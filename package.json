@@ -13,7 +13,7 @@
     }
   },
   "bin": {
-    "firmis": "./dist/cli/index.js"
+    "firmis": "dist/cli/index.js"
   },
   "files": [
     "dist",
