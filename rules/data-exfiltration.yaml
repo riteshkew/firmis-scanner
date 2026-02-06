@@ -1,0 +1,216 @@
+rules:
+  - id: exfil-001
+    name: Suspicious External HTTP Request
+    description: Detects HTTP requests to suspicious or unknown domains
+    category: data-exfiltration
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: network
+        pattern: "https?://[^/]*\\.(tk|ml|ga|cf|gq|xyz|top|work|click)/"
+        weight: 85
+        description: Request to suspicious TLD
+      - type: regex
+        pattern: 'fetch\(["\'][^"\']*\.(tk|ml|ga|cf|gq)["\']'
+        weight: 80
+        description: Fetch to suspicious domain
+      - type: regex
+        pattern: "ngrok\\.io|localtunnel\\.me|serveo\\.net"
+        weight: 75
+        description: Request to tunneling service
+    remediation: |
+      Review all external HTTP requests. Ensure they go to legitimate, expected endpoints.
+
+  - id: exfil-002
+    name: Base64 Encoded Data Transmission
+    description: Detects base64 encoding before network transmission
+    category: data-exfiltration
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 65
+    patterns:
+      - type: regex
+        pattern: "btoa\\(.*\\).*fetch|Buffer\\.from\\(.*\\)\\.toString\\(['\"]base64['\"]\\).*(?:fetch|axios|http)"
+        weight: 80
+        description: Base64 encode before HTTP request
+      - type: regex
+        pattern: "encodeURIComponent\\(.*btoa"
+        weight: 70
+        description: URL-safe base64 encoding pattern
+    remediation: |
+      Base64 encoding before transmission may indicate data obfuscation. Review the data being sent.
+
+  - id: exfil-003
+    name: File Upload to External Service
+    description: Detects file uploads to external services
+    category: data-exfiltration
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 75
+    patterns:
+      - type: regex
+        pattern: "FormData.*append.*(?:fetch|axios)"
+        weight: 70
+        description: FormData file upload pattern
+      - type: regex
+        pattern: "multipart/form-data.*(?:fs\\.read|readFile)"
+        weight: 80
+        description: File read with multipart upload
+      - type: regex
+        pattern: "(?:pastebin|hastebin|ghostbin|file\\.io|transfer\\.sh)"
+        weight: 90
+        description: Upload to paste/file sharing service
+    remediation: |
+      Review file uploads to external services. Ensure sensitive data is not being exfiltrated.
+
+  - id: exfil-004
+    name: DNS Exfiltration Pattern
+    description: Detects potential DNS-based data exfiltration
+    category: data-exfiltration
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "dns\\.resolve.*\\$\\{|dns\\.lookup.*\\+"
+        weight: 85
+        description: Dynamic DNS query construction
+      - type: regex
+        pattern: "\\.substring\\(.*\\)\\..*\\.resolve"
+        weight: 75
+        description: String chunking before DNS query
+    remediation: |
+      DNS queries with dynamic subdomains may indicate data exfiltration. Review DNS usage.
+
+  - id: exfil-005
+    name: Clipboard Data Access
+    description: Detects access to clipboard contents
+    category: data-exfiltration
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: "clipboard\\.(read|write)Text|pbcopy|pbpaste|xclip|xsel"
+        weight: 75
+        description: Clipboard access API or command
+      - type: import
+        pattern: "clipboardy"
+        weight: 70
+        description: Clipboard access library
+    remediation: |
+      Clipboard access should be minimized. Review why clipboard data is being accessed.
+
+  - id: exfil-006
+    name: Screenshot Capture
+    description: Detects screenshot capture functionality
+    category: data-exfiltration
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "screenshot|screencapture|screen\\.capture"
+        weight: 80
+        description: Screenshot function or command
+      - type: import
+        pattern: "screenshot-desktop"
+        weight: 85
+        description: Screenshot capture library
+      - type: regex
+        pattern: "puppeteer.*screenshot|playwright.*screenshot"
+        weight: 60
+        description: Browser automation screenshot
+    remediation: |
+      Screenshot capture is highly sensitive. Ensure this is explicitly requested by the user.
+
+  - id: exfil-007
+    name: Bulk File Read Pattern
+    description: Detects reading multiple files in rapid succession
+    category: data-exfiltration
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 65
+    patterns:
+      - type: regex
+        pattern: "glob\\(.*\\).*readFile|readdir.*readFile"
+        weight: 70
+        description: Glob then read pattern
+      - type: regex
+        pattern: "walk.*readFileSync|recursive.*fs\\.read"
+        weight: 75
+        description: Recursive file reading
+    remediation: |
+      Bulk file reading should be scoped to specific directories. Review the access pattern.
+
+  - id: exfil-008
+    name: Archive Creation Before Upload
+    description: Detects creating archives before network transmission
+    category: data-exfiltration
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 75
+    patterns:
+      - type: regex
+        pattern: "archiver|tar\\.create|zip.*(?:fetch|http|upload)"
+        weight: 80
+        description: Archive creation with upload
+      - type: import
+        pattern: "archiver"
+        weight: 60
+        description: Archive creation library
+      - type: regex
+        pattern: "createWriteStream.*\\.zip.*(?:fetch|axios)"
+        weight: 85
+        description: ZIP stream with upload
+    remediation: |
+      Creating archives before upload may indicate bulk data exfiltration. Review carefully.
+
+  - id: exfil-009
+    name: Webhook Data Transmission
+    description: Detects data transmission via webhooks
+    category: data-exfiltration
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: "discord\\.com/api/webhooks|hooks\\.slack\\.com"
+        weight: 75
+        description: Chat platform webhook
+      - type: regex
+        pattern: "webhook.*POST.*body:"
+        weight: 65
+        description: Generic webhook POST pattern
+    remediation: |
+      Webhook data transmission should only send expected, non-sensitive data.
+
+  - id: exfil-010
+    name: Email Data Transmission
+    description: Detects sending data via email
+    category: data-exfiltration
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: import
+        pattern: "nodemailer"
+        weight: 60
+        description: Email sending library
+      - type: regex
+        pattern: "sendMail.*attachments|smtp.*readFile"
+        weight: 80
+        description: Email with file attachment
+    remediation: |
+      Email transmission should be explicitly requested. Review what data is being sent.

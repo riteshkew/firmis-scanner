@@ -1,0 +1,228 @@
+rules:
+  - id: prompt-001
+    name: Instruction Override in Tool Description
+    description: Detects prompt injection patterns in tool/skill descriptions
+    category: prompt-injection
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 75
+    patterns:
+      - type: regex
+        pattern: "(?i)ignore (all |previous |prior |above )?instructions"
+        weight: 95
+        description: Direct instruction override attempt
+      - type: regex
+        pattern: "(?i)disregard (all |previous |prior |the above )?instructions"
+        weight: 95
+        description: Disregard instructions pattern
+      - type: regex
+        pattern: "(?i)forget (everything|what|all) (you|I) (said|told|mentioned)"
+        weight: 90
+        description: Memory wipe attempt
+    remediation: |
+      Remove instruction override patterns from descriptions. These are prompt injection attempts.
+
+  - id: prompt-002
+    name: System Prompt Extraction
+    description: Detects attempts to extract system prompts
+    category: prompt-injection
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "(?i)(print|show|display|reveal|output) (your |the )?(system |initial )?(prompt|instructions)"
+        weight: 90
+        description: Direct prompt extraction request
+      - type: regex
+        pattern: "(?i)what (are|were) your (original |initial |system )?(instructions|prompt)"
+        weight: 85
+        description: Question-based extraction
+      - type: regex
+        pattern: "(?i)repeat (everything|all|your) (above|previous|system)"
+        weight: 80
+        description: Repeat prompt pattern
+    remediation: |
+      Remove prompt extraction attempts. These try to reveal confidential instructions.
+
+  - id: prompt-003
+    name: Role Manipulation
+    description: Detects attempts to change AI behavior through role play
+    category: prompt-injection
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: "(?i)you are (now |actually )?(?:a |an )?(?:DAN|evil|unrestricted|unfiltered)"
+        weight: 90
+        description: DAN-style jailbreak pattern
+      - type: regex
+        pattern: "(?i)pretend (you are|to be|you're) (?:a |an )?(?:different|unrestricted|evil)"
+        weight: 85
+        description: Pretend role manipulation
+      - type: regex
+        pattern: "(?i)act as (?:a |an )?(?:hacker|malicious|evil|unethical)"
+        weight: 80
+        description: Malicious role assignment
+    remediation: |
+      Remove role manipulation patterns. These attempt to bypass AI safety measures.
+
+  - id: prompt-004
+    name: Hidden Instructions in Unicode
+    description: Detects hidden instructions using Unicode tricks
+    category: prompt-injection
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 85
+    patterns:
+      - type: regex
+        pattern: "[\\u200B-\\u200F\\u2028-\\u202F\\uFEFF]"
+        weight: 80
+        description: Zero-width or invisible Unicode characters
+      - type: regex
+        pattern: "[\\u0300-\\u036F]{3,}"
+        weight: 75
+        description: Excessive combining characters
+      - type: regex
+        pattern: "[\u202A-\u202E]"
+        weight: 90
+        description: Bidirectional text override characters
+    remediation: |
+      Remove invisible Unicode characters. These may hide malicious instructions.
+
+  - id: prompt-005
+    name: Delimiter Injection
+    description: Detects attempts to break out of delimiters
+    category: prompt-injection
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: "```\\s*(?:system|assistant|user)\\s*\\n"
+        weight: 85
+        description: Fake message delimiter
+      - type: regex
+        pattern: "</?(?:system|assistant|user)>"
+        weight: 80
+        description: XML-style role tags
+      - type: regex
+        pattern: "\\[(?:SYSTEM|INST|/INST)\\]"
+        weight: 85
+        description: Instruction block markers
+    remediation: |
+      Remove fake delimiters that attempt to inject system-level instructions.
+
+  - id: prompt-006
+    name: Encoded Instruction Injection
+    description: Detects encoded or obfuscated instructions
+    category: prompt-injection
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 75
+    patterns:
+      - type: regex
+        pattern: "(?i)decode this:? [A-Za-z0-9+/=]{20,}"
+        weight: 80
+        description: Base64 encoded instruction
+      - type: regex
+        pattern: "(?i)(?:hex|rot13|caesar):? [0-9a-fA-F\\s]{20,}"
+        weight: 75
+        description: Hex or cipher encoded instruction
+    remediation: |
+      Remove encoded instructions. These attempt to bypass content filtering.
+
+  - id: prompt-007
+    name: Context Manipulation
+    description: Detects attempts to manipulate conversation context
+    category: prompt-injection
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: "(?i)the (user|human) (actually |really )?(wants|needs|asked)"
+        weight: 75
+        description: False user intent claim
+      - type: regex
+        pattern: "(?i)this is (a |an )?(test|authorized|approved)"
+        weight: 70
+        description: False authorization claim
+      - type: regex
+        pattern: "(?i)(?:admin|developer|owner) mode"
+        weight: 80
+        description: Fake privilege escalation
+    remediation: |
+      Remove context manipulation attempts. These try to mislead the AI about user intent.
+
+  - id: prompt-008
+    name: Output Format Manipulation
+    description: Detects attempts to control AI output format maliciously
+    category: prompt-injection
+    severity: low
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 65
+    patterns:
+      - type: regex
+        pattern: "(?i)respond only with|output only|just (say|print|return)"
+        weight: 60
+        description: Output restriction pattern
+      - type: regex
+        pattern: "(?i)do not (explain|describe|mention|include)"
+        weight: 55
+        description: Negative instruction pattern
+    remediation: |
+      Review output format instructions. Some may attempt to suppress safety warnings.
+
+  - id: prompt-009
+    name: Recursive Prompt Injection
+    description: Detects prompts designed to inject into future contexts
+    category: prompt-injection
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "(?i)when (you |the AI )?(see|encounter|process) this"
+        weight: 85
+        description: Future context trigger
+      - type: regex
+        pattern: "(?i)save this (instruction|command|rule)"
+        weight: 80
+        description: Persistent instruction attempt
+    remediation: |
+      Remove recursive injection patterns. These attempt to persist malicious instructions.
+
+  - id: prompt-010
+    name: Markdown/HTML Injection
+    description: Detects attempts to inject via markdown or HTML
+    category: prompt-injection
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: "!\\[.*\\]\\(https?://[^)]+\\?.*=.*\\)"
+        weight: 75
+        description: Markdown image with query params
+      - type: regex
+        pattern: "<img[^>]+on\\w+\\s*="
+        weight: 90
+        description: HTML img with event handler
+      - type: regex
+        pattern: "<script[^>]*>"
+        weight: 95
+        description: Script tag injection
+    remediation: |
+      Sanitize markdown and HTML content. These may execute malicious code.

@@ -1,0 +1,356 @@
+rules:
+  - id: sus-001
+    name: Obfuscated Code Detection
+    description: Detects heavily obfuscated or encoded code
+    category: suspicious-behavior
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: "eval\\(.*(?:atob|Buffer\\.from|decodeURIComponent)"
+        weight: 90
+        description: Eval with decoding
+      - type: regex
+        pattern: "\\\\x[0-9a-fA-F]{2}(?:\\\\x[0-9a-fA-F]{2}){10,}"
+        weight: 85
+        description: Extensive hex encoding
+      - type: regex
+        pattern: "String\\.fromCharCode\\([^)]{50,}\\)"
+        weight: 80
+        description: Long charCode construction
+      - type: regex
+        pattern: "_0x[0-9a-f]{4,}\\["
+        weight: 75
+        description: JavaScript obfuscator pattern
+    remediation: |
+      Heavily obfuscated code is suspicious. Deobfuscate and review the actual behavior.
+
+  - id: sus-002
+    name: Dynamic Code Execution
+    description: Detects dynamic code execution patterns
+    category: suspicious-behavior
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 65
+    patterns:
+      - type: regex
+        pattern: "eval\\(|vm\\.runInContext"
+        weight: 70
+        description: Direct code evaluation
+      - type: regex
+        pattern: "require\\(.*\\$|import\\(.*\\$|__import__\\("
+        weight: 75
+        description: Dynamic module loading
+      - type: regex
+        pattern: "exec\\(.*\\$|subprocess.*shell=True"
+        weight: 80
+        description: Dynamic shell execution
+    remediation: |
+      Dynamic code execution can hide malicious behavior. Review the executed code carefully.
+
+  - id: sus-003
+    name: Anti-Debugging Techniques
+    description: Detects attempts to detect or evade debugging
+    category: suspicious-behavior
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "debugger;|isDebuggerPresent"
+        weight: 75
+        description: Debugger detection
+      - type: regex
+        pattern: "console\\.log.*=.*function|console\\.clear\\("
+        weight: 70
+        description: Console manipulation
+      - type: regex
+        pattern: "performance\\.now.*>.*1000|Date\\.now.*-.*>"
+        weight: 65
+        description: Timing-based debug detection
+    remediation: |
+      Anti-debugging techniques indicate the code may be trying to hide malicious behavior.
+
+  - id: sus-004
+    name: Network Reconnaissance
+    description: Detects network scanning or reconnaissance patterns
+    category: suspicious-behavior
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 75
+    patterns:
+      - type: regex
+        pattern: "net\\.createConnection.*for.*|Socket.*connect.*\\d{1,5}"
+        weight: 75
+        description: Port scanning pattern
+      - type: regex
+        pattern: "192\\.168\\.|10\\.|172\\.(?:1[6-9]|2[0-9]|3[0-1])\\."
+        weight: 60
+        description: Private IP range reference
+      - type: import
+        pattern: "nmap|masscan"
+        weight: 90
+        description: Network scanning tool
+    remediation: |
+      Network reconnaissance should not be performed by AI agents without explicit permission.
+
+  - id: sus-005
+    name: Persistence Mechanisms
+    description: Detects attempts to establish persistence
+    category: suspicious-behavior
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "~/.bashrc|~/.zshrc|~/.profile|~/.bash_profile"
+        weight: 70
+        description: Shell profile modification
+      - type: regex
+        pattern: "HKEY.*\\\\Run|HKLM.*\\\\CurrentVersion\\\\Run"
+        weight: 90
+        description: Windows registry run key
+      - type: regex
+        pattern: "~/Library/LaunchAgents|/Library/LaunchDaemons"
+        weight: 85
+        description: macOS launch agent paths
+      - type: regex
+        pattern: "\\.config/autostart|/etc/xdg/autostart"
+        weight: 80
+        description: Linux autostart locations
+    remediation: |
+      Persistence mechanisms should not be created by AI agents. Remove these patterns.
+
+  - id: sus-006
+    name: Cryptocurrency Mining Indicators
+    description: Detects potential cryptocurrency mining code
+    category: suspicious-behavior
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "stratum\\+tcp://|pool\\.[a-z]+\\.com:[0-9]+"
+        weight: 95
+        description: Mining pool connection
+      - type: regex
+        pattern: "xmrig|cpuminer|nicehash|coinhive"
+        weight: 90
+        description: Mining software reference
+      - type: regex
+        pattern: "hashrate|nonce.*difficulty|proof.*of.*work"
+        weight: 70
+        description: Mining terminology
+    remediation: |
+      Cryptocurrency mining should never be present in AI agent code.
+
+  - id: sus-007
+    name: Keylogging Patterns
+    description: Detects keylogging or input capture patterns
+    category: suspicious-behavior
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 85
+    patterns:
+      - type: regex
+        pattern: "keydown|keyup|keypress.*(?:log|save|send)"
+        weight: 80
+        description: Keyboard event capture
+      - type: import
+        pattern: "iohook|node-global-key-listener"
+        weight: 95
+        description: Global keyboard hook library
+      - type: regex
+        pattern: "CGEventTap|GetAsyncKeyState|SetWindowsHookEx"
+        weight: 100
+        description: OS-level keyboard capture API
+    remediation: |
+      Keylogging is highly malicious. This should never be present in an AI agent.
+
+  - id: sus-008
+    name: Camera/Microphone Access
+    description: Detects attempts to access camera or microphone
+    category: suspicious-behavior
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "getUserMedia|mediaDevices.*(?:audio|video)"
+        weight: 75
+        description: Web media device access
+      - type: regex
+        pattern: "AVCaptureDevice|AVAudioSession"
+        weight: 85
+        description: macOS AV capture
+      - type: import
+        pattern: "node-webcam|mic"
+        weight: 80
+        description: Camera/microphone library
+    remediation: |
+      Camera and microphone access requires explicit user consent. Review this carefully.
+
+  - id: sus-009
+    name: Data Wiping Patterns
+    description: Detects patterns that could wipe data
+    category: suspicious-behavior
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 85
+    patterns:
+      - type: regex
+        pattern: "rm\\s+-rf\\s+[~/]|rimraf\\s+[~/]"
+        weight: 95
+        description: Recursive delete from home/root
+      - type: regex
+        pattern: "shred|wipe|secure-delete"
+        weight: 90
+        description: Secure deletion tools
+      - type: regex
+        pattern: "format\\s+[A-Z]:|diskpart.*clean"
+        weight: 100
+        description: Disk formatting commands
+    remediation: |
+      Data wiping commands are extremely dangerous. These should never be in an AI agent.
+
+  - id: sus-010
+    name: Reverse Shell Patterns
+    description: Detects reverse shell creation patterns
+    category: suspicious-behavior
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 90
+    patterns:
+      - type: regex
+        pattern: "bash.*-i.*>&.*/dev/tcp/"
+        weight: 100
+        description: Bash reverse shell
+      - type: regex
+        pattern: "nc.*-e.*/bin/(?:ba)?sh|ncat.*--exec"
+        weight: 100
+        description: Netcat reverse shell
+      - type: regex
+        pattern: "python.*socket.*subprocess.*shell"
+        weight: 95
+        description: Python reverse shell pattern
+      - type: regex
+        pattern: "php.*fsockopen.*exec|perl.*socket.*exec"
+        weight: 95
+        description: PHP/Perl reverse shell
+    remediation: |
+      Reverse shells are highly malicious. This is a critical security threat.
+
+  - id: sus-011
+    name: Timestomping
+    description: Detects file timestamp manipulation
+    category: suspicious-behavior
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 75
+    patterns:
+      - type: regex
+        pattern: "touch\\s+-[amd]|utimes|SetFileTime"
+        weight: 70
+        description: File timestamp modification
+      - type: regex
+        pattern: "stat.*mtime|fs\\.utimes"
+        weight: 65
+        description: Programmatic timestamp access
+    remediation: |
+      Timestamp manipulation is often used to hide malicious activity. Review carefully.
+
+  - id: sus-012
+    name: Unusual File Locations
+    description: Detects operations in unusual file locations
+    category: suspicious-behavior
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: "/tmp/\\.[^/]+|/var/tmp/\\.[^/]+"
+        weight: 75
+        description: Hidden file in temp directory
+      - type: regex
+        pattern: "/dev/shm/|/run/shm/"
+        weight: 80
+        description: Shared memory file creation
+      - type: regex
+        pattern: "~/.local/share/\\.[^/]+|~/.cache/\\.[^/]+"
+        weight: 70
+        description: Hidden file in user directories
+    remediation: |
+      Hidden files in unusual locations may indicate attempts to hide malicious activity.
+
+  - id: sus-013
+    name: Self-Modification
+    description: Detects code that modifies itself
+    category: suspicious-behavior
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "__filename.*writeFile|process\\.argv\\[1\\].*write"
+        weight: 85
+        description: Self-modifying script
+      - type: regex
+        pattern: "fs\\.(?:writeFile|appendFile).*__dirname"
+        weight: 75
+        description: Writing to own directory
+    remediation: |
+      Self-modifying code is suspicious and may be used to hide malicious payloads.
+
+  - id: sus-014
+    name: Abnormal Process Spawning
+    description: Detects suspicious process creation patterns
+    category: suspicious-behavior
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: "spawn.*detached:\\s*true|fork\\(\\).*setsid"
+        weight: 75
+        description: Detached process creation
+      - type: regex
+        pattern: "nohup.*&|disown|start /b"
+        weight: 70
+        description: Background process creation
+    remediation: |
+      Detached background processes may indicate persistence attempts. Review carefully.
+
+  - id: sus-015
+    name: Encoding Without Clear Purpose
+    description: Detects unnecessary encoding or weak encryption
+    category: suspicious-behavior
+    severity: low
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: "crypto\\.createCipher(?!iv)|DES|RC4"
+        weight: 65
+        description: Weak or deprecated encryption
+      - type: regex
+        pattern: "xor.*[0-9]{2,}|\\^=.*0x[0-9a-f]"
+        weight: 60
+        description: XOR encoding pattern
+    remediation: |
+      Unnecessary encoding or weak encryption may be used to obfuscate malicious code.

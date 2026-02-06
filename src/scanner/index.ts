@@ -1,0 +1,5 @@
+export { ScanEngine } from './engine.js'
+export { PlatformDiscovery } from './discovery.js'
+export { FileAnalyzer } from './analyzer.js'
+export type { DiscoveryResult } from './discovery.js'
+export type { FileAnalysis } from './analyzer.js'

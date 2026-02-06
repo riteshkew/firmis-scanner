@@ -1,0 +1,232 @@
+rules:
+  - id: privesc-001
+    name: Sudo/Root Command Execution
+    description: Detects attempts to execute commands with elevated privileges
+    category: privilege-escalation
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 85
+    patterns:
+      - type: regex
+        pattern: "sudo\\s+(?!-v|--version)"
+        weight: 95
+        description: Sudo command execution
+      - type: regex
+        pattern: "(?:exec|spawn).*(?:sudo|su\\s+-|doas)"
+        weight: 90
+        description: Subprocess with privilege escalation
+      - type: regex
+        pattern: "runAsRoot|asAdmin|elevate"
+        weight: 80
+        description: Elevation function reference
+    remediation: |
+      AI agents should never execute commands with elevated privileges. Remove sudo/su usage.
+
+  - id: privesc-002
+    name: Process Injection Patterns
+    description: Detects process injection or DLL injection patterns
+    category: privilege-escalation
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 90
+    patterns:
+      - type: regex
+        pattern: "(?:WriteProcessMemory|CreateRemoteThread|VirtualAllocEx)"
+        weight: 100
+        description: Windows process injection APIs
+      - type: regex
+        pattern: "ptrace.*PTRACE_ATTACH|process_vm_writev"
+        weight: 100
+        description: Linux process injection
+      - type: regex
+        pattern: "LD_PRELOAD|DYLD_INSERT_LIBRARIES"
+        weight: 95
+        description: Library injection environment variables
+    remediation: |
+      Process injection is a serious security concern. This should never be in an AI agent.
+
+  - id: privesc-003
+    name: Shell Escape Sequences
+    description: Detects attempts to escape restricted shells
+    category: privilege-escalation
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "\\$\\([^)]*bash|\\$\\([^)]*sh\\)"
+        weight: 75
+        description: Subshell escape pattern
+      - type: regex
+        pattern: "vim.*:!|less.*!|man.*!sh"
+        weight: 85
+        description: Editor shell escape
+      - type: regex
+        pattern: "python.*-c.*import os|perl.*-e.*system"
+        weight: 70
+        description: Interpreter shell escape
+    remediation: |
+      Remove shell escape patterns. These attempt to break out of restricted environments.
+
+  - id: privesc-004
+    name: Setuid/Capability Manipulation
+    description: Detects attempts to modify file permissions or capabilities
+    category: privilege-escalation
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 85
+    patterns:
+      - type: regex
+        pattern: "chmod.*[47]7[0-7]{2}|chmod.*\\+s"
+        weight: 95
+        description: Setuid bit manipulation
+      - type: regex
+        pattern: "setcap|getcap.*cap_"
+        weight: 90
+        description: Linux capabilities manipulation
+      - type: regex
+        pattern: "chown.*root:|chgrp.*root"
+        weight: 80
+        description: Ownership change to root
+    remediation: |
+      File permission and capability manipulation can lead to privilege escalation. Remove these.
+
+  - id: privesc-005
+    name: Cron/Scheduled Task Manipulation
+    description: Detects modification of scheduled tasks
+    category: privilege-escalation
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "crontab\\s+-[el]|/etc/cron"
+        weight: 85
+        description: Crontab modification
+      - type: regex
+        pattern: "schtasks.*/(Create|Change|Delete)"
+        weight: 85
+        description: Windows scheduled task manipulation
+      - type: regex
+        pattern: "launchctl.*load|launchd.*plist"
+        weight: 80
+        description: macOS launch agent manipulation
+    remediation: |
+      Scheduled task modification should not be performed by AI agents without explicit permission.
+
+  - id: privesc-006
+    name: Service/Daemon Manipulation
+    description: Detects attempts to modify system services
+    category: privilege-escalation
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "systemctl.*(?:enable|disable|start|stop|restart)"
+        weight: 75
+        description: Systemd service manipulation
+      - type: regex
+        pattern: "service\\s+\\w+\\s+(?:start|stop|restart)"
+        weight: 75
+        description: Service command
+      - type: regex
+        pattern: "sc\\.exe.*(?:create|delete|config)"
+        weight: 85
+        description: Windows service manipulation
+    remediation: |
+      System service manipulation requires careful review. Ensure this is intended behavior.
+
+  - id: privesc-007
+    name: Kernel Module Loading
+    description: Detects attempts to load kernel modules
+    category: privilege-escalation
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 90
+    patterns:
+      - type: regex
+        pattern: "insmod|modprobe|rmmod"
+        weight: 95
+        description: Linux kernel module commands
+      - type: regex
+        pattern: "kextload|kextunload"
+        weight: 95
+        description: macOS kernel extension commands
+      - type: regex
+        pattern: "\\.sys.*DeviceIoControl"
+        weight: 90
+        description: Windows driver interaction
+    remediation: |
+      Kernel module manipulation is extremely dangerous. This should never be in an AI agent.
+
+  - id: privesc-008
+    name: Environment Path Manipulation
+    description: Detects PATH or library path manipulation
+    category: privilege-escalation
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: "PATH=.*:\\.|PATH=\\./|PATH=\\$PWD"
+        weight: 80
+        description: PATH injection with current directory
+      - type: regex
+        pattern: "LD_LIBRARY_PATH=|DYLD_LIBRARY_PATH="
+        weight: 75
+        description: Library path manipulation
+    remediation: |
+      PATH manipulation can lead to binary hijacking. Review environment variable changes.
+
+  - id: privesc-009
+    name: Container Escape Patterns
+    description: Detects attempts to escape container environments
+    category: privilege-escalation
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 85
+    patterns:
+      - type: regex
+        pattern: "/proc/1/root|/proc/self/exe"
+        weight: 85
+        description: Proc filesystem escape attempt
+      - type: regex
+        pattern: "docker\\.sock|/var/run/docker"
+        weight: 90
+        description: Docker socket access
+      - type: regex
+        pattern: "--privileged|--cap-add|--security-opt"
+        weight: 75
+        description: Container privilege escalation flags
+    remediation: |
+      Container escape attempts are critical security issues. Remove these patterns.
+
+  - id: privesc-010
+    name: Debugger Attachment
+    description: Detects attempts to attach debuggers to processes
+    category: privilege-escalation
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 80
+    patterns:
+      - type: regex
+        pattern: "gdb.*-p|lldb.*-p|strace.*-p"
+        weight: 85
+        description: Debugger attachment to process
+      - type: regex
+        pattern: "DebugActiveProcess|OpenProcess.*PROCESS_ALL"
+        weight: 90
+        description: Windows debug APIs
+    remediation: |
+      Debugger attachment can be used for privilege escalation. Review this carefully.

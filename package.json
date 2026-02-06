@@ -1,0 +1,88 @@
+{
+  "name": "firmis-scanner",
+  "version": "1.0.0",
+  "description": "AI agent runtime security scanner - detect malicious behavior in Claude Skills, MCP Servers, Codex Plugins, and more",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "firmis": "./dist/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "rules",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build",
+    "firmis": "node --loader ts-node/esm src/cli/index.ts"
+  },
+  "keywords": [
+    "security",
+    "ai-agents",
+    "claude",
+    "mcp",
+    "codex",
+    "cursor",
+    "crewai",
+    "autogpt",
+    "scanner",
+    "threat-detection",
+    "malware"
+  ],
+  "author": "Firmis Labs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/firmis-labs/firmis-scanner.git"
+  },
+  "bugs": {
+    "url": "https://github.com/firmis-labs/firmis-scanner/issues"
+  },
+  "homepage": "https://firmislabs.com",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.24.0",
+    "@babel/traverse": "^7.24.0",
+    "@babel/types": "^7.24.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "fast-glob": "^3.3.2",
+    "js-yaml": "^4.1.0",
+    "ora": "^8.0.1"
+  },
+  "devDependencies": {
+    "@types/babel__traverse": "^7.20.5",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vitest/coverage-v8": "^1.3.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.0",
+    "prettier": "^3.2.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.3.0"
+  }
+}
