@@ -34,3 +34,6 @@ npm-debug.log*
 # Temporary
 tmp/
 temp/
+
+# Test fixtures (local testing only)
+test/fixtures/

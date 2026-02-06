@@ -160,6 +160,8 @@ export class TerminalReporter implements Reporter {
       cursor: 'Cursor Extensions',
       crewai: 'CrewAI Agents',
       autogpt: 'AutoGPT Plugins',
+      openclaw: 'OpenClaw Skills',
+      nanobot: 'Nanobot Agents',
       langchain: 'LangChain Tools',
       custom: 'Custom Agents',
     }
@@ -174,6 +176,8 @@ export class TerminalReporter implements Reporter {
       cursor: 'extensions',
       crewai: 'agents',
       autogpt: 'plugins',
+      openclaw: 'skills',
+      nanobot: 'agents',
       langchain: 'tools',
       custom: 'agents',
     }
@@ -188,6 +192,8 @@ export class TerminalReporter implements Reporter {
       cursor: 'Extension',
       crewai: 'Agent',
       autogpt: 'Plugin',
+      openclaw: 'Skill',
+      nanobot: 'Agent',
       langchain: 'Tool',
       custom: 'Agent',
     }

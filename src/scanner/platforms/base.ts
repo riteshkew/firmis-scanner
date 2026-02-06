@@ -49,7 +49,8 @@ export abstract class BasePlatformAnalyzer {
       const { readFile } = await import('node:fs/promises')
       const yaml = await import('js-yaml')
       const content = await readFile(path, 'utf-8')
-      return yaml.load(content) as T
+      // Use JSON_SCHEMA to prevent code execution via YAML parsing
+      return yaml.load(content, { schema: yaml.JSON_SCHEMA }) as T
     } catch {
       return null
     }

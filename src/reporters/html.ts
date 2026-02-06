@@ -408,7 +408,7 @@ export class HtmlReporter implements FileReporter {
           <span>Component: <strong>${this.escapeHtml(componentName)}</strong></span>
           <span>Severity: <span class="badge badge-${threat.severity}">${threat.severity}</span></span>
           <span>Category: <strong>${this.formatCategory(threat.category)}</strong></span>
-          <span>Confidence: <strong>${Math.round(threat.confidence * 100)}%</strong></span>
+          <span>Confidence: <strong>${Math.round(threat.confidence)}%</strong></span>
         </div>
       </div>
       <div class="threat-body">
@@ -466,6 +466,8 @@ export class HtmlReporter implements FileReporter {
       cursor: 'Cursor Extensions',
       crewai: 'CrewAI Agents',
       autogpt: 'AutoGPT Plugins',
+      openclaw: 'OpenClaw Skills',
+      nanobot: 'Nanobot Agents',
       langchain: 'LangChain Tools',
       custom: 'Custom Agents',
     }

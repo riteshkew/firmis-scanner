@@ -6,6 +6,8 @@ import { CodexAnalyzer } from './codex.js'
 import { CursorAnalyzer } from './cursor.js'
 import { CrewAIAnalyzer } from './crewai.js'
 import { AutoGPTAnalyzer } from './autogpt.js'
+import { OpenClawAnalyzer } from './openclaw.js'
+import { NanobotAnalyzer } from './nanobot.js'
 
 export { BasePlatformAnalyzer } from './base.js'
 export { ClaudeSkillsAnalyzer } from './claude.js'
@@ -14,6 +16,8 @@ export { CodexAnalyzer } from './codex.js'
 export { CursorAnalyzer } from './cursor.js'
 export { CrewAIAnalyzer } from './crewai.js'
 export { AutoGPTAnalyzer } from './autogpt.js'
+export { OpenClawAnalyzer } from './openclaw.js'
+export { NanobotAnalyzer } from './nanobot.js'
 
 const PLATFORM_ANALYZERS: Record<PlatformType, new () => BasePlatformAnalyzer> = {
   claude: ClaudeSkillsAnalyzer,
@@ -22,6 +26,8 @@ const PLATFORM_ANALYZERS: Record<PlatformType, new () => BasePlatformAnalyzer> =
   cursor: CursorAnalyzer,
   crewai: CrewAIAnalyzer,
   autogpt: AutoGPTAnalyzer,
+  openclaw: OpenClawAnalyzer,
+  nanobot: NanobotAnalyzer,
   langchain: ClaudeSkillsAnalyzer,
   custom: ClaudeSkillsAnalyzer,
 }

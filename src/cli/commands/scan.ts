@@ -127,7 +127,7 @@ function buildConfig(options: ScanOptions): FirmisConfig {
 export const scanCommand = new Command('scan')
   .description('Scan AI agent components for security threats')
   .argument('[path]', 'Path to scan (default: auto-detect)')
-  .option('--platform <name>', 'Scan specific platform (claude|mcp|codex|cursor|crewai|autogpt)')
+  .option('--platform <name>', 'Scan specific platform (claude|mcp|codex|cursor|crewai|autogpt|openclaw|nanobot)')
   .option('--all', 'Scan all detected platforms (default)', true)
   .option('--json', 'Output in JSON format')
   .option('--sarif', 'Output in SARIF format')

@@ -43,6 +43,8 @@
     "cursor",
     "crewai",
     "autogpt",
+    "openclaw",
+    "nanobot",
     "scanner",
     "threat-detection",
     "malware"

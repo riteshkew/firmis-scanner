@@ -1,7 +1,10 @@
-import { readFile } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { parse, type ParseResult } from '@babel/parser'
 import type * as t from '@babel/types'
 import { ParseError } from '../types/index.js'
+
+/** Maximum file size to analyze (10MB) - prevents memory exhaustion */
+const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 export interface FileAnalysis {
   filePath: string
@@ -15,6 +18,15 @@ export class FileAnalyzer {
 
   async analyzeFile(filePath: string): Promise<FileAnalysis> {
     try {
+      // Check file size before reading to prevent memory exhaustion
+      const stats = await stat(filePath)
+      if (stats.size > MAX_FILE_SIZE) {
+        throw new ParseError(
+          `File too large (${Math.round(stats.size / 1024 / 1024)}MB > 10MB limit)`,
+          filePath
+        )
+      }
+
       const content = await readFile(filePath, 'utf-8')
       const ast = this.parseFile(filePath, content)
 

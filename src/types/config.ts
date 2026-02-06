@@ -8,6 +8,8 @@ export type PlatformType =
   | 'cursor'
   | 'crewai'
   | 'autogpt'
+  | 'openclaw'
+  | 'nanobot'
   | 'langchain'
   | 'custom'
 

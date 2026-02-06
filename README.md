@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  Detect malicious behavior in Claude Skills, MCP Servers, Codex Plugins, Cursor Extensions, CrewAI Agents, and AutoGPT Plugins before they compromise your system.
+  Detect malicious behavior in Claude Skills, MCP Servers, OpenClaw Skills, Nanobot Agents, and other AI agent frameworks before they compromise your system.
 </p>
 
 ---
@@ -61,6 +61,8 @@ firmis scan --sarif --output results.sarif
 | **Cursor Extensions** | `~/.cursor/extensions/` | Full |
 | **CrewAI Agents** | Project `crew.yaml`, `agents.yaml` | Full |
 | **AutoGPT Plugins** | `~/.autogpt/plugins/` | Full |
+| **OpenClaw Skills** | `~/.openclaw/skills/`, workspace `skills/` | Full |
+| **Nanobot Agents** | `nanobot.yaml`, `agents/*.md` | Full |
 
 ## Example Output
 
@@ -98,7 +100,7 @@ Scan for security threats.
 
 ```bash
 Options:
-  -p, --platform <name>   Scan specific platform (claude|mcp|codex|cursor|crewai|autogpt)
+  -p, --platform <name>   Scan specific platform (claude|mcp|codex|cursor|crewai|autogpt|openclaw|nanobot)
   -a, --all               Scan all detected platforms (default)
   -j, --json              Output as JSON
   --sarif                 Output as SARIF (GitHub Security)

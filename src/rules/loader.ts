@@ -2,7 +2,7 @@ import { readFile, readdir } from 'fs/promises'
 import { join, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
-import { load as yamlLoad } from 'js-yaml'
+import { load as yamlLoad, JSON_SCHEMA } from 'js-yaml'
 import type { Rule, RuleFile } from '../types/index.js'
 import { RuleError } from '../types/index.js'
 
@@ -50,7 +50,8 @@ export async function loadRules(customPath?: string): Promise<Rule[]> {
 
 async function loadRuleFile(filePath: string): Promise<Rule[]> {
   const content = await readFile(filePath, 'utf-8')
-  const parsed = yamlLoad(content) as RuleFile
+  // Use JSON_SCHEMA to prevent code execution via YAML parsing
+  const parsed = yamlLoad(content, { schema: JSON_SCHEMA }) as RuleFile
 
   if (!parsed || !parsed.rules || !Array.isArray(parsed.rules)) {
     throw new RuleError(`Invalid rule file format: missing 'rules' array`, 'unknown')
