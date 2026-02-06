@@ -1,5 +1,5 @@
 import { readdir } from 'node:fs/promises'
-import { join, basename } from 'node:path'
+import { join } from 'node:path'
 import fg from 'fast-glob'
 import type {
   DiscoveredComponent,
@@ -177,8 +177,8 @@ export class MCPAnalyzer extends BasePlatformAnalyzer {
 
     if (component.configPath) {
       const config = await this.readJSON<MCPConfig>(component.configPath)
-      if (config?.mcpServers?.[component.name]) {
-        const serverConfig = config.mcpServers[component.name]
+      const serverConfig = config?.mcpServers?.[component.name]
+      if (serverConfig) {
         metadata.entryPoints = [serverConfig.command]
         if (serverConfig.env) {
           metadata.permissions = Object.keys(serverConfig.env).map((key) => `env:${key}`)
@@ -191,11 +191,11 @@ export class MCPAnalyzer extends BasePlatformAnalyzer {
 
   private resolveServerPath(command: string): string {
     if (command.startsWith('node ')) {
-      return command.substring(5).split(' ')[0]
+      return command.substring(5).split(' ')[0] ?? command
     }
     if (command.startsWith('python ') || command.startsWith('python3 ')) {
-      return command.split(' ')[1] || command
+      return command.split(' ')[1] ?? command
     }
-    return command.split(' ')[0]
+    return command.split(' ')[0] ?? command
   }
 }

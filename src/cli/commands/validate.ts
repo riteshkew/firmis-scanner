@@ -1,13 +1,13 @@
 import { Command } from 'commander'
 import { validateCustomRules } from '../../rules/loader.js'
-import { printHeader, printError, printInfo } from '../utils/output.js'
+import { printHeader, printError } from '../utils/output.js'
 import chalk from 'chalk'
 
 interface ValidateOptions {
   strict?: boolean
 }
 
-async function action(rulePaths: string[], options: ValidateOptions): Promise<void> {
+async function action(rulePaths: string[], _options: ValidateOptions): Promise<void> {
   printHeader()
 
   if (rulePaths.length === 0) {

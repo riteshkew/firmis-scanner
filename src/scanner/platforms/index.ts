@@ -26,6 +26,14 @@ const PLATFORM_ANALYZERS: Record<PlatformType, new () => BasePlatformAnalyzer> =
   custom: ClaudeSkillsAnalyzer,
 }
 
+export function getPlatformAnalyzer(platform: PlatformType): BasePlatformAnalyzer {
+  return PlatformRegistry.getAnalyzer(platform)
+}
+
+export function getAllPlatformAnalyzers(): BasePlatformAnalyzer[] {
+  return PlatformRegistry.getAllAnalyzers()
+}
+
 export class PlatformRegistry {
   private static analyzers = new Map<PlatformType, BasePlatformAnalyzer>()
 

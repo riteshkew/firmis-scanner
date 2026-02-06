@@ -19,13 +19,7 @@ interface AutoGPTPluginManifest {
   }>
 }
 
-interface PackageJson {
-  name?: string
-  version?: string
-  author?: string
-  description?: string
-  dependencies?: Record<string, string>
-}
+// PackageJson interface not needed for AutoGPT - uses Python-based requirements.txt
 
 export class AutoGPTAnalyzer extends BasePlatformAnalyzer {
   readonly platformType = 'autogpt' as const
@@ -137,8 +131,8 @@ export class AutoGPTAnalyzer extends BasePlatformAnalyzer {
         try {
           const content = await readFile(initPath, 'utf-8')
           const docstringMatch = content.match(/"""([\s\S]*?)"""/)
-          if (docstringMatch) {
-            const firstLine = docstringMatch[1].split('\n')[0].trim()
+          if (docstringMatch?.[1]) {
+            const firstLine = docstringMatch[1].split('\n')[0]?.trim() ?? ''
             metadata.description = firstLine.substring(0, 200)
           }
         } catch {
@@ -155,7 +149,7 @@ export class AutoGPTAnalyzer extends BasePlatformAnalyzer {
           .split('\n')
           .map((line) => line.trim())
           .filter((line) => line && !line.startsWith('#'))
-          .map((line) => line.split('==')[0].split('>=')[0].split('<=')[0].trim())
+          .map((line) => line.split('==')[0]?.split('>=')[0]?.split('<=')[0]?.trim() ?? line)
       } catch {
         // Ignore
       }

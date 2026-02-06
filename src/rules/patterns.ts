@@ -4,7 +4,7 @@ import type {
   APICallPattern,
   PatternMatch,
 } from '../types/index.js'
-import { parse, type ParseResult } from '@babel/parser'
+import type { ParseResult } from '@babel/parser'
 import traverse, { type NodePath } from '@babel/traverse'
 import type * as t from '@babel/types'
 
@@ -121,7 +121,7 @@ function matchStringLiteral(
 function matchFileAccess(
   pattern: string,
   content: string,
-  ast: ParseResult<t.File> | null,
+  _ast: ParseResult<t.File> | null,
   description: string,
   weight: number
 ): PatternMatch[] {
@@ -290,7 +290,7 @@ function matchImport(
             path.node.arguments.length > 0
           ) {
             const arg = path.node.arguments[0]
-            if (arg.type === 'StringLiteral' && arg.value.includes(pattern)) {
+            if (arg && arg.type === 'StringLiteral' && arg.value.includes(pattern)) {
               matches.push({
                 patternType: 'import',
                 description,
@@ -353,7 +353,7 @@ function matchNodeProperties(
   if (!properties) return true
 
   for (const [key, value] of Object.entries(properties)) {
-    const nodeValue = (node as Record<string, unknown>)[key]
+    const nodeValue = (node as unknown as Record<string, unknown>)[key]
 
     if (typeof value === 'object' && value !== null) {
       if (typeof nodeValue !== 'object' || nodeValue === null) {
@@ -376,7 +376,8 @@ function getLineAndColumn(
 ): { line: number; column: number } {
   const lines = content.slice(0, index).split('\n')
   const line = lines.length
-  const column = lines[lines.length - 1].length
+  const lastLine = lines[lines.length - 1]
+  const column = lastLine?.length ?? 0
 
   return { line, column }
 }

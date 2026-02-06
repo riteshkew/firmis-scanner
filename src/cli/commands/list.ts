@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import { PlatformDiscovery } from '../../scanner/discovery.js'
 import { printHeader, formatPlatformList } from '../utils/output.js'
 import { createSpinner } from '../utils/progress.js'
-import type { DetectedPlatform } from '../../types/index.js'
+// DetectedPlatform type is implicit from discovery.discoverAll()
 
 interface ListOptions {
   json?: boolean

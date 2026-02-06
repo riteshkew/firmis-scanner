@@ -5,7 +5,14 @@ import { JsonReporter } from './json.js'
 import { SarifReporter } from './sarif.js'
 import { HtmlReporter } from './html.js'
 
-export { Reporter, FileReporter } from './base.js'
+export type { Reporter, FileReporter } from './base.js'
+
+export function getReporter(format: OutputFormat, options?: Partial<ReporterFactoryOptions>): Reporter {
+  return ReporterFactory.create({
+    format,
+    ...options,
+  } as ReporterFactoryOptions)
+}
 export { TerminalReporter } from './terminal.js'
 export { JsonReporter } from './json.js'
 export { SarifReporter } from './sarif.js'

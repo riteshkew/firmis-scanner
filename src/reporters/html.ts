@@ -487,6 +487,6 @@ export class HtmlReporter implements FileReporter {
       '"': '&quot;',
       "'": '&#039;',
     }
-    return text.replace(/[&<>"']/g, (char) => map[char])
+    return text.replace(/[&<>"']/g, (char) => map[char] ?? char)
   }
 }

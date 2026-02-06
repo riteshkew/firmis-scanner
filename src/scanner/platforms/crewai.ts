@@ -1,4 +1,4 @@
-import { readdir } from 'node:fs/promises'
+// readdir not needed - using fast-glob
 import { join } from 'node:path'
 import fg from 'fast-glob'
 import type {
@@ -10,13 +10,7 @@ import type {
 } from '../../types/index.js'
 import { BasePlatformAnalyzer } from './base.js'
 
-interface PackageJson {
-  name?: string
-  version?: string
-  author?: string
-  description?: string
-  dependencies?: Record<string, string>
-}
+// PackageJson interface not needed for CrewAI - uses pyproject.toml
 
 export class CrewAIAnalyzer extends BasePlatformAnalyzer {
   readonly platformType = 'crewai' as const
@@ -64,7 +58,7 @@ export class CrewAIAnalyzer extends BasePlatformAnalyzer {
       return components
     }
 
-    const agentsConfigPath = await this.findAgentsConfig(basePath)
+    // agentsConfigPath used in getMetadata
     const crewName = basePath.split('/').pop() || 'crew'
 
     components.push({
@@ -185,12 +179,15 @@ export class CrewAIAnalyzer extends BasePlatformAnalyzer {
 
       const dependencies: string[] = []
       const depsMatch = content.match(/dependencies\s*=\s*\[([\s\S]*?)\]/)
-      if (depsMatch) {
+      if (depsMatch?.[1]) {
         const depsStr = depsMatch[1]
         const depMatches = depsStr.matchAll(/"([^"]+)"/g)
         for (const match of depMatches) {
-          const dep = match[1].split('==')[0].split('>=')[0].split('<=')[0].trim()
-          dependencies.push(dep)
+          const depValue = match[1]
+          if (depValue) {
+            const dep = depValue.split('==')[0]?.split('>=')[0]?.split('<=')[0]?.trim() ?? depValue
+            dependencies.push(dep)
+          }
         }
       }
 
@@ -212,7 +209,7 @@ export class CrewAIAnalyzer extends BasePlatformAnalyzer {
         .split('\n')
         .map((line) => line.trim())
         .filter((line) => line && !line.startsWith('#'))
-        .map((line) => line.split('==')[0].split('>=')[0].split('<=')[0].trim())
+        .map((line) => line.split('==')[0]?.split('>=')[0]?.split('<=')[0]?.trim() ?? line)
     } catch {
       return []
     }

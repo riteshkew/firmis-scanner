@@ -8,10 +8,8 @@ import type {
 } from '../types/index.js'
 
 export class TerminalReporter implements Reporter {
-  private readonly verbose: boolean
-
-  constructor(verbose = false) {
-    this.verbose = verbose
+  constructor(_verbose = false) {
+    // verbose option reserved for future use
   }
 
   async report(result: ScanResult): Promise<void> {

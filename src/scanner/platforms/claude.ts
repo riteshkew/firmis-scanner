@@ -1,5 +1,5 @@
 import { readdir, readFile } from 'node:fs/promises'
-import { join, basename } from 'node:path'
+import { join } from 'node:path'
 import fg from 'fast-glob'
 import type {
   DiscoveredComponent,
@@ -115,11 +115,11 @@ export class ClaudeSkillsAnalyzer extends BasePlatformAnalyzer {
     if (await this.fileExists(packageJsonPath)) {
       const pkg = await this.readJSON<Record<string, unknown>>(packageJsonPath)
       if (pkg) {
-        metadata.version = metadata.version || (pkg.version as string)
-        metadata.author = metadata.author || (pkg.author as string)
-        metadata.description = metadata.description || (pkg.description as string)
-        if (pkg.dependencies) {
-          metadata.dependencies = Object.keys(pkg.dependencies as Record<string, string>)
+        metadata.version = metadata.version || (pkg['version'] as string)
+        metadata.author = metadata.author || (pkg['author'] as string)
+        metadata.description = metadata.description || (pkg['description'] as string)
+        if (pkg['dependencies']) {
+          metadata.dependencies = Object.keys(pkg['dependencies'] as Record<string, string>)
         }
       }
     }

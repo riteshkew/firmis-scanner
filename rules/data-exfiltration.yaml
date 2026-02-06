@@ -13,7 +13,7 @@ rules:
         weight: 85
         description: Request to suspicious TLD
       - type: regex
-        pattern: 'fetch\(["\'][^"\']*\.(tk|ml|ga|cf|gq)["\']'
+        pattern: "fetch\\([\"'][^\"']*\\.(tk|ml|ga|cf|gq)[\"']"
         weight: 80
         description: Fetch to suspicious domain
       - type: regex

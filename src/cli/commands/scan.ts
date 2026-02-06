@@ -31,7 +31,7 @@ interface ScanOptions {
   concurrency?: string
 }
 
-async function action(targetPath: string | undefined, options: ScanOptions): Promise<void> {
+async function action(_targetPath: string | undefined, options: ScanOptions): Promise<void> {
   const config = buildConfig(options)
 
   if (config.output === 'terminal') {
@@ -66,7 +66,7 @@ async function action(targetPath: string | undefined, options: ScanOptions): Pro
 
     if (config.output === 'terminal') {
       const detectedPlatforms = result.platforms.map((p) => ({
-        platformType: p.platform,
+        type: p.platform,
         name: formatPlatformName(p.platform),
         basePath: p.basePath,
         componentCount: p.components.length,
@@ -93,7 +93,7 @@ async function action(targetPath: string | undefined, options: ScanOptions): Pro
 
       await reporter.report(result)
 
-      if (config.outputFile && config.output !== 'terminal') {
+      if (config.outputFile) {
         console.log(`Report saved to ${config.outputFile}`)
       }
     }

@@ -108,7 +108,7 @@ export class RuleEngine {
   private async matchRule(
     rule: Rule,
     content: string,
-    filePath: string,
+    _filePath: string,
     ast: ParseResult<t.File> | null
   ): Promise<RuleMatch | null> {
     const matches: PatternMatch[] = []
@@ -151,32 +151,34 @@ export class RuleEngine {
       locationMap.get(key)!.push(match)
     }
 
-    return Array.from(locationMap.entries()).map(([, groupedMatches]) => {
-      const primary = groupedMatches[0]
+    return Array.from(locationMap.entries())
+      .filter(([, groupedMatches]) => groupedMatches.length > 0)
+      .map(([, groupedMatches]) => {
+        const primary = groupedMatches[0]!
 
-      return {
-        id: `${rule.id}-${filePath.replace(/[^a-zA-Z0-9]/g, '-')}-${primary.line}`,
-        ruleId: rule.id,
-        category: rule.category,
-        severity: rule.severity,
-        message: rule.description,
-        evidence: groupedMatches.map((m) => ({
-          type: mapPatternTypeToEvidenceType(m.patternType),
-          description: m.description,
-          snippet: m.snippet,
-          line: m.line,
-        })),
-        location: {
-          file: filePath,
-          line: primary.line,
-          column: primary.column,
-          endLine: primary.endLine,
-          endColumn: primary.endColumn,
-        },
-        confidence: ruleMatch.confidence,
-        remediation: rule.remediation,
-      }
-    })
+        return {
+          id: `${rule.id}-${filePath.replace(/[^a-zA-Z0-9]/g, '-')}-${primary.line}`,
+          ruleId: rule.id,
+          category: rule.category,
+          severity: rule.severity,
+          message: rule.description,
+          evidence: groupedMatches.map((m) => ({
+            type: mapPatternTypeToEvidenceType(m.patternType),
+            description: m.description,
+            snippet: m.snippet,
+            line: m.line,
+          })),
+          location: {
+            file: filePath,
+            line: primary.line,
+            column: primary.column,
+            endLine: primary.endLine,
+            endColumn: primary.endColumn,
+          },
+          confidence: ruleMatch.confidence,
+          remediation: rule.remediation,
+        }
+      })
   }
 }
 

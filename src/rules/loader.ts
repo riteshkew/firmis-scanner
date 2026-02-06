@@ -27,6 +27,7 @@ export async function loadRules(customPath?: string): Promise<Rule[]> {
         const fileRules = await loadRuleFile(filePath)
         rules.push(...fileRules)
       } catch (error) {
+        console.error(`Failed to load rule file ${file}:`, error)
         throw new RuleError(
           `Failed to load rule file ${file}: ${error instanceof Error ? error.message : String(error)}`,
           'unknown'
@@ -36,6 +37,7 @@ export async function loadRules(customPath?: string): Promise<Rule[]> {
 
     return rules
   } catch (error) {
+    console.error(`Failed to load rules from ${rulePath}:`, error)
     if (customPath) {
       throw new RuleError(
         `Failed to read rules from ${rulePath}: ${error instanceof Error ? error.message : String(error)}`,

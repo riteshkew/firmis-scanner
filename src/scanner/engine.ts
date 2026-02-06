@@ -55,7 +55,7 @@ export class ScanEngine {
         platformResults.push(platformResult)
 
         if (this.config.failFast && this.hasCriticalThreat(platformResult)) {
-          throw new EarlyExitError('Critical threat detected, stopping scan')
+          throw new EarlyExitError('Critical threat detected, stopping scan', platformResult.threats)
         }
       } catch (error) {
         if (error instanceof EarlyExitError) {
@@ -107,7 +107,7 @@ export class ScanEngine {
         allThreats.push(...componentResult.threats)
 
         if (this.config.failFast && componentResult.riskLevel === 'critical') {
-          throw new EarlyExitError('Critical threat in component, stopping scan')
+          throw new EarlyExitError('Critical threat in component, stopping scan', componentResult.threats)
         }
       } catch (error) {
         if (error instanceof EarlyExitError) {

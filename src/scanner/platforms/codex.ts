@@ -115,11 +115,11 @@ export class CodexAnalyzer extends BasePlatformAnalyzer {
     if (await this.fileExists(packageJsonPath)) {
       const pkg = await this.readJSON<Record<string, unknown>>(packageJsonPath)
       if (pkg) {
-        metadata.version = metadata.version || (pkg.version as string)
-        metadata.author = metadata.author || (pkg.author as string)
-        metadata.description = metadata.description || (pkg.description as string)
-        if (pkg.dependencies) {
-          metadata.dependencies = Object.keys(pkg.dependencies as Record<string, string>)
+        metadata.version = metadata.version || (pkg['version'] as string)
+        metadata.author = metadata.author || (pkg['author'] as string)
+        metadata.description = metadata.description || (pkg['description'] as string)
+        if (pkg['dependencies']) {
+          metadata.dependencies = Object.keys(pkg['dependencies'] as Record<string, string>)
         }
       }
     }
@@ -132,7 +132,7 @@ export class CodexAnalyzer extends BasePlatformAnalyzer {
           .split('\n')
           .map((line) => line.trim())
           .filter((line) => line && !line.startsWith('#'))
-          .map((line) => line.split('==')[0].split('>=')[0].split('<=')[0].trim())
+          .map((line) => line.split('==')[0]?.split('>=')[0]?.split('<=')[0]?.trim() ?? line)
       } catch {
         // Ignore
       }
