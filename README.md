@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/firmis-scanner"><img src="https://img.shields.io/npm/v/firmis-scanner.svg" alt="npm version"></a>
-  <a href="https://github.com/firmis-labs/firmis-scanner/actions"><img src="https://github.com/firmis-labs/firmis-scanner/workflows/CI/badge.svg" alt="CI Status"></a>
+  <a href="https://github.com/riteshkew/firmis-scanner/actions"><img src="https://github.com/riteshkew/firmis-scanner/workflows/CI/badge.svg" alt="CI Status"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
   <a href="https://firmislabs.com"><img src="https://img.shields.io/badge/Firmis-Labs-violet" alt="Firmis Labs"></a>
 </p>
@@ -243,7 +243,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ```bash
 # Clone the repository
-git clone https://github.com/firmis-labs/firmis-scanner.git
+git clone https://github.com/riteshkew/firmis-scanner.git
 cd firmis-scanner
 
 # Install dependencies

@@ -51,10 +51,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/firmis-labs/firmis-scanner.git"
+    "url": "git+https://github.com/riteshkew/firmis-scanner.git"
   },
   "bugs": {
-    "url": "https://github.com/firmis-labs/firmis-scanner/issues"
+    "url": "https://github.com/riteshkew/firmis-scanner/issues"
   },
   "homepage": "https://firmislabs.com",
   "engines": {
