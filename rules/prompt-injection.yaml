@@ -221,8 +221,8 @@ rules:
         weight: 90
         description: HTML img with event handler
       - type: regex
-        pattern: "<script[^>]*>"
+        pattern: "<script(?!\\s+setup)[^>]*src[^>]*>"
         weight: 95
-        description: Script tag injection
+        description: Script tag with external source
     remediation: |
       Sanitize markdown and HTML content. These may execute malicious code.

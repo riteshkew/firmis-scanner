@@ -73,9 +73,9 @@ rules:
         weight: 90
         description: "Wildcard version (*) — accepts any version including malicious"
       - type: regex
-        pattern: '"[^"]+"\s*:\s*">='
+        pattern: '"(dependencies|devDependencies)"[\s\S]*?"[^"]+"\s*:\s*">='
         weight: 60
-        description: "Open-ended version range (>=) — no upper bound"
+        description: "Open-ended version range (>=) in dependencies — no upper bound"
       - type: regex
         pattern: '"[^"]+"\s*:\s*"latest"'
         weight: 85
@@ -133,7 +133,7 @@ rules:
         weight: 95
         description: "jeIlyfish — typosquat of jellyfish (uses capital I, steals SSH keys)"
       - type: regex
-        pattern: '\b(requessts|requets|request[sz]|reaquests)\b'
+        pattern: '\b(requessts|requets|requestz|reaquests)\b'
         weight: 90
         description: "Typosquat of requests (Python HTTP library)"
     remediation: |

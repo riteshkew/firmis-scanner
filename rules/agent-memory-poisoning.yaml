@@ -111,8 +111,8 @@ rules:
         weight: 75
         description: "Python time.sleep > 30 seconds — potential deferred action"
       - type: regex
-        pattern: '(0|\\*)\s+(0|\\*)\s+(\\*)\s+(\\*)\s+(\\*)'
+        pattern: '["''](0|\*)\s+(0|\*)\s+(\*)\s+(\*)\s+(\*)["\x27]'
         weight: 70
-        description: "Cron-style pattern — scheduled execution"
+        description: "Cron-style pattern in string literal — scheduled execution"
     remediation: |
       Long time delays in AI agent skills are suspicious. Legitimate skills should execute promptly, not schedule deferred actions.
