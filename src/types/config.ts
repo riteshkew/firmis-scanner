@@ -57,6 +57,15 @@ export interface FirmisConfig {
 
   /** Stop on first critical threat */
   failFast?: boolean
+
+  /** Suppress terminal output, only exit code (for CI/CD) */
+  quiet?: boolean
+
+  /** Rule IDs to skip (comma-separated) */
+  ignoreRules?: string[]
+
+  /** Exit with code 1 only if threats at this severity or above */
+  failOnSeverity?: SeverityLevel
 }
 
 /**

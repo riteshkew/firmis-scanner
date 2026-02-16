@@ -18,6 +18,7 @@ import type {
   SeverityLevel,
   PlatformType,
 } from '../../types/index.js'
+import { meetsMinimumSeverity } from '../../types/index.js'
 
 interface ScanOptions {
   platform?: string
@@ -30,18 +31,21 @@ interface ScanOptions {
   output?: string
   verbose?: boolean
   concurrency?: string
+  quiet?: boolean
+  ignore?: string
+  failOn?: string
 }
 
 async function action(targetPath: string | undefined, options: ScanOptions): Promise<void> {
   const config = buildConfig(options, targetPath)
 
-  if (config.output === 'terminal') {
+  if (config.output === 'terminal' && !config.quiet) {
     printHeader()
   }
 
   const scanEngine = new ScanEngine(config)
 
-  const spinner = config.output === 'terminal' ? createSpinner('Loading rules...') : null
+  const spinner = (config.output === 'terminal' && !config.quiet) ? createSpinner('Loading rules...') : null
   spinner?.start()
 
   try {
@@ -59,13 +63,13 @@ async function action(targetPath: string | undefined, options: ScanOptions): Pro
     spinner?.stop()
 
     if (result.platforms.length === 0) {
-      if (config.output === 'terminal') {
+      if (config.output === 'terminal' && !config.quiet) {
         printError('No AI platforms detected. Try specifying a path or installing AI tools.')
       }
       process.exit(1)
     }
 
-    if (config.output === 'terminal') {
+    if (config.output === 'terminal' && !config.quiet) {
       const detectedPlatforms = result.platforms.map((p) => ({
         type: p.platform,
         name: formatPlatformName(p.platform),
@@ -84,7 +88,7 @@ async function action(targetPath: string | undefined, options: ScanOptions): Pro
       }
 
       printSummary(result)
-    } else {
+    } else if (config.output !== 'terminal') {
       const reporter = ReporterFactory.create({
         format: config.output,
         outputFile: config.outputFile,
@@ -94,12 +98,22 @@ async function action(targetPath: string | undefined, options: ScanOptions): Pro
 
       await reporter.report(result)
 
-      if (config.outputFile) {
+      if (config.outputFile && !config.quiet) {
         console.log(`Report saved to ${config.outputFile}`)
       }
     }
 
-    if (result.summary.threatsFound > 0) {
+    // Handle exit code based on --fail-on severity
+    if (config.failOnSeverity) {
+      const hasFailure = result.platforms.some(p =>
+        p.components.some(c =>
+          c.threats.some(t => meetsMinimumSeverity(t.severity, config.failOnSeverity!))
+        )
+      )
+      if (hasFailure) {
+        process.exit(1)
+      }
+    } else if (result.summary.threatsFound > 0) {
       process.exit(1)
     }
   } catch (error) {
@@ -123,6 +137,9 @@ function buildConfig(options: ScanOptions, targetPath?: string): FirmisConfig {
     outputFile: options.output,
     verbose: options.verbose ?? false,
     concurrency: parseInt(options.concurrency ?? '4', 10),
+    quiet: options.quiet ?? false,
+    ignoreRules: options.ignore ? options.ignore.split(',').map((s: string) => s.trim()) : undefined,
+    failOnSeverity: options.failOn as SeverityLevel | undefined,
   }
 }
 
@@ -139,4 +156,7 @@ export const scanCommand = new Command('scan')
   .option('--output <file>', 'Output file path (for JSON/SARIF/HTML)')
   .option('--verbose', 'Enable verbose logging', false)
   .option('--concurrency <n>', 'Number of parallel workers', '4')
+  .option('--quiet', 'Suppress terminal output, only exit code', false)
+  .option('--ignore <rules>', 'Skip specific rule IDs (comma-separated)')
+  .option('--fail-on <severity>', 'Exit non-zero only for this severity or above')
   .action(action)
