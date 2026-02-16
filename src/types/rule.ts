@@ -14,6 +14,11 @@ export type PatternType =
   | 'import'
 
 /**
+ * Context where a pattern match occurred
+ */
+export type MatchContext = 'code_execution' | 'documentation' | 'string_literal' | 'config'
+
+/**
  * AST node pattern for matching
  */
 export interface ASTPattern {
@@ -98,6 +103,7 @@ export interface PatternMatch {
   endLine?: number
   endColumn?: number
   weight: number
+  matchContext?: MatchContext
 }
 
 /**

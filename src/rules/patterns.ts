@@ -3,10 +3,34 @@ import type {
   ASTPattern,
   APICallPattern,
   PatternMatch,
+  MatchContext,
 } from '../types/index.js'
 import type { ParseResult } from '@babel/parser'
 import traverse, { type NodePath } from '@babel/traverse'
 import type * as t from '@babel/types'
+
+export function detectMatchContext(filePath: string): MatchContext {
+  const lower = filePath.toLowerCase()
+
+  // Config files
+  if (lower.endsWith('.json') || lower.endsWith('.yaml') || lower.endsWith('.yml') ||
+      lower.endsWith('.toml') || lower.endsWith('.env') || lower.endsWith('.ini')) {
+    return 'config'
+  }
+
+  // Documentation files (NOT SKILL.md)
+  if (!lower.endsWith('/skill.md')) {
+    if (lower.endsWith('.md') || lower.endsWith('.mdx') || lower.endsWith('.txt') || lower.endsWith('.rst')) {
+      return 'documentation'
+    }
+    if (lower.includes('/docs/') || lower.includes('/doc/') || lower.includes('/readme') || lower.includes('/examples/')) {
+      return 'documentation'
+    }
+  }
+
+  // Code execution
+  return 'code_execution'
+}
 
 export async function matchPattern(
   pattern: RulePattern,

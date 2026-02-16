@@ -7,30 +7,20 @@ import type {
   SeverityLevel,
   ThreatCategory,
   ConfidenceTier,
+  MatchContext,
 } from '../types/index.js'
 import type { ParseResult } from '@babel/parser'
 import type * as t from '@babel/types'
 import { loadRules } from './loader.js'
-import { matchPattern } from './patterns.js'
+import { matchPattern, detectMatchContext } from './patterns.js'
 import { meetsMinimumSeverity } from '../types/index.js'
 
-/** File extensions considered documentation (reduced weight) */
-const DOC_EXTENSIONS = ['.md', '.mdx', '.txt', '.rst']
-
-/** Path segments that indicate documentation context */
-const DOC_PATH_SEGMENTS = ['/docs/', '/doc/', '/README', '/CHANGELOG', '/examples/']
-
-function isDocumentationFile(filePath: string): boolean {
-  const lowerPath = filePath.toLowerCase()
-  // SKILL.md is NOT documentation — it's a skill definition
-  if (lowerPath.endsWith('/skill.md')) return false
-  for (const ext of DOC_EXTENSIONS) {
-    if (lowerPath.endsWith(ext)) return true
-  }
-  for (const seg of DOC_PATH_SEGMENTS) {
-    if (lowerPath.includes(seg.toLowerCase())) return true
-  }
-  return false
+/** Context-based confidence multipliers */
+const CONTEXT_MULTIPLIERS: Record<MatchContext, number> = {
+  code_execution: 1.0,
+  config: 1.0,
+  string_literal: 0.7,
+  documentation: 0.3,
 }
 
 function computeConfidenceTier(
@@ -156,6 +146,10 @@ export class RuleEngine {
     let maxSinglePatternWeight = 0
     let matchedPatternCount = 0
 
+    // Detect file context once
+    const context = detectMatchContext(filePath)
+    const contextMultiplier = CONTEXT_MULTIPLIERS[context]
+
     for (const pattern of rule.patterns) {
       totalWeight += pattern.weight
 
@@ -163,6 +157,12 @@ export class RuleEngine {
       if (patternMatches.length > 0) {
         matchedWeight += pattern.weight
         matchedPatternCount++
+
+        // Tag each match with context
+        for (const match of patternMatches) {
+          match.matchContext = context
+        }
+
         matches.push(...patternMatches)
         if (pattern.weight > maxSinglePatternWeight) {
           maxSinglePatternWeight = pattern.weight
@@ -171,10 +171,6 @@ export class RuleEngine {
     }
 
     if (totalWeight === 0 || matches.length === 0) return null
-
-    // Context weighting: reduce effective weight for documentation files
-    const isDoc = isDocumentationFile(filePath)
-    const contextMultiplier = isDoc ? 0.3 : 1.0
 
     const ratioConfidence = Math.round((matchedWeight / totalWeight) * 100)
     const rawConfidence = Math.max(ratioConfidence, maxSinglePatternWeight)

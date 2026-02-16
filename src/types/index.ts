@@ -38,6 +38,7 @@ export type {
 // Rule types
 export type {
   PatternType,
+  MatchContext,
   ASTPattern,
   APICallPattern,
   ArgumentPattern,
