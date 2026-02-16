@@ -1,0 +1,68 @@
+# Firmis Scanner Ignore File
+#
+# This file allows you to suppress specific findings from the Firmis Scanner.
+# You can place this file in:
+#   1. Project root (.firmisignore)
+#   2. Home directory (~/.firmis/.firmisignore)
+#
+# Format:
+#   - Lines starting with # are comments
+#   - Blank lines are ignored
+#   - Rule IDs (e.g., exfil-001, sus-006)
+#   - File patterns using glob syntax (e.g., **/docs/**, *.md)
+#   - Rule:pattern combos (e.g., sus-006:**/crypto/**)
+
+# ============================================================
+# Examples
+# ============================================================
+
+# Ignore specific rules globally
+# exfil-001
+# sus-006
+
+# Ignore all findings in documentation
+# **/docs/**
+# **/README.md
+# **/*.md
+
+# Ignore all findings in test files
+# **/test/**
+# **/__tests__/**
+# **/*.test.ts
+# **/*.spec.ts
+
+# Ignore all findings in examples
+# **/examples/**
+# **/samples/**
+
+# Ignore specific rules in specific locations
+# sus-006:**/crypto-skills/**      # Allow crypto patterns in crypto skills
+# cred-004:**/test/**               # Allow test credentials in test files
+# exfil-001:**/examples/**          # Allow network calls in examples
+
+# Ignore all findings in vendored/third-party code
+# **/node_modules/**
+# **/vendor/**
+# **/third-party/**
+
+# ============================================================
+# Common Use Cases
+# ============================================================
+
+# False Positive: Legitimate crypto operations in wallet skills
+# sus-006:**/wallet/**
+# sus-007:**/wallet/**
+
+# False Positive: Test files with mock credentials
+# cred-001:**/test/**
+# cred-002:**/test/**
+# cred-003:**/test/**
+# cred-004:**/test/**
+
+# False Positive: Documentation with example API keys
+# cred-001:**/docs/**
+# cred-002:**/docs/**
+
+# False Positive: Network calls in legitimate API integration skills
+# exfil-001:**/api-integrations/**
+# sus-003:**/api-integrations/**
