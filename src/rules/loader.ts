@@ -3,8 +3,9 @@ import { join, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { load as yamlLoad, JSON_SCHEMA } from 'js-yaml'
-import type { Rule, RuleFile } from '../types/index.js'
+import type { Rule, RuleFile, PatternType } from '../types/index.js'
 import { RuleError } from '../types/index.js'
+import { validateRegexPattern } from './patterns.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -89,6 +90,19 @@ function validateRule(rule: Rule, filePath: string, index: number): Rule {
         `Pattern weight in rule ${rule.id} must be between 0 and 100`,
         rule.id
       )
+    }
+  }
+
+  // Validate regex patterns compile correctly
+  const regexTypes: PatternType[] = ['regex', 'file-access', 'network']
+  for (const pattern of rule.patterns) {
+    if (regexTypes.includes(pattern.type) && typeof pattern.pattern === 'string') {
+      const error = validateRegexPattern(pattern.pattern)
+      if (error) {
+        console.warn(
+          `[firmis] Warning: Rule ${rule.id} has invalid regex pattern "${pattern.pattern}": ${error}`
+        )
+      }
     }
   }
 

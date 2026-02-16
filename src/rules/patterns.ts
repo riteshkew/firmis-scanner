@@ -98,10 +98,38 @@ function matchRegex(
       })
     }
   } catch (error) {
+    if (typeof process !== 'undefined' && process.env['FIRMIS_VERBOSE'] === '1') {
+      console.warn(`[firmis] Regex compile failed for pattern: ${pattern} — ${error instanceof Error ? error.message : String(error)}`)
+    }
     return []
   }
 
   return matches
+}
+
+/**
+ * Pre-compile a regex pattern to check validity.
+ * Returns an error message if invalid, null if valid.
+ */
+export function validateRegexPattern(pattern: string): string | null {
+  try {
+    let flags = 'gm'
+    let cleanPattern = pattern
+    const inlineFlagMatch = pattern.match(/^\(\?([gimsuy]+)\)/)
+    if (inlineFlagMatch && inlineFlagMatch[1]) {
+      const inlineFlags = inlineFlagMatch[1]
+      cleanPattern = pattern.slice(inlineFlagMatch[0].length)
+      for (const flag of inlineFlags) {
+        if (!flags.includes(flag)) {
+          flags += flag
+        }
+      }
+    }
+    new RegExp(cleanPattern, flags)
+    return null
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error)
+  }
 }
 
 function matchStringLiteral(
