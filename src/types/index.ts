@@ -20,9 +20,10 @@ export type {
   PlatformScanResult,
   ScanSummary,
   ScanResult,
+  SecurityGrade,
 } from './scan.js'
 
-export { createEmptySummary, calculateRiskLevel } from './scan.js'
+export { createEmptySummary, calculateRiskLevel, computeSecurityGrade } from './scan.js'
 
 // Platform types
 export type {

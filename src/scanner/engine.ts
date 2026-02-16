@@ -9,7 +9,7 @@ import type {
   DetectedPlatform,
   ScanSummary,
 } from '../types/index.js'
-import { createEmptySummary, calculateRiskLevel, EarlyExitError } from '../types/index.js'
+import { createEmptySummary, calculateRiskLevel, EarlyExitError, computeSecurityGrade } from '../types/index.js'
 import { RuleEngine } from '../rules/index.js'
 import { PlatformRegistry } from './platforms/index.js'
 import { PlatformDiscovery } from './discovery.js'
@@ -93,6 +93,7 @@ export class ScanEngine {
       duration,
       platforms: platformResults,
       summary,
+      score: computeSecurityGrade(summary),
     }
   }
 

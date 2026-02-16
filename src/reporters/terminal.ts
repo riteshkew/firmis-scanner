@@ -5,6 +5,7 @@ import type {
   PlatformScanResult,
   Threat,
   SeverityLevel,
+  SecurityGrade,
 } from '../types/index.js'
 
 export class TerminalReporter implements Reporter {
@@ -22,7 +23,7 @@ export class TerminalReporter implements Reporter {
 
   private printHeader(): void {
     console.log()
-    console.log(chalk.bold.cyan('  Firmis Scanner v1.0.0'))
+    console.log(chalk.bold.cyan('  Firmis Scanner v1.1.0'))
     console.log()
   }
 
@@ -87,7 +88,13 @@ export class TerminalReporter implements Reporter {
   }
 
   private printSummary(result: ScanResult): void {
-    const { summary } = result
+    const { summary, score } = result
+
+    // Display security grade
+    const gradeColor = this.getGradeColor(score)
+    console.log(gradeColor(`  Security Grade: ${score}`))
+    console.log()
+
     const icon = summary.threatsFound > 0 ? chalk.yellow('⚠') : chalk.green('✓')
 
     console.log(chalk.bold(`  ${icon} SCAN COMPLETE`))
@@ -103,6 +110,21 @@ export class TerminalReporter implements Reporter {
     console.log()
     console.log(chalk.dim(`    Duration: ${result.duration}ms`))
     console.log()
+  }
+
+  private getGradeColor(grade: SecurityGrade): typeof chalk {
+    switch (grade) {
+      case 'A':
+        return chalk.green.bold
+      case 'B':
+        return chalk.green
+      case 'C':
+        return chalk.yellow
+      case 'D':
+        return chalk.red
+      case 'F':
+        return chalk.red.bold
+    }
   }
 
   private formatSeverityBreakdown(
