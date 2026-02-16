@@ -13,7 +13,7 @@ rules:
         weight: 90
         description: Eval with decoding
       - type: regex
-        pattern: "\\\\x[0-9a-fA-F]{2}(?:\\\\x[0-9a-fA-F]{2}){10,}"
+        pattern: "\\x[0-9a-fA-F]{2}(?:\\x[0-9a-fA-F]{2}){10,}"
         weight: 85
         description: Extensive hex encoding
       - type: regex
@@ -113,7 +113,7 @@ rules:
         weight: 70
         description: Shell profile modification
       - type: regex
-        pattern: "HKEY.*\\\\Run|HKLM.*\\\\CurrentVersion\\\\Run"
+        pattern: "HKEY.*\\Run|HKLM.*\\CurrentVersion\\Run"
         weight: 90
         description: Windows registry run key
       - type: regex

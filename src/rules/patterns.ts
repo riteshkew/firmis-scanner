@@ -67,7 +67,21 @@ function matchRegex(
   const matches: PatternMatch[] = []
 
   try {
-    const regex = new RegExp(pattern, 'gm')
+    // Handle inline flags like (?i) that JavaScript doesn't support
+    let flags = 'gm'
+    let cleanPattern = pattern
+    const inlineFlagMatch = pattern.match(/^\(\?([gimsuy]+)\)/)
+    if (inlineFlagMatch && inlineFlagMatch[1]) {
+      const inlineFlags = inlineFlagMatch[1]
+      cleanPattern = pattern.slice(inlineFlagMatch[0].length)
+      for (const flag of inlineFlags) {
+        if (!flags.includes(flag)) {
+          flags += flag
+        }
+      }
+    }
+
+    const regex = new RegExp(cleanPattern, flags)
     const lines = content.split('\n')
 
     let match: RegExpExecArray | null

@@ -114,6 +114,7 @@ export class RuleEngine {
     const matches: PatternMatch[] = []
     let totalWeight = 0
     let matchedWeight = 0
+    let maxSinglePatternWeight = 0
 
     for (const pattern of rule.patterns) {
       totalWeight += pattern.weight
@@ -122,12 +123,20 @@ export class RuleEngine {
       if (patternMatches.length > 0) {
         matchedWeight += pattern.weight
         matches.push(...patternMatches)
+        if (pattern.weight > maxSinglePatternWeight) {
+          maxSinglePatternWeight = pattern.weight
+        }
       }
     }
 
     if (totalWeight === 0) return null
 
-    const confidence = Math.round((matchedWeight / totalWeight) * 100)
+    // Use a hybrid confidence model:
+    // 1. Ratio-based: matched weight / total weight (original)
+    // 2. Max-pattern: if any single pattern has weight >= threshold, it's a match
+    // Final confidence = max of both approaches
+    const ratioConfidence = Math.round((matchedWeight / totalWeight) * 100)
+    const confidence = Math.max(ratioConfidence, maxSinglePatternWeight)
 
     if (confidence < rule.confidenceThreshold) {
       return null
