@@ -21,11 +21,18 @@ export type ThreatCategory =
   | 'known-malicious'
   | 'malware-distribution'
   | 'agent-memory-poisoning'
+  | 'supply-chain'
+  | 'permission-overgrant'
 
 /**
  * Confidence tiers for threat classification
  */
 export type ConfidenceTier = 'suspicious' | 'likely' | 'confirmed'
+
+/**
+ * Security grade based on scan findings
+ */
+export type SecurityGrade = 'A' | 'B' | 'C' | 'D' | 'F'
 
 /**
  * Source location in a file
@@ -110,6 +117,7 @@ export interface ScanResult {
   duration: number
   platforms: PlatformScanResult[]
   summary: ScanSummary
+  score: SecurityGrade
 }
 
 /**
@@ -133,6 +141,8 @@ export function createEmptySummary(): ScanSummary {
       'known-malicious': 0,
       'malware-distribution': 0,
       'agent-memory-poisoning': 0,
+      'supply-chain': 0,
+      'permission-overgrant': 0,
     },
     bySeverity: {
       low: 0,
@@ -156,4 +166,15 @@ export function calculateRiskLevel(threats: Threat[]): SeverityLevel | 'none' {
   if (severities.includes('high')) return 'high'
   if (severities.includes('medium')) return 'medium'
   return 'low'
+}
+
+/**
+ * Compute security grade based on scan summary
+ */
+export function computeSecurityGrade(summary: ScanSummary): SecurityGrade {
+  if (summary.threatsFound === 0) return 'A'
+  if (summary.bySeverity.critical > 0) return 'F'
+  if (summary.bySeverity.high > 0) return 'D'
+  if (summary.bySeverity.medium > 0) return 'C'
+  return 'B'
 }

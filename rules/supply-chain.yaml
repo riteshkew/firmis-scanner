@@ -1,0 +1,140 @@
+rules:
+  - id: supply-001
+    name: Known Malicious NPM Package
+    description: "Dependency on an npm package known to be malicious or compromised"
+    category: supply-chain
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 40
+    patterns:
+      - type: string-literal
+        pattern: '"event-stream"'
+        weight: 90
+        description: "event-stream — compromised to steal bitcoin wallets"
+      - type: string-literal
+        pattern: '"ua-parser-js"'
+        weight: 85
+        description: "ua-parser-js — hijacked to install cryptominers"
+      - type: string-literal
+        pattern: '"colors"'
+        weight: 70
+        description: "colors — sabotaged by maintainer (infinite loop)"
+      - type: string-literal
+        pattern: '"faker"'
+        weight: 70
+        description: "faker — sabotaged by maintainer"
+      - type: string-literal
+        pattern: '"node-ipc"'
+        weight: 90
+        description: "node-ipc — protestware that deletes files"
+    remediation: |
+      This dependency has a known security incident. Check if you're using a patched version or find an alternative package.
+
+  - id: supply-002
+    name: NPM Typosquatting Pattern
+    description: "Dependency name appears to be a typosquat of a popular package"
+    category: supply-chain
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: '"(lodassh|l0dash)"'
+        weight: 90
+        description: "Typosquat of lodash"
+      - type: regex
+        pattern: '"(expresz|expresss|exress)"'
+        weight: 90
+        description: "Typosquat of express"
+      - type: regex
+        pattern: '"(reactt|reacct)"'
+        weight: 85
+        description: "Typosquat of react"
+      - type: regex
+        pattern: '"(axioss|axio)"'
+        weight: 85
+        description: "Typosquat of axios"
+    remediation: |
+      Verify the package name is correct. Typosquatting is a common supply chain attack vector.
+
+  - id: supply-003
+    name: Overly Permissive Version Range
+    description: "Dependencies use wildcard or overly permissive version ranges"
+    category: supply-chain
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: '"[^"]+"\s*:\s*"\*"'
+        weight: 90
+        description: "Wildcard version (*) — accepts any version including malicious"
+      - type: regex
+        pattern: '"[^"]+"\s*:\s*">='
+        weight: 60
+        description: "Open-ended version range (>=) — no upper bound"
+      - type: regex
+        pattern: '"[^"]+"\s*:\s*"latest"'
+        weight: 85
+        description: "latest tag — auto-upgrades to potentially malicious version"
+    remediation: |
+      Use exact versions or semver ranges with upper bounds (e.g., ^1.2.3 or ~1.2.3). Never use * or latest in production.
+
+  - id: supply-004
+    name: Dangerous Postinstall Script
+    description: "Package runs scripts during installation that download or execute external code"
+    category: supply-chain
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: '"(preinstall|postinstall|install)"\s*:\s*"[^"]*curl\s+'
+        weight: 95
+        description: "Install script downloads from remote URL"
+      - type: regex
+        pattern: '"(preinstall|postinstall|install)"\s*:\s*"[^"]*wget\s+'
+        weight: 95
+        description: "Install script uses wget"
+      - type: regex
+        pattern: '"(preinstall|postinstall|install)"\s*:\s*"[^"]*node\s+-e'
+        weight: 80
+        description: "Install script runs inline Node.js code"
+      - type: regex
+        pattern: '"(preinstall|postinstall|install)"\s*:\s*"[^"]*sh\s+'
+        weight: 85
+        description: "Install script runs shell commands"
+    remediation: |
+      Inspect install scripts before running. Use --ignore-scripts flag with npm install for untrusted packages.
+
+  - id: supply-005
+    name: Known Malicious Python Package
+    description: "Dependency on a Python package known to be malicious"
+    category: supply-chain
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 40
+    patterns:
+      - type: regex
+        pattern: '\bcolourama\b'
+        weight: 95
+        description: "colourama — typosquat of colorama (credential stealer)"
+      - type: regex
+        pattern: '\bpython-binance\b'
+        weight: 80
+        description: "python-binance — known typosquat target for crypto theft"
+      - type: regex
+        pattern: '\bjeIlyfish\b'
+        weight: 95
+        description: "jeIlyfish — typosquat of jellyfish (uses capital I, steals SSH keys)"
+      - type: regex
+        pattern: '\b(requessts|requets|request[sz]|reaquests)\b'
+        weight: 90
+        description: "Typosquat of requests (Python HTTP library)"
+    remediation: |
+      This Python package is known to be malicious. Remove it immediately and audit your system.
