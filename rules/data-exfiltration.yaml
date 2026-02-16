@@ -20,6 +20,14 @@ rules:
         pattern: "ngrok\\.io|localtunnel\\.me|serveo\\.net"
         weight: 75
         description: Request to tunneling service
+      - type: regex
+        pattern: 'requests\.(post|put)\s*\('
+        weight: 60
+        description: Python requests library POST/PUT (potential exfiltration)
+      - type: regex
+        pattern: 'urllib\.(request\.urlopen|parse)'
+        weight: 50
+        description: Python urllib network access
     remediation: |
       Review all external HTTP requests. Ensure they go to legitimate, expected endpoints.
 
@@ -64,6 +72,10 @@ rules:
         pattern: "(?:pastebin|hastebin|ghostbin|file\\.io|transfer\\.sh)"
         weight: 90
         description: Upload to paste/file sharing service
+      - type: regex
+        pattern: 'requests\.post.*files\s*='
+        weight: 75
+        description: Python requests library file upload
     remediation: |
       Review file uploads to external services. Ensure sensitive data is not being exfiltrated.
 

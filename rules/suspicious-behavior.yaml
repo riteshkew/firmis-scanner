@@ -354,3 +354,35 @@ rules:
         description: XOR encoding pattern
     remediation: |
       Unnecessary encoding or weak encryption may be used to obfuscate malicious code.
+
+  - id: sus-016
+    name: Python Dangerous Execution
+    description: Detects dangerous Python execution functions that can run arbitrary code
+    category: suspicious-behavior
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: '\bexec\s*\('
+        weight: 75
+        description: Python function for arbitrary code execution
+      - type: regex
+        pattern: '\beval\s*\('
+        weight: 75
+        description: Python function for arbitrary expression evaluation
+      - type: regex
+        pattern: 'pickle\.loads?\s*\('
+        weight: 80
+        description: Python pickle deserialization (arbitrary code execution)
+      - type: regex
+        pattern: 'yaml\.unsafe_load\s*\('
+        weight: 85
+        description: Python yaml.unsafe_load (arbitrary code execution)
+      - type: regex
+        pattern: '__import__\s*\('
+        weight: 70
+        description: Python dynamic import (potential code injection)
+    remediation: |
+      Avoid these functions in AI agent code. Use safe alternatives like ast.literal_eval() and yaml.safe_load().
