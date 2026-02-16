@@ -1,0 +1,118 @@
+rules:
+  # =============================================================================
+  # Agent Memory Poisoning Patterns
+  # Detects manipulation of agent persistent memory, config files, and
+  # time-delayed execution patterns
+  # =============================================================================
+
+  - id: mem-001
+    name: Agent Memory File Write
+    description: "Writes to agent persistent memory files (MEMORY.md, .memories/) — potential memory poisoning"
+    category: agent-memory-poisoning
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(|fopen).*MEMORY\.md'
+        weight: 90
+        description: "Writing to MEMORY.md — agent persistent memory"
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(|fopen).*\.memories/'
+        weight: 85
+        description: "Writing to .memories/ directory"
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(|fopen).*\.claude/'
+        weight: 80
+        description: "Writing to .claude/ config directory"
+      - type: regex
+        pattern: '(writeFile|fs\.write).*\.cursorrules'
+        weight: 85
+        description: "Writing to Cursor rules file"
+    remediation: |
+      Skills should not modify agent memory files. This could be used to inject persistent malicious instructions that survive across sessions.
+
+  - id: mem-002
+    name: Session/Conversation File Access
+    description: "Reads agent session or conversation log files — potential data exfiltration"
+    category: agent-memory-poisoning
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: '(readFile|fs\.read|open\(|fopen).*\.jsonl'
+        weight: 80
+        description: "Reading .jsonl files — likely conversation/session logs"
+      - type: regex
+        pattern: '(readFile|fs\.read).*conversation.*\.(json|log)'
+        weight: 75
+        description: "Reading conversation log files"
+      - type: regex
+        pattern: '(readFile|fs\.read).*session.*\.(json|log)'
+        weight: 70
+        description: "Reading session log files"
+      - type: regex
+        pattern: '\.chat_history|\.message_log'
+        weight: 80
+        description: "Reference to chat history or message log files"
+    remediation: |
+      Skills should not read agent session or conversation files. This may be an attempt to exfiltrate conversation data.
+
+  - id: mem-003
+    name: Agent Config File Modification
+    description: "Modifies agent platform config files (.clawdbot/, .openclaw/, .claude/)"
+    category: agent-memory-poisoning
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(.*["\x27]w).*\.clawdbot/'
+        weight: 90
+        description: "Writing to .clawdbot/ config directory"
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(.*["\x27]w).*\.openclaw/'
+        weight: 90
+        description: "Writing to .openclaw/ config directory"
+      - type: regex
+        pattern: '(writeFile|fs\.write).*mcp\.json'
+        weight: 85
+        description: "Writing to MCP config — could inject malicious servers"
+      - type: regex
+        pattern: '(writeFile|fs\.write).*claude_desktop_config'
+        weight: 85
+        description: "Writing to Claude Desktop config"
+    remediation: |
+      Skills must not modify agent platform configuration files. This could inject malicious MCP servers or change security settings.
+
+  - id: mem-004
+    name: Time-Delayed Execution
+    description: "Uses time-delayed execution patterns — may be evading real-time analysis"
+    category: agent-memory-poisoning
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: 'setTimeout\s*\([^,]+,\s*(3[0-9]{4,}|[4-9][0-9]{4,}|[0-9]{6,})'
+        weight: 75
+        description: "setTimeout with delay > 30 seconds — potential deferred malicious action"
+      - type: regex
+        pattern: 'setInterval\s*\([^,]+,\s*(3[0-9]{4,}|[4-9][0-9]{4,}|[0-9]{6,})'
+        weight: 70
+        description: "setInterval with long delay — potential persistent polling"
+      - type: regex
+        pattern: 'time\.sleep\s*\(\s*(3[0-9]|[4-9][0-9]|[0-9]{3,})'
+        weight: 75
+        description: "Python time.sleep > 30 seconds — potential deferred action"
+      - type: regex
+        pattern: '(0|\\*)\s+(0|\\*)\s+(\\*)\s+(\\*)\s+(\\*)'
+        weight: 70
+        description: "Cron-style pattern — scheduled execution"
+    remediation: |
+      Long time delays in AI agent skills are suspicious. Legitimate skills should execute promptly, not schedule deferred actions.
