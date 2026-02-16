@@ -135,6 +135,11 @@ export class MCPAnalyzer extends BasePlatformAnalyzer {
   async analyze(component: DiscoveredComponent): Promise<string[]> {
     const files: string[] = []
 
+    // Include the MCP config file itself for credential scanning
+    if (component.configPath && await this.fileExists(component.configPath)) {
+      files.push(component.configPath)
+    }
+
     try {
       const patterns = [
         '**/*.{js,ts,py,go,rs}',
@@ -150,7 +155,12 @@ export class MCPAnalyzer extends BasePlatformAnalyzer {
         ignore: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/build/**'],
       })
 
-      files.push(...matchedFiles)
+      // Deduplicate in case configPath is already in matched files
+      for (const f of matchedFiles) {
+        if (!files.includes(f)) {
+          files.push(f)
+        }
+      }
     } catch (error) {
       throw new Error(`Failed to analyze MCP server ${component.name}: ${error}`)
     }
