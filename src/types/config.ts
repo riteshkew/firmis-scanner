@@ -11,6 +11,7 @@ export type PlatformType =
   | 'openclaw'
   | 'nanobot'
   | 'langchain'
+  | 'supabase'
   | 'custom'
 
 /**
@@ -29,6 +30,9 @@ export type OutputFormat = 'terminal' | 'json' | 'sarif' | 'html'
 export interface FirmisConfig {
   /** Platforms to scan (undefined = auto-detect all) */
   platforms?: PlatformType[]
+
+  /** Target path to scan (overrides platform default paths) */
+  targetPath?: string
 
   /** Minimum severity to report */
   severity: SeverityLevel

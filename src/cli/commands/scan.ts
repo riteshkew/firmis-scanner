@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import { Command } from 'commander'
 import { ScanEngine } from '../../scanner/engine.js'
 import { ReporterFactory } from '../../reporters/index.js'
@@ -31,8 +32,8 @@ interface ScanOptions {
   concurrency?: string
 }
 
-async function action(_targetPath: string | undefined, options: ScanOptions): Promise<void> {
-  const config = buildConfig(options)
+async function action(targetPath: string | undefined, options: ScanOptions): Promise<void> {
+  const config = buildConfig(options, targetPath)
 
   if (config.output === 'terminal') {
     printHeader()
@@ -108,7 +109,7 @@ async function action(_targetPath: string | undefined, options: ScanOptions): Pr
   }
 }
 
-function buildConfig(options: ScanOptions): FirmisConfig {
+function buildConfig(options: ScanOptions, targetPath?: string): FirmisConfig {
   let output: OutputFormat = 'terminal'
   if (options.json === true) output = 'json'
   if (options.sarif === true) output = 'sarif'
@@ -116,6 +117,7 @@ function buildConfig(options: ScanOptions): FirmisConfig {
 
   return {
     platforms: options.platform ? [options.platform as PlatformType] : undefined,
+    targetPath: targetPath ? resolve(targetPath) : undefined,
     severity: (options.severity ?? 'low') as SeverityLevel,
     output,
     outputFile: options.output,

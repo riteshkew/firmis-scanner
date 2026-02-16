@@ -52,11 +52,35 @@ export class PlatformDiscovery {
   }
 
   async discover(config: FirmisConfig): Promise<DiscoveryResult> {
+    // If a target path is specified with specific platforms, use it directly
+    if (config.targetPath && config.platforms && config.platforms.length > 0) {
+      return this.discoverAtPath(config.platforms, config.targetPath)
+    }
+
     if (config.platforms && config.platforms.length > 0) {
       return this.discoverSpecific(config.platforms)
     }
 
     return this.discoverAll()
+  }
+
+  async discoverAtPath(platformTypes: PlatformType[], targetPath: string): Promise<DiscoveryResult> {
+    const platforms: DetectedPlatform[] = []
+
+    for (const platformType of platformTypes) {
+      const analyzer = PlatformRegistry.getAnalyzer(platformType)
+      platforms.push({
+        type: platformType,
+        name: analyzer.name,
+        basePath: targetPath,
+        componentCount: 0, // Will be resolved during discover()
+      })
+    }
+
+    return {
+      platforms,
+      totalComponents: 0,
+    }
   }
 
   getSupportedPlatforms(): PlatformType[] {
