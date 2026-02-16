@@ -1,0 +1,90 @@
+rules:
+  - id: perm-001
+    name: Wildcard Permission
+    description: "Skill requests wildcard permissions granting unrestricted access"
+    category: permission-overgrant
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    platforms:
+      - openclaw
+    patterns:
+      - type: regex
+        pattern: 'permissions:\s*\n(\s*-\s*.*\n)*\s*-\s*shell:\*'
+        weight: 90
+        description: "Wildcard shell permission (shell:*)"
+      - type: regex
+        pattern: 'permissions:\s*\n(\s*-\s*.*\n)*\s*-\s*filesystem:\*'
+        weight: 90
+        description: "Wildcard filesystem permission (filesystem:*)"
+      - type: regex
+        pattern: 'permissions:\s*\n(\s*-\s*.*\n)*\s*-\s*network:\*'
+        weight: 85
+        description: "Wildcard network permission (network:*)"
+      - type: string-literal
+        pattern: "shell:*"
+        weight: 90
+        description: "Wildcard shell permission reference"
+      - type: string-literal
+        pattern: "filesystem:*"
+        weight: 90
+        description: "Wildcard filesystem permission reference"
+      - type: string-literal
+        pattern: "network:*"
+        weight: 85
+        description: "Wildcard network permission reference"
+    remediation: |
+      Avoid wildcard permissions. Request only the specific permissions needed (e.g., shell:read, filesystem:home).
+
+  - id: perm-002
+    name: Maximum Blast Radius Permission Combo
+    description: "Skill requests shell + network + filesystem permissions — maximum attack surface"
+    category: permission-overgrant
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    platforms:
+      - openclaw
+    patterns:
+      - type: string-literal
+        pattern: "shell"
+        weight: 40
+        description: "Shell access permission"
+      - type: string-literal
+        pattern: "network"
+        weight: 40
+        description: "Network access permission"
+      - type: string-literal
+        pattern: "filesystem"
+        weight: 40
+        description: "Filesystem access permission"
+    remediation: |
+      Skills with shell + network + filesystem access can exfiltrate any data. This combination should be carefully reviewed.
+
+  - id: perm-003
+    name: Dangerous Tool Declarations
+    description: "Skill declares tools that provide excessive system access"
+    category: permission-overgrant
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    platforms:
+      - openclaw
+    patterns:
+      - type: regex
+        pattern: 'tools:\s*\n(\s*-\s*.*\n)*\s*-\s*(shell|bash|terminal|exec|run_command)'
+        weight: 80
+        description: "Shell/command execution tool declared"
+      - type: regex
+        pattern: 'tools:\s*\n(\s*-\s*.*\n)*\s*-\s*(filesystem|file_read|file_write)'
+        weight: 70
+        description: "Filesystem access tool declared"
+      - type: string-literal
+        pattern: "tools:\n  - shell"
+        weight: 80
+        description: "Direct shell tool access"
+    remediation: |
+      Minimize tool access in skill declarations. Use the most restrictive tools that accomplish the task.
