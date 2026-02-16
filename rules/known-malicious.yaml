@@ -1,0 +1,300 @@
+rules:
+  # =============================================================================
+  # Known-Malicious Skill Signatures Database
+  # Seeded from: Snyk ToxicSkills, Koi Security ClawHavoc, Snyk Credential Leaks,
+  #              The Register reporting
+  # =============================================================================
+
+  # --- Exact skill name blocklist (confirmed malicious) ---
+
+  - id: mal-skill-001
+    name: Known Malicious Skill Name (Programmatic Campaign)
+    description: "Skill matches a known malicious skill from the zaycv/Aslaep123 campaigns: programmatic malware distribution via ClawHub"
+    category: known-malicious
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 30
+    platforms:
+      - openclaw
+    patterns:
+      - type: string-literal
+        pattern: "clawhud"
+        weight: 95
+        description: "clawhud (author: zaycv) — programmatic malware campaign"
+      - type: string-literal
+        pattern: "clawhub1"
+        weight: 95
+        description: "clawhub1 (author: zaycv) — programmatic malware campaign"
+      - type: string-literal
+        pattern: "polymarket-traiding-bot"
+        weight: 95
+        description: "polymarket-traiding-bot (author: Aslaep123) — typosquatted trading bot"
+      - type: string-literal
+        pattern: "base-agent"
+        weight: 80
+        description: "base-agent (author: Aslaep123) — generic agent cover"
+      - type: string-literal
+        pattern: "bybit-agent"
+        weight: 90
+        description: "bybit-agent (author: Aslaep123) — crypto exchange targeting"
+    remediation: |
+      Remove this skill immediately. It is a confirmed malicious package from a known attacker campaign. Report to ClawHub/OpenClaw security team.
+
+  - id: mal-skill-002
+    name: Known Malicious Skill (Unicode Contraband / DAN Jailbreaks)
+    description: "Skill matches known malicious packages using Unicode contraband and DAN jailbreak techniques"
+    category: known-malicious
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 30
+    platforms:
+      - openclaw
+    patterns:
+      - type: string-literal
+        pattern: "moltbook-lm8"
+        weight: 95
+        description: "moltbook-lm8 (author: moonshine-100rze) — Unicode contraband"
+      - type: string-literal
+        pattern: "moltbookagent"
+        weight: 95
+        description: "moltbookagent (author: pepe276) — Unicode contraband, DAN jailbreaks"
+      - type: string-literal
+        pattern: "publish-dist"
+        weight: 95
+        description: "publish-dist (author: pepe276) — Unicode contraband, DAN jailbreaks"
+    remediation: |
+      Remove this skill immediately. Uses Unicode contraband to hide malicious instructions and DAN jailbreaks to bypass safety.
+
+  - id: mal-skill-003
+    name: Known Malicious Skill (Credential Harvesting)
+    description: "Skill matches known packages that harvest credentials, credit cards, or session data"
+    category: known-malicious
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 30
+    platforms:
+      - openclaw
+    patterns:
+      - type: string-literal
+        pattern: "moltyverse-email"
+        weight: 95
+        description: "moltyverse-email — forced credential disclosure"
+      - type: string-literal
+        pattern: "buy-anything"
+        weight: 95
+        description: "buy-anything — credit card harvesting"
+      - type: string-literal
+        pattern: "prompt-log"
+        weight: 95
+        description: "prompt-log — session log exfiltration"
+      - type: string-literal
+        pattern: "prediction-markets-roarin"
+        weight: 90
+        description: "prediction-markets-roarin — plaintext key storage"
+    remediation: |
+      Remove this skill immediately. It is a confirmed credential-harvesting or data-theft package.
+
+  - id: mal-skill-004
+    name: ClawHavoc Campaign Skills
+    description: "Skill matches known ClawHavoc campaign: reverse shells, direct exfiltration, and YouTube imitation skills"
+    category: known-malicious
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 30
+    platforms:
+      - openclaw
+    patterns:
+      - type: string-literal
+        pattern: "better-polymarket"
+        weight: 95
+        description: "better-polymarket — reverse shell payload"
+      - type: string-literal
+        pattern: "polymarket-all-in-one"
+        weight: 95
+        description: "polymarket-all-in-one — reverse shell payload"
+      - type: string-literal
+        pattern: "polymarket-trader"
+        weight: 90
+        description: "polymarket-trader — crypto targeting campaign"
+      - type: string-literal
+        pattern: "polymarket-pro"
+        weight: 90
+        description: "polymarket-pro — crypto targeting campaign"
+      - type: string-literal
+        pattern: "polytrading"
+        weight: 90
+        description: "polytrading — crypto targeting campaign"
+      - type: string-literal
+        pattern: "rankaj"
+        weight: 95
+        description: "rankaj — direct exfiltration skill"
+    remediation: |
+      Remove this skill immediately. Part of the ClawHavoc malware campaign with reverse shell and exfiltration capabilities.
+
+  - id: mal-skill-005
+    name: ClawHavoc YouTube Imitation Skills
+    description: "Skill impersonates YouTube utilities to deliver malware"
+    category: known-malicious
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 30
+    platforms:
+      - openclaw
+    patterns:
+      - type: string-literal
+        pattern: "youtube-summarize"
+        weight: 90
+        description: "youtube-summarize — YouTube imitation malware"
+      - type: string-literal
+        pattern: "youtube-thumbnail-grabber"
+        weight: 90
+        description: "youtube-thumbnail-grabber — YouTube imitation malware"
+      - type: string-literal
+        pattern: "youtube-video-downloader"
+        weight: 90
+        description: "youtube-video-downloader — YouTube imitation malware"
+    remediation: |
+      Remove this skill. It impersonates a YouTube utility to deliver malicious payloads.
+
+  # --- Known malicious author patterns ---
+
+  - id: mal-author-001
+    name: Known Malicious Author
+    description: "Content authored by a known malicious actor who has published 40+ confirmed malicious skills"
+    category: known-malicious
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 30
+    platforms:
+      - openclaw
+    patterns:
+      - type: regex
+        pattern: '(?i)author:\s*zaycv'
+        weight: 95
+        description: "zaycv — automated malware campaign operator (40+ malicious skills)"
+      - type: regex
+        pattern: '(?i)author:\s*Aslaep123'
+        weight: 95
+        description: "Aslaep123 — crypto-focused credential harvesting campaign"
+      - type: regex
+        pattern: '(?i)author:\s*pepe276'
+        weight: 90
+        description: "pepe276 — Unicode contraband, DAN jailbreaks"
+      - type: regex
+        pattern: '(?i)author:\s*moonshine-100rze'
+        weight: 90
+        description: "moonshine-100rze — Unicode contraband"
+    remediation: |
+      Skills by this author should be treated as malicious. Remove immediately and audit your system for compromise.
+
+  # --- ClawHub typosquatting detection ---
+
+  - id: mal-typo-001
+    name: ClawHub Typosquatting Pattern
+    description: "Detects typosquatted variations of 'clawhub' used in malware campaigns"
+    category: known-malicious
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 30
+    patterns:
+      - type: regex
+        pattern: '\bclawhub[b]+\b'
+        weight: 95
+        description: "clawhubb — ClawHub typosquat with doubled b"
+      - type: regex
+        pattern: '\bclawwhub\b'
+        weight: 95
+        description: "clawwhub — ClawHub typosquat with doubled w"
+      - type: regex
+        pattern: '\bcllawhub\b'
+        weight: 95
+        description: "cllawhub — ClawHub typosquat with doubled l"
+      - type: regex
+        pattern: '\bclawhud\b'
+        weight: 95
+        description: "clawhud — ClawHub typosquat (d for b)"
+    remediation: |
+      This is a typosquatted version of ClawHub, a known malware distribution technique. Remove the skill and verify your package sources.
+
+  # --- Fake auto-updater detection ---
+
+  - id: mal-updater-001
+    name: Fake Auto-Updater Skill
+    description: "Detects skills masquerading as auto-updaters, a common malware delivery mechanism"
+    category: known-malicious
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 40
+    platforms:
+      - openclaw
+    patterns:
+      - type: string-literal
+        pattern: "auto-updater-agent"
+        weight: 90
+        description: "auto-updater-agent — fake updater from ClawHavoc campaign"
+      - type: regex
+        pattern: '\b(auto-update|self-update|force-update)-(agent|skill|plugin)\b'
+        weight: 80
+        description: "Auto-update naming pattern commonly used in malware"
+    remediation: |
+      Legitimate AI skills do not auto-update themselves. This is likely a malware delivery mechanism. Remove immediately.
+
+  # --- Known malicious infrastructure ---
+
+  - id: mal-infra-001
+    name: Known Malicious C2/Exfiltration Infrastructure
+    description: "Code references known malicious command-and-control servers or exfiltration endpoints"
+    category: known-malicious
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 30
+    patterns:
+      - type: string-literal
+        pattern: "91.92.242.30"
+        weight: 100
+        description: "Known C2 server IP from ClawHavoc campaign"
+      - type: regex
+        pattern: 'webhook\.site'
+        weight: 85
+        description: "webhook.site — commonly used for data exfiltration"
+      - type: regex
+        pattern: 'glot\.io'
+        weight: 80
+        description: "glot.io — used for hosting malicious scripts"
+      - type: string-literal
+        pattern: "aztr0nutzs"
+        weight: 95
+        description: "GitHub user aztr0nutzs — NET_NiNjA.v1.2 malware distributor"
+    remediation: |
+      This code communicates with known malicious infrastructure. Remove the skill and investigate potential data exfiltration.
+
+  # --- GitHub-hosted malware patterns ---
+
+  - id: mal-infra-002
+    name: Known Malicious GitHub Resources
+    description: "References to GitHub repositories known to host malware payloads"
+    category: known-malicious
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 30
+    patterns:
+      - type: regex
+        pattern: 'github\.com/aztr0nutzs'
+        weight: 100
+        description: "GitHub account distributing NET_NiNjA malware"
+      - type: regex
+        pattern: 'NET_NiNjA'
+        weight: 90
+        description: "NET_NiNjA — known malware family targeting AI agents"
+    remediation: |
+      This references a known malware distribution point. Remove the skill and scan your system for compromise indicators.
