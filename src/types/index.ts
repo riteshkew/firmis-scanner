@@ -12,6 +12,7 @@ export { DEFAULT_CONFIG, SEVERITY_ORDER, meetsMinimumSeverity } from './config.j
 export type {
   ComponentType,
   ThreatCategory,
+  ConfidenceTier,
   SourceLocation,
   Evidence,
   Threat,
@@ -58,3 +59,12 @@ export {
   EarlyExitError,
   isFirmisError,
 } from './errors.js'
+
+// Supabase types
+export type {
+  SupabaseTable,
+  SupabasePolicy,
+  SupabaseBucket,
+  SupabaseAuthConfig,
+  SupabaseProject,
+} from './supabase.js'

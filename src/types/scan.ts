@@ -16,6 +16,16 @@ export type ThreatCategory =
   | 'suspicious-behavior'
   | 'network-abuse'
   | 'file-system-abuse'
+  | 'access-control'
+  | 'insecure-config'
+  | 'known-malicious'
+  | 'malware-distribution'
+  | 'agent-memory-poisoning'
+
+/**
+ * Confidence tiers for threat classification
+ */
+export type ConfidenceTier = 'suspicious' | 'likely' | 'confirmed'
 
 /**
  * Source location in a file
@@ -50,6 +60,7 @@ export interface Threat {
   evidence: Evidence[]
   location: SourceLocation
   confidence: number
+  confidenceTier: ConfidenceTier
   remediation?: string
 }
 
@@ -117,6 +128,11 @@ export function createEmptySummary(): ScanSummary {
       'suspicious-behavior': 0,
       'network-abuse': 0,
       'file-system-abuse': 0,
+      'access-control': 0,
+      'insecure-config': 0,
+      'known-malicious': 0,
+      'malware-distribution': 0,
+      'agent-memory-poisoning': 0,
     },
     bySeverity: {
       low: 0,

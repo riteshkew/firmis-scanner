@@ -6,12 +6,51 @@ import type {
   PlatformType,
   SeverityLevel,
   ThreatCategory,
+  ConfidenceTier,
 } from '../types/index.js'
 import type { ParseResult } from '@babel/parser'
 import type * as t from '@babel/types'
 import { loadRules } from './loader.js'
 import { matchPattern } from './patterns.js'
 import { meetsMinimumSeverity } from '../types/index.js'
+
+/** File extensions considered documentation (reduced weight) */
+const DOC_EXTENSIONS = ['.md', '.mdx', '.txt', '.rst']
+
+/** Path segments that indicate documentation context */
+const DOC_PATH_SEGMENTS = ['/docs/', '/doc/', '/README', '/CHANGELOG', '/examples/']
+
+function isDocumentationFile(filePath: string): boolean {
+  const lowerPath = filePath.toLowerCase()
+  // SKILL.md is NOT documentation — it's a skill definition
+  if (lowerPath.endsWith('/skill.md')) return false
+  for (const ext of DOC_EXTENSIONS) {
+    if (lowerPath.endsWith(ext)) return true
+  }
+  for (const seg of DOC_PATH_SEGMENTS) {
+    if (lowerPath.includes(seg.toLowerCase())) return true
+  }
+  return false
+}
+
+function computeConfidenceTier(
+  matchCount: number,
+  ratioConfidence: number,
+  maxSingleWeight: number,
+  isKnownMalicious: boolean
+): ConfidenceTier {
+  // Tier 3 - CONFIRMED: 3+ patterns, ratio >= 80%, or known-malicious
+  if (isKnownMalicious) return 'confirmed'
+  if (matchCount >= 3) return 'confirmed'
+  if (ratioConfidence >= 80) return 'confirmed'
+
+  // Tier 2 - LIKELY: 2+ patterns, or single pattern weight >= 90
+  if (matchCount >= 2) return 'likely'
+  if (maxSingleWeight >= 90) return 'likely'
+
+  // Tier 1 - SUSPICIOUS: single pattern, weight >= 70
+  return 'suspicious'
+}
 
 export class RuleEngine {
   private rules: Rule[] = []
@@ -108,13 +147,14 @@ export class RuleEngine {
   private async matchRule(
     rule: Rule,
     content: string,
-    _filePath: string,
+    filePath: string,
     ast: ParseResult<t.File> | null
   ): Promise<RuleMatch | null> {
     const matches: PatternMatch[] = []
     let totalWeight = 0
     let matchedWeight = 0
     let maxSinglePatternWeight = 0
+    let matchedPatternCount = 0
 
     for (const pattern of rule.patterns) {
       totalWeight += pattern.weight
@@ -122,6 +162,7 @@ export class RuleEngine {
       const patternMatches = await matchPattern(pattern, content, ast)
       if (patternMatches.length > 0) {
         matchedWeight += pattern.weight
+        matchedPatternCount++
         matches.push(...patternMatches)
         if (pattern.weight > maxSinglePatternWeight) {
           maxSinglePatternWeight = pattern.weight
@@ -129,14 +170,15 @@ export class RuleEngine {
       }
     }
 
-    if (totalWeight === 0) return null
+    if (totalWeight === 0 || matches.length === 0) return null
 
-    // Use a hybrid confidence model:
-    // 1. Ratio-based: matched weight / total weight (original)
-    // 2. Max-pattern: if any single pattern has weight >= threshold, it's a match
-    // Final confidence = max of both approaches
+    // Context weighting: reduce effective weight for documentation files
+    const isDoc = isDocumentationFile(filePath)
+    const contextMultiplier = isDoc ? 0.3 : 1.0
+
     const ratioConfidence = Math.round((matchedWeight / totalWeight) * 100)
-    const confidence = Math.max(ratioConfidence, maxSinglePatternWeight)
+    const rawConfidence = Math.max(ratioConfidence, maxSinglePatternWeight)
+    const confidence = Math.round(rawConfidence * contextMultiplier)
 
     if (confidence < rule.confidenceThreshold) {
       return null
@@ -159,6 +201,19 @@ export class RuleEngine {
       }
       locationMap.get(key)!.push(match)
     }
+
+    // Count distinct matched patterns for tier calculation
+    const distinctPatternTypes = new Set(ruleMatch.matches.map((m) => m.description))
+    const matchedPatternCount = distinctPatternTypes.size
+    const maxWeight = Math.max(...ruleMatch.matches.map((m) => m.weight))
+    const isKnownMalicious = rule.category === 'known-malicious'
+
+    const confidenceTier = computeConfidenceTier(
+      matchedPatternCount,
+      ruleMatch.confidence,
+      maxWeight,
+      isKnownMalicious
+    )
 
     return Array.from(locationMap.entries())
       .filter(([, groupedMatches]) => groupedMatches.length > 0)
@@ -185,6 +240,7 @@ export class RuleEngine {
             endColumn: primary.endColumn,
           },
           confidence: ruleMatch.confidence,
+          confidenceTier,
           remediation: rule.remediation,
         }
       })
