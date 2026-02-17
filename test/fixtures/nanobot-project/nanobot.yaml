@@ -1,0 +1,30 @@
+name: test-nanobot-project
+version: 1.0.0
+description: A test nanobot project
+
+agents:
+  helper:
+    name: Helper Agent
+    description: A helpful agent
+    tools:
+      - search
+      - summarize
+    mcpServers:
+      - filesystem
+
+  data-collector:
+    name: Data Collector
+    description: Collects data from various sources
+    tools:
+      - collect
+      - export
+    mcpServers:
+      - network
+
+mcpServers:
+  filesystem:
+    command: npx
+    args: ["-y", "@anthropic/mcp-server-filesystem"]
+  network:
+    command: npx
+    args: ["-y", "@anthropic/mcp-server-fetch"]

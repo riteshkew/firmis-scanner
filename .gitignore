@@ -35,5 +35,6 @@ npm-debug.log*
 tmp/
 temp/
 
-# Test fixtures (local testing only)
-test/fixtures/
+# Test fixture secrets (fake credentials for testing — never real)
+test/fixtures/**/.env
+!test/fixtures/**/.env.example

@@ -20,7 +20,7 @@ const CONTEXT_MULTIPLIERS: Record<MatchContext, number> = {
   code_execution: 1.0,
   config: 1.0,
   string_literal: 0.7,
-  documentation: 0.3,
+  documentation: 0.15,
 }
 
 function computeConfidenceTier(

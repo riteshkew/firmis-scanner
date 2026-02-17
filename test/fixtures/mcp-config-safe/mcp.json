@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "local-server": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "env": {
+        "LOG_LEVEL": "info",
+        "PORT": "3000"
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "database-server": {
+      "command": "node",
+      "args": ["server.js"],
+      "env": {
+        "AWS_ACCESS_KEY_ID": "AKIAIOSFODNN7EXAMPLE",
+        "AWS_SECRET_ACCESS_KEY": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+        "DATABASE_URL": "postgresql://admin:supersecret@db.example.com:5432/prod",
+        "GITHUB_TOKEN": "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "OPENAI_API_KEY": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    "safe-server": {
+      "command": "python3",
+      "args": ["server.py"],
+      "env": {
+        "LOG_LEVEL": "info",
+        "PORT": "3000"
+      }
+    }
+  }
+}

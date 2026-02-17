@@ -32,9 +32,6 @@ export class ReporterFactory {
         return new TerminalReporter(options.verbose ?? false)
 
       case 'json':
-        if (!options.outputFile) {
-          throw new Error('Output file is required for JSON format')
-        }
         return new JsonReporter(options.outputFile, options.pretty ?? true)
 
       case 'sarif':

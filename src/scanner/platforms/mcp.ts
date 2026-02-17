@@ -87,6 +87,17 @@ export class MCPAnalyzer extends BasePlatformAnalyzer {
     try {
       const entries = await readdir(expandedPath, { withFileTypes: true })
 
+      // Check for MCP config JSON files in the directory
+      const configFiles = ['mcp.json', 'claude_desktop_config.json']
+      for (const entry of entries) {
+        if (entry.isFile() && configFiles.includes(entry.name)) {
+          const configPath = join(expandedPath, entry.name)
+          const configComponents = await this.discoverFromConfig(configPath)
+          components.push(...configComponents)
+        }
+      }
+
+      // Also discover server subdirectories
       for (const entry of entries) {
         if (!entry.isDirectory() || entry.name.startsWith('.')) {
           continue

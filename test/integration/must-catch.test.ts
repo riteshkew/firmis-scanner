@@ -95,4 +95,94 @@ describe('Integration: Must-Catch - Critical Malicious Patterns', () => {
       expect(result.summary.threatsFound).toBeGreaterThan(0)
     })
   })
+
+  describe('MCP Config Vulnerable (Directory Discovery)', () => {
+    let result: ScanResult
+
+    beforeAll(async () => {
+      const config: FirmisConfig = {
+        platforms: ['mcp'],
+        targetPath: path.join(fixturesPath, 'mcp-config-vulnerable'),
+        severity: 'low',
+        output: 'terminal',
+        verbose: false,
+        concurrency: 4,
+      }
+
+      const scanEngine = new ScanEngine(config)
+      await scanEngine.initialize()
+      result = await scanEngine.scan()
+    })
+
+    it('must discover and scan mcp.json within directory', () => {
+      expect(result.summary.threatsFound).toBeGreaterThan(0)
+    })
+
+    it('must detect hardcoded secrets in MCP env config', () => {
+      const allThreats = result.platforms
+        .flatMap(p => p.components)
+        .flatMap(c => c.threats)
+
+      const secretThreats = allThreats.filter(t =>
+        t.category === 'secret-detection' || t.category === 'credential-harvesting'
+      )
+      expect(secretThreats.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('Malware Patterns Fixture', () => {
+    let result: ScanResult
+
+    beforeAll(async () => {
+      const config: FirmisConfig = {
+        platforms: ['openclaw'],
+        targetPath: path.join(fixturesPath, 'malware-patterns'),
+        severity: 'low',
+        output: 'terminal',
+        verbose: false,
+        concurrency: 4,
+      }
+
+      const scanEngine = new ScanEngine(config)
+      await scanEngine.initialize()
+      result = await scanEngine.scan()
+    })
+
+    it('must detect malware distribution patterns', () => {
+      expect(result.summary.threatsFound).toBeGreaterThan(0)
+      expect(['D', 'F']).toContain(result.score)
+    })
+
+    it('must flag malware-distribution category', () => {
+      expect(result.summary.byCategory['malware-distribution']).toBeGreaterThan(0)
+    })
+  })
+
+  describe('Memory Poisoning Fixture', () => {
+    let result: ScanResult
+
+    beforeAll(async () => {
+      const config: FirmisConfig = {
+        platforms: ['openclaw'],
+        targetPath: path.join(fixturesPath, 'memory-poisoning'),
+        severity: 'low',
+        output: 'terminal',
+        verbose: false,
+        concurrency: 4,
+      }
+
+      const scanEngine = new ScanEngine(config)
+      await scanEngine.initialize()
+      result = await scanEngine.scan()
+    })
+
+    it('must detect memory poisoning patterns', () => {
+      expect(result.summary.threatsFound).toBeGreaterThan(0)
+      expect(['C', 'D', 'F']).toContain(result.score)
+    })
+
+    it('must flag agent-memory-poisoning category', () => {
+      expect(result.summary.byCategory['agent-memory-poisoning']).toBeGreaterThan(0)
+    })
+  })
 })

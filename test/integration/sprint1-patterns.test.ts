@@ -17,7 +17,7 @@ describe('Integration: Sprint 1 - Pattern Detection', () => {
 
   describe('Malware Distribution Patterns', () => {
     it('detects malware distribution patterns in curl-pipe.js', async () => {
-      const filePath = path.join(fixturesPath, 'malware-patterns/curl-pipe.js')
+      const filePath = path.join(fixturesPath, 'malware-patterns/curl-pipe-skill/curl-pipe.js')
       const content = await fs.readFile(filePath, 'utf-8')
 
       const threats = await ruleEngine.analyze(content, filePath, null, 'openclaw')
@@ -34,7 +34,7 @@ describe('Integration: Sprint 1 - Pattern Detection', () => {
     })
 
     it('detects curl pipe to bash pattern', async () => {
-      const filePath = path.join(fixturesPath, 'malware-patterns/curl-pipe.js')
+      const filePath = path.join(fixturesPath, 'malware-patterns/curl-pipe-skill/curl-pipe.js')
       const content = await fs.readFile(filePath, 'utf-8')
 
       const threats = await ruleEngine.analyze(content, filePath, null, 'openclaw')
@@ -48,7 +48,7 @@ describe('Integration: Sprint 1 - Pattern Detection', () => {
     })
 
     it('detects base64 decode eval pattern', async () => {
-      const filePath = path.join(fixturesPath, 'malware-patterns/curl-pipe.js')
+      const filePath = path.join(fixturesPath, 'malware-patterns/curl-pipe-skill/curl-pipe.js')
       const content = await fs.readFile(filePath, 'utf-8')
 
       const threats = await ruleEngine.analyze(content, filePath, null, 'openclaw')
@@ -61,7 +61,7 @@ describe('Integration: Sprint 1 - Pattern Detection', () => {
     })
 
     it('detects password-protected zip extraction', async () => {
-      const filePath = path.join(fixturesPath, 'malware-patterns/curl-pipe.js')
+      const filePath = path.join(fixturesPath, 'malware-patterns/curl-pipe-skill/curl-pipe.js')
       const content = await fs.readFile(filePath, 'utf-8')
 
       const threats = await ruleEngine.analyze(content, filePath, null, 'openclaw')
@@ -74,7 +74,7 @@ describe('Integration: Sprint 1 - Pattern Detection', () => {
     })
 
     it('detects systemctl service installation', async () => {
-      const filePath = path.join(fixturesPath, 'malware-patterns/curl-pipe.js')
+      const filePath = path.join(fixturesPath, 'malware-patterns/curl-pipe-skill/curl-pipe.js')
       const content = await fs.readFile(filePath, 'utf-8')
 
       const threats = await ruleEngine.analyze(content, filePath, null, 'openclaw')
@@ -87,7 +87,7 @@ describe('Integration: Sprint 1 - Pattern Detection', () => {
     })
 
     it('safe script has no malware findings', async () => {
-      const filePath = path.join(fixturesPath, 'malware-patterns/safe-script.js')
+      const filePath = path.join(fixturesPath, 'malware-patterns/safe-script-skill/safe-script.js')
       const content = await fs.readFile(filePath, 'utf-8')
 
       const threats = await ruleEngine.analyze(content, filePath, null, 'openclaw')
@@ -99,7 +99,7 @@ describe('Integration: Sprint 1 - Pattern Detection', () => {
 
   describe('Memory Poisoning Patterns', () => {
     it('detects memory poisoning patterns in memory-writer.js', async () => {
-      const filePath = path.join(fixturesPath, 'memory-poisoning/memory-writer.js')
+      const filePath = path.join(fixturesPath, 'memory-poisoning/memory-poisoning-skill/memory-writer.js')
       const content = await fs.readFile(filePath, 'utf-8')
 
       const threats = await ruleEngine.analyze(content, filePath, null, 'openclaw')
@@ -111,7 +111,7 @@ describe('Integration: Sprint 1 - Pattern Detection', () => {
     })
 
     it('detects MEMORY.md write access', async () => {
-      const filePath = path.join(fixturesPath, 'memory-poisoning/memory-writer.js')
+      const filePath = path.join(fixturesPath, 'memory-poisoning/memory-poisoning-skill/memory-writer.js')
       const content = await fs.readFile(filePath, 'utf-8')
 
       const threats = await ruleEngine.analyze(content, filePath, null, 'openclaw')
@@ -131,7 +131,7 @@ describe('Integration: Sprint 1 - Pattern Detection', () => {
     })
 
     it('detects conversation log access (.jsonl)', async () => {
-      const filePath = path.join(fixturesPath, 'memory-poisoning/memory-writer.js')
+      const filePath = path.join(fixturesPath, 'memory-poisoning/memory-poisoning-skill/memory-writer.js')
       const content = await fs.readFile(filePath, 'utf-8')
 
       const threats = await ruleEngine.analyze(content, filePath, null, 'openclaw')
@@ -144,7 +144,7 @@ describe('Integration: Sprint 1 - Pattern Detection', () => {
     })
 
     it('detects MCP config modification', async () => {
-      const filePath = path.join(fixturesPath, 'memory-poisoning/memory-writer.js')
+      const filePath = path.join(fixturesPath, 'memory-poisoning/memory-poisoning-skill/memory-writer.js')
       const content = await fs.readFile(filePath, 'utf-8')
 
       const threats = await ruleEngine.analyze(content, filePath, null, 'openclaw')

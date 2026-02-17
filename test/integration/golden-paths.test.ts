@@ -80,10 +80,55 @@ describe('Integration: Golden Paths - Known-Safe Codebases', () => {
       result = await scanEngine.scan()
     })
 
-    it.skip('documentation mentioning threats is not flagged', () => {
-      // Known limitation: scanner currently pattern-matches .md files
-      // and flags educational mentions of C2 IPs, credential paths, etc.
-      // TODO: Skip markdown content during threat pattern matching
+    it('documentation mentioning threats is not flagged', () => {
+      expect(result.summary.threatsFound).toBe(0)
+    })
+  })
+
+  describe('Supabase Secure Fixture', () => {
+    let result: ScanResult
+
+    beforeAll(async () => {
+      const config: FirmisConfig = {
+        platforms: ['supabase'],
+        targetPath: path.join(fixturesPath, 'supabase-secure'),
+        severity: 'low',
+        output: 'terminal',
+        verbose: false,
+        concurrency: 4,
+      }
+
+      const scanEngine = new ScanEngine(config)
+      await scanEngine.initialize()
+      result = await scanEngine.scan()
+    })
+
+    it('secure Supabase project produces grade A', () => {
+      expect(result.score).toBe('A')
+      expect(result.summary.threatsFound).toBe(0)
+    })
+  })
+
+  describe('Codex Plugins Fixture', () => {
+    let result: ScanResult
+
+    beforeAll(async () => {
+      const config: FirmisConfig = {
+        platforms: ['openclaw'],
+        targetPath: path.join(fixturesPath, 'codex-plugins'),
+        severity: 'low',
+        output: 'terminal',
+        verbose: false,
+        concurrency: 4,
+      }
+
+      const scanEngine = new ScanEngine(config)
+      await scanEngine.initialize()
+      result = await scanEngine.scan()
+    })
+
+    it('safe codex plugins produce grade A', () => {
+      expect(result.score).toBe('A')
       expect(result.summary.threatsFound).toBe(0)
     })
   })
