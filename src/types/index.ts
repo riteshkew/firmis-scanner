@@ -44,6 +44,8 @@ export type {
   APICallPattern,
   ArgumentPattern,
   PatternContext,
+  YaraString,
+  YaraPattern,
   RulePattern,
   Rule,
   RuleFile,

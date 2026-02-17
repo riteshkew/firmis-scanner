@@ -12,6 +12,7 @@ export type PatternType =
   | 'network'
   | 'string-literal'
   | 'import'
+  | 'yara'
 
 /**
  * Context where a pattern match occurred
@@ -58,9 +59,26 @@ export interface PatternContext {
 /**
  * Pattern definition in a rule
  */
+/**
+ * YARA-like string definition
+ */
+export interface YaraString {
+  type: 'text' | 'hex' | 'regex'
+  value: string
+  modifiers?: string[]
+}
+
+/**
+ * YARA-like pattern with strings and condition
+ */
+export interface YaraPattern {
+  strings: Record<string, YaraString>
+  condition: string
+}
+
 export interface RulePattern {
   type: PatternType
-  pattern: string | ASTPattern | APICallPattern
+  pattern: string | ASTPattern | APICallPattern | YaraPattern
   context?: PatternContext
   weight: number
   description: string

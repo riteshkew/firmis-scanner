@@ -266,6 +266,7 @@ function mapPatternTypeToEvidenceType(
       return 'file-access'
     case 'regex':
     case 'string-literal':
+    case 'yara':
       return 'pattern'
     default:
       return 'pattern'

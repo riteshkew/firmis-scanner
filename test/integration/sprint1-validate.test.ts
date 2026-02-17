@@ -241,6 +241,7 @@ describe('Integration: Sprint 1 - Rule Validation', () => {
         'api-call',
         'ast',
         'import',
+        'yara',
       ]
 
       for (const rule of rules) {
