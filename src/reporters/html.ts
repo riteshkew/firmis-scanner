@@ -2,10 +2,12 @@ import { writeFile } from 'node:fs/promises'
 import type { FileReporter } from './base.js'
 import type { ScanResult } from '../types/index.js'
 import { getHtmlStyles } from './html-styles.js'
+import { getDarkThemeStyles } from './html-dark-theme.js'
 import {
   generateHeader,
   generateSummary,
   generatePlatformResults,
+  generateRuntimeRisks,
   generateFooter,
 } from './html-sections.js'
 
@@ -35,6 +37,7 @@ function generateHtml(result: ScanResult): string {
   <title>Firmis Scanner Report - ${new Date(result.startedAt).toLocaleString()}</title>
   <style>
     ${getHtmlStyles()}
+    ${getDarkThemeStyles()}
   </style>
 </head>
 <body>
@@ -42,6 +45,7 @@ function generateHtml(result: ScanResult): string {
     ${generateHeader(result)}
     ${generateSummary(result)}
     ${generatePlatformResults(result)}
+    ${generateRuntimeRisks(result)}
     ${generateFooter(result)}
   </div>
 </body>

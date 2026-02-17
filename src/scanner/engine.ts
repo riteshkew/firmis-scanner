@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import type {
   FirmisConfig,
   ScanResult,
@@ -16,6 +18,7 @@ import { PlatformDiscovery } from './discovery.js'
 import { FileAnalyzer } from './analyzer.js'
 import { SupabaseSemanticAnalyzer } from './platforms/supabase/semantic-analyzer.js'
 import { FirmisIgnore } from './ignore.js'
+import { runOsvCheck } from './osv.js'
 
 export class ScanEngine {
   private ruleEngine: RuleEngine
@@ -80,6 +83,12 @@ export class ScanEngine {
           threats: [],
         })
       }
+    }
+
+    // Post-scan: OSV dependency vulnerability check
+    const osvResult = await this.runOsvScanStep()
+    if (osvResult) {
+      platformResults.push(osvResult)
     }
 
     const completedAt = new Date()
@@ -233,6 +242,58 @@ export class ScanEngine {
       filesNotAnalyzed,
       threats: filteredThreats,
       riskLevel,
+    }
+  }
+
+  private async runOsvScanStep(): Promise<PlatformScanResult | null> {
+    const targetPath = this.config.targetPath ?? process.cwd()
+    const hasPackageJson = existsSync(join(targetPath, 'package.json'))
+    const hasRequirementsTxt = existsSync(join(targetPath, 'requirements.txt'))
+    const hasPyproject = existsSync(join(targetPath, 'pyproject.toml'))
+
+    if (!hasPackageJson && !hasRequirementsTxt && !hasPyproject) {
+      return null
+    }
+
+    try {
+      const { threats, dependencyFiles } = await runOsvCheck(
+        targetPath,
+        this.config.verbose
+      )
+
+      if (threats.length === 0 && dependencyFiles.length === 0) {
+        return null
+      }
+
+      const filteredThreats = threats.filter(
+        t => !this.ignore.shouldIgnore(t.ruleId, t.location.file)
+      ).filter(
+        t => !(this.config.ignoreRules ?? []).includes(t.ruleId)
+      )
+
+      const componentResult: ComponentResult = {
+        id: randomUUID(),
+        name: 'Dependencies',
+        type: 'plugin',
+        path: targetPath,
+        filesScanned: dependencyFiles.length,
+        filesAnalyzed: dependencyFiles.length,
+        filesNotAnalyzed: 0,
+        threats: filteredThreats,
+        riskLevel: calculateRiskLevel(filteredThreats),
+      }
+
+      return {
+        platform: 'mcp',
+        basePath: targetPath,
+        components: [componentResult],
+        threats: filteredThreats,
+      }
+    } catch (err) {
+      if (this.config.verbose) {
+        console.warn('OSV scan step failed:', err)
+      }
+      return null
     }
   }
 
