@@ -341,8 +341,27 @@ export class HtmlReporter implements FileReporter {
           <p>${summary.passedComponents}</p>
         </div>
       </div>
+      ${this.generateCoverageInfo(summary)}
       ${this.generateSeverityBreakdown(summary.bySeverity)}
     </div>
+    `
+  }
+
+  private generateCoverageInfo(summary: ScanResult['summary']): string {
+    const totalFiles = summary.filesAnalyzed + summary.filesNotAnalyzed
+    if (totalFiles === 0 || summary.filesNotAnalyzed === 0) return ''
+
+    const pct = Math.round((summary.filesNotAnalyzed / totalFiles) * 100)
+    const warnClass = pct > 20 ? 'warning' : ''
+
+    return `
+      <div style="margin-top: 1.5rem;">
+        <div class="summary-card ${warnClass}">
+          <h3>Analysis Coverage</h3>
+          <p style="font-size: 1rem;">${summary.filesAnalyzed}/${totalFiles} files analyzed (${pct}% not analyzable)</p>
+          ${pct > 20 ? '<p style="font-size: 0.875rem; color: #e67e22; margin-top: 0.5rem;">Grade capped at B due to low coverage</p>' : ''}
+        </div>
+      </div>
     `
   }
 

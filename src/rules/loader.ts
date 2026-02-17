@@ -28,11 +28,10 @@ export async function loadRules(customPath?: string): Promise<Rule[]> {
         const fileRules = await loadRuleFile(filePath)
         rules.push(...fileRules)
       } catch (error) {
-        console.error(`Failed to load rule file ${file}:`, error)
-        throw new RuleError(
-          `Failed to load rule file ${file}: ${error instanceof Error ? error.message : String(error)}`,
-          'unknown'
+        console.warn(
+          `[firmis] Warning: Skipping rule file ${file}: ${error instanceof Error ? error.message : String(error)}`
         )
+        continue
       }
     }
 

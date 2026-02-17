@@ -198,7 +198,7 @@ export class OpenClawAnalyzer extends BasePlatformAnalyzer {
       }
 
       const yaml = await import('js-yaml')
-      return yaml.load(frontmatterContent) as SkillFrontmatter
+      return yaml.load(frontmatterContent, { schema: yaml.JSON_SCHEMA }) as SkillFrontmatter
     } catch {
       return null
     }

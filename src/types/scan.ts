@@ -80,6 +80,8 @@ export interface ComponentResult {
   type: ComponentType
   path: string
   filesScanned: number
+  filesAnalyzed: number
+  filesNotAnalyzed: number
   threats: Threat[]
   riskLevel: SeverityLevel | 'none'
 }
@@ -100,6 +102,8 @@ export interface PlatformScanResult {
 export interface ScanSummary {
   totalComponents: number
   totalFiles: number
+  filesAnalyzed: number
+  filesNotAnalyzed: number
   threatsFound: number
   byCategory: Record<ThreatCategory, number>
   bySeverity: Record<SeverityLevel, number>
@@ -118,6 +122,7 @@ export interface ScanResult {
   platforms: PlatformScanResult[]
   summary: ScanSummary
   score: SecurityGrade
+  runtimeRisksNotCovered: string[]
 }
 
 /**
@@ -127,6 +132,8 @@ export function createEmptySummary(): ScanSummary {
   return {
     totalComponents: 0,
     totalFiles: 0,
+    filesAnalyzed: 0,
+    filesNotAnalyzed: 0,
     threatsFound: 0,
     byCategory: {
       'credential-harvesting': 0,
@@ -172,9 +179,13 @@ export function calculateRiskLevel(threats: Threat[]): SeverityLevel | 'none' {
  * Compute security grade based on scan summary
  */
 export function computeSecurityGrade(summary: ScanSummary): SecurityGrade {
-  if (summary.threatsFound === 0) return 'A'
+  const totalFiles = summary.filesAnalyzed + summary.filesNotAnalyzed
+  const lowCoverage = totalFiles > 0 && summary.filesNotAnalyzed / totalFiles > 0.2
+
   if (summary.bySeverity.critical > 0) return 'F'
   if (summary.bySeverity.high > 0) return 'D'
   if (summary.bySeverity.medium > 0) return 'C'
+  if (lowCoverage) return 'B'
+  if (summary.threatsFound === 0) return 'A'
   return 'B'
 }

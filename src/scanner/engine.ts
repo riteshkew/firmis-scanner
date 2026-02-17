@@ -94,6 +94,13 @@ export class ScanEngine {
       platforms: platformResults,
       summary,
       score: computeSecurityGrade(summary),
+      runtimeRisksNotCovered: [
+        'Runtime prompt injection via live user input',
+        'Real-time data exfiltration over network',
+        'Dynamic tool invocation abuse',
+        'Session hijacking and token theft',
+        'Live MCP message tampering',
+      ],
     }
   }
 
@@ -132,6 +139,8 @@ export class ScanEngine {
           type: component.type,
           path: component.path,
           filesScanned: 0,
+          filesAnalyzed: 0,
+          filesNotAnalyzed: 0,
           threats: [],
           riskLevel: 'none',
         })
@@ -158,9 +167,12 @@ export class ScanEngine {
     )
 
     const threats: Threat[] = []
+    let filesAnalyzed = 0
+    let filesNotAnalyzed = 0
 
     for (const fileAnalysis of fileAnalyses) {
       if (fileAnalysis.parseError) {
+        filesNotAnalyzed++
         if (this.config.verbose) {
           console.warn(`Parse error in ${fileAnalysis.filePath}: ${fileAnalysis.parseError}`)
         }
@@ -175,8 +187,10 @@ export class ScanEngine {
           platformType as Parameters<typeof this.ruleEngine.analyze>[3]
         )
 
+        filesAnalyzed++
         threats.push(...fileThreats)
       } catch (error) {
+        filesNotAnalyzed++
         if (this.config.verbose) {
           console.error(`Failed to analyze ${fileAnalysis.filePath}:`, error)
         }
@@ -215,6 +229,8 @@ export class ScanEngine {
       type: component.type,
       path: component.path,
       filesScanned: fileAnalyses.length,
+      filesAnalyzed,
+      filesNotAnalyzed,
       threats: filteredThreats,
       riskLevel,
     }
@@ -231,6 +247,8 @@ export class ScanEngine {
       for (const component of platformResult.components) {
         summary.totalComponents++
         summary.totalFiles += component.filesScanned
+        summary.filesAnalyzed += component.filesAnalyzed
+        summary.filesNotAnalyzed += component.filesNotAnalyzed
 
         if (component.threats.length === 0) {
           summary.passedComponents++

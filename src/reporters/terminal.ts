@@ -93,6 +93,18 @@ export class TerminalReporter implements Reporter {
     // Display security grade
     const gradeColor = this.getGradeColor(score)
     console.log(gradeColor(`  Security Grade: ${score}`))
+
+    // Show coverage caveat if files were not analyzable
+    const totalFiles = summary.filesAnalyzed + summary.filesNotAnalyzed
+    if (totalFiles > 0 && summary.filesNotAnalyzed > 0) {
+      const pct = Math.round((summary.filesNotAnalyzed / totalFiles) * 100)
+      console.log(
+        chalk.yellow(`  Coverage: ${summary.filesAnalyzed}/${totalFiles} files analyzed (${pct}% not analyzable)`)
+      )
+      if (pct > 20) {
+        console.log(chalk.yellow('  Grade capped at B due to low coverage'))
+      }
+    }
     console.log()
 
     const icon = summary.threatsFound > 0 ? chalk.yellow('⚠') : chalk.green('✓')
@@ -105,6 +117,15 @@ export class TerminalReporter implements Reporter {
       console.log(
         chalk.yellow(`    ${summary.threatsFound} threats detected ${severityBreakdown}`)
       )
+    }
+
+    // Show runtime risks disclaimer
+    if (result.runtimeRisksNotCovered.length > 0) {
+      console.log()
+      console.log(chalk.dim('  Note: Static analysis cannot detect:'))
+      for (const risk of result.runtimeRisksNotCovered) {
+        console.log(chalk.dim(`    - ${risk}`))
+      }
     }
 
     console.log()
