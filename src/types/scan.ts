@@ -23,6 +23,8 @@ export type ThreatCategory =
   | 'agent-memory-poisoning'
   | 'supply-chain'
   | 'permission-overgrant'
+  | 'secret-detection'
+  | 'tool-poisoning'
 
 /**
  * Confidence tiers for threat classification
@@ -150,6 +152,8 @@ export function createEmptySummary(): ScanSummary {
       'agent-memory-poisoning': 0,
       'supply-chain': 0,
       'permission-overgrant': 0,
+      'secret-detection': 0,
+      'tool-poisoning': 0,
     },
     bySeverity: {
       low: 0,

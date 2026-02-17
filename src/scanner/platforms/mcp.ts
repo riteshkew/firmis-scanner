@@ -29,6 +29,7 @@ export class MCPAnalyzer extends BasePlatformAnalyzer {
   private readonly configPaths = [
     '~/.config/mcp/mcp.json',
     '~/Library/Application Support/Claude/claude_desktop_config.json',
+    '.vscode/mcp.json',
   ]
 
   private readonly basePaths = ['~/.config/mcp/', '~/.mcp/servers/']

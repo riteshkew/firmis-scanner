@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+import { VERSION } from '../version.js'
 import type { Reporter } from './base.js'
 import type {
   ScanResult,
@@ -23,7 +24,7 @@ export class TerminalReporter implements Reporter {
 
   private printHeader(): void {
     console.log()
-    console.log(chalk.bold.cyan('  Firmis Scanner v1.1.0'))
+    console.log(chalk.bold.cyan(`  Firmis Scanner v${VERSION}`))
     console.log()
   }
 
@@ -205,8 +206,6 @@ export class TerminalReporter implements Reporter {
       autogpt: 'AutoGPT Plugins',
       openclaw: 'OpenClaw Skills',
       nanobot: 'Nanobot Agents',
-      langchain: 'LangChain Tools',
-      custom: 'Custom Agents',
     }
     return names[platform] || platform
   }
@@ -221,8 +220,6 @@ export class TerminalReporter implements Reporter {
       autogpt: 'plugins',
       openclaw: 'skills',
       nanobot: 'agents',
-      langchain: 'tools',
-      custom: 'agents',
     }
     return suffixes[platform] || 'components'
   }
@@ -237,8 +234,6 @@ export class TerminalReporter implements Reporter {
       autogpt: 'Plugin',
       openclaw: 'Skill',
       nanobot: 'Agent',
-      langchain: 'Tool',
-      custom: 'Agent',
     }
     return labels[platform] || 'Component'
   }

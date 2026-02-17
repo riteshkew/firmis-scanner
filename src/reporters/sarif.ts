@@ -1,4 +1,5 @@
 import { writeFile } from 'node:fs/promises'
+import { VERSION } from '../version.js'
 import type { FileReporter } from './base.js'
 import type { ScanResult, Threat, SeverityLevel } from '../types/index.js'
 
@@ -99,7 +100,7 @@ export class SarifReporter implements FileReporter {
           tool: {
             driver: {
               name: 'Firmis Scanner',
-              version: '1.0.0',
+              version: VERSION,
               informationUri: 'https://firmislabs.com',
               rules,
             },
