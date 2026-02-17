@@ -288,7 +288,7 @@ export class NanobotAnalyzer extends BasePlatformAnalyzer {
       }
 
       const yaml = await import('js-yaml')
-      return yaml.load(frontmatterContent) as AgentFrontmatter
+      return yaml.load(frontmatterContent, { schema: yaml.JSON_SCHEMA }) as AgentFrontmatter
     } catch {
       return null
     }

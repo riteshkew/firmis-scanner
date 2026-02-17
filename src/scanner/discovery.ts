@@ -57,6 +57,14 @@ export class PlatformDiscovery {
       return this.discoverAtPath(config.platforms, config.targetPath)
     }
 
+    // If a target path is specified without platforms, try all platforms against it
+    if (config.targetPath) {
+      return this.discoverAtPath(
+        PlatformRegistry.getSupportedPlatforms(),
+        config.targetPath
+      )
+    }
+
     if (config.platforms && config.platforms.length > 0) {
       return this.discoverSpecific(config.platforms)
     }

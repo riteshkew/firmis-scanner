@@ -26,6 +26,8 @@ export class MCPAnalyzer extends BasePlatformAnalyzer {
   readonly platformType = 'mcp' as const
   readonly name = 'MCP Servers'
 
+  private analyzedConfigFiles = new Set<string>()
+
   private readonly configPaths = [
     '~/.config/mcp/mcp.json',
     '~/Library/Application Support/Claude/claude_desktop_config.json',
@@ -77,6 +79,7 @@ export class MCPAnalyzer extends BasePlatformAnalyzer {
   }
 
   async discover(basePath: string): Promise<DiscoveredComponent[]> {
+    this.analyzedConfigFiles = new Set<string>()
     const components: DiscoveredComponent[] = []
     const expandedPath = this.expandHome(basePath)
 
@@ -147,9 +150,12 @@ export class MCPAnalyzer extends BasePlatformAnalyzer {
   async analyze(component: DiscoveredComponent): Promise<string[]> {
     const files: string[] = []
 
-    // Include the MCP config file itself for credential scanning
-    if (component.configPath && await this.fileExists(component.configPath)) {
-      files.push(component.configPath)
+    // Include the MCP config file once (not per-server) for credential scanning
+    if (component.configPath && !this.analyzedConfigFiles.has(component.configPath)) {
+      if (await this.fileExists(component.configPath)) {
+        files.push(component.configPath)
+        this.analyzedConfigFiles.add(component.configPath)
+      }
     }
 
     try {

@@ -226,3 +226,62 @@ rules:
         description: Email with file attachment
     remediation: |
       Email transmission should be explicitly requested. Review what data is being sent.
+
+  - id: exfil-011
+    name: Cloud Metadata Service Access (IMDS/SSRF)
+    description: Detects access to cloud instance metadata services for credential theft
+    category: data-exfiltration
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: '169\.254\.169\.254'
+        weight: 95
+        description: AWS/Azure IMDS endpoint IP
+      - type: regex
+        pattern: 'metadata\.google\.internal'
+        weight: 95
+        description: GCP metadata server hostname
+      - type: regex
+        pattern: 'latest/meta-data/iam'
+        weight: 100
+        description: AWS IAM credentials endpoint path
+      - type: regex
+        pattern: 'computeMetadata/v1'
+        weight: 90
+        description: GCP compute metadata API path
+      - type: regex
+        pattern: 'metadata/instance/compute'
+        weight: 90
+        description: Azure IMDS instance metadata path
+    remediation: |
+      Cloud metadata service access from agent code is extremely suspicious.
+      This is the primary vector for SSRF-to-credential-theft in cloud environments.
+      Agents should never access instance metadata endpoints directly.
+
+  - id: exfil-012
+    name: WebSocket Exfiltration
+    description: Detects WebSocket connections that may exfiltrate data to external servers
+    category: data-exfiltration
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: 'new\s+WebSocket\s*\(\s*[''"]wss?://'
+        weight: 70
+        description: WebSocket connection to external server
+      - type: regex
+        pattern: '\.send\s*\(.*(?:readFile|credential|secret|token|password|apiKey)'
+        weight: 85
+        description: WebSocket sending sensitive data
+      - type: import
+        pattern: 'ws'
+        weight: 40
+        description: WebSocket library import
+    remediation: |
+      WebSocket connections can maintain persistent channels for data exfiltration.
+      Verify the destination server is trusted and the data being sent is appropriate.

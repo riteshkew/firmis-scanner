@@ -23,6 +23,11 @@ const CONTEXT_MULTIPLIERS: Record<MatchContext, number> = {
   documentation: 0.15,
 }
 
+/** Categories where documentation multiplier should NOT apply (a secret is a secret) */
+const DOC_MULTIPLIER_EXEMPT: Set<ThreatCategory> = new Set([
+  'secret-detection',
+])
+
 function computeConfidenceTier(
   matchCount: number,
   ratioConfidence: number,
@@ -174,7 +179,11 @@ export class RuleEngine {
 
     const ratioConfidence = Math.round((matchedWeight / totalWeight) * 100)
     const rawConfidence = Math.max(ratioConfidence, maxSinglePatternWeight)
-    const confidence = Math.round(rawConfidence * contextMultiplier)
+    // Secrets and credentials get full confidence regardless of file context
+    const effectiveMultiplier = (context === 'documentation' && DOC_MULTIPLIER_EXEMPT.has(rule.category))
+      ? 1.0
+      : contextMultiplier
+    const confidence = Math.round(rawConfidence * effectiveMultiplier)
 
     if (confidence < rule.confidenceThreshold) {
       return null
