@@ -83,8 +83,6 @@ export function matchRegex(
     while ((match = regex.exec(content)) !== null) {
       const { line, column } = getLineAndColumn(content, match.index)
       const snippet = lines[line - 1]?.trim() ?? ''
-      // Skip matches inside comments (SQL --, JS //, shell #)
-      if (/^(--|\/\/|#)\s/.test(snippet)) continue
       matches.push({
         patternType: 'regex',
         description,

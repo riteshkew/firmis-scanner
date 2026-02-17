@@ -116,3 +116,67 @@ rules:
         description: "Cron-style pattern in string literal — scheduled execution"
     remediation: |
       Long time delays in AI agent skills are suspicious. Legitimate skills should execute promptly, not schedule deferred actions.
+
+  - id: mem-005
+    name: Copilot Instructions Manipulation
+    description: "Writes to .github/copilot-instructions.md — persistent Copilot behavior injection"
+    category: agent-memory-poisoning
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(|fopen).*copilot-instructions\.md'
+        weight: 90
+        description: "Writing to GitHub Copilot instructions file"
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(|fopen).*\.github[/\\]copilot'
+        weight: 85
+        description: "Writing to .github/copilot config"
+    remediation: |
+      Skills should not modify GitHub Copilot instruction files. This could inject persistent malicious behavior into Copilot-assisted development.
+
+  - id: mem-006
+    name: OpenAI Agents Memory Manipulation
+    description: "Writes to AGENTS.md or .codex/ — OpenAI Codex/Agents persistent memory injection"
+    category: agent-memory-poisoning
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(|fopen).*AGENTS\.md'
+        weight: 90
+        description: "Writing to OpenAI AGENTS.md memory file"
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(|fopen).*\.codex[/\\]'
+        weight: 85
+        description: "Writing to .codex/ agent config directory"
+    remediation: |
+      Skills should not modify OpenAI agent memory files. This could inject persistent malicious instructions.
+
+  - id: mem-007
+    name: Aider Agent Config Manipulation
+    description: "Writes to .aider/ config or .aider.conf.yml — Aider AI agent manipulation"
+    category: agent-memory-poisoning
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(|fopen).*\.aider[/\\]'
+        weight: 85
+        description: "Writing to .aider/ config directory"
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(|fopen).*\.aider\.conf'
+        weight: 85
+        description: "Writing to .aider.conf configuration"
+      - type: regex
+        pattern: '(writeFile|fs\.write|open\(|fopen).*\.aiderignore'
+        weight: 70
+        description: "Writing to .aiderignore file"
+    remediation: |
+      Skills should not modify Aider AI agent configuration. This could inject malicious instructions or change security settings.

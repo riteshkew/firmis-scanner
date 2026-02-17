@@ -1,0 +1,247 @@
+rules:
+  - id: fs-001
+    name: /proc Filesystem Enumeration
+    description: "Detects access to /proc filesystem entries used for reconnaissance and credential theft"
+    category: file-system-abuse
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: '/proc/self/environ'
+        weight: 90
+        description: "Read process environment — may expose secrets and tokens"
+      - type: regex
+        pattern: '/proc/self/fd'
+        weight: 85
+        description: "Enumerate open file descriptors for reconnaissance"
+      - type: regex
+        pattern: '/proc/1/environ'
+        weight: 90
+        description: "Read PID 1 environment — container credential theft vector"
+      - type: regex
+        pattern: '/proc/self/maps'
+        weight: 80
+        description: "Read memory map — used to locate loaded libraries and secrets"
+      - type: regex
+        pattern: '/proc/self/cmdline'
+        weight: 80
+        description: "Read process command line — may expose secrets passed as arguments"
+      - type: regex
+        pattern: '/proc/self/status'
+        weight: 80
+        description: "Read process status — used for privilege/capability reconnaissance"
+      - type: regex
+        pattern: '/proc/net/tcp'
+        weight: 82
+        description: "Read kernel TCP table — used to enumerate open ports"
+    remediation: |
+      Access to /proc filesystem entries is a strong indicator of reconnaissance activity.
+      AI agents should never read /proc entries outside of explicitly approved diagnostic tools.
+      For container environments, /proc/1/environ access is a known credential theft vector.
+      Remove all /proc reads and use legitimate APIs for any required system information.
+
+  - id: fs-002
+    name: System Log Manipulation
+    description: "Detects reads, writes, or destruction of system log files to cover tracks"
+    category: file-system-abuse
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 55
+    patterns:
+      - type: regex
+        pattern: '/var/log/auth\.log'
+        weight: 85
+        description: "Access to authentication log — read or write for track-covering"
+      - type: regex
+        pattern: '/var/log/syslog'
+        weight: 80
+        description: "Access to syslog — read or write for track-covering"
+      - type: regex
+        pattern: '/var/log/secure'
+        weight: 85
+        description: "Access to secure log (RHEL/CentOS) — authentication events"
+      - type: regex
+        pattern: '/var/log/messages'
+        weight: 80
+        description: "Access to messages log — general system event log"
+      - type: regex
+        pattern: 'truncate\s+-s\s+0.*log'
+        weight: 85
+        description: "Truncate log file to zero bytes — evidence destruction"
+      - type: regex
+        pattern: '>\s+/var/log/'
+        weight: 85
+        description: "Shell redirect to overwrite log file"
+      - type: regex
+        pattern: 'echo\s*>\s*/var/log/'
+        weight: 85
+        description: "Echo redirect to clear log file"
+      - type: regex
+        pattern: 'rm\s+.*\.log'
+        weight: 80
+        description: "Delete log files — evidence destruction"
+      - type: regex
+        pattern: 'auditctl\s+-e\s+0'
+        weight: 85
+        description: "Disable Linux audit subsystem"
+      - type: regex
+        pattern: 'service\s+(rsyslog|auditd)\s+stop'
+        weight: 85
+        description: "Stop logging or audit daemon"
+    remediation: |
+      System log access or modification is a serious indicator of anti-forensic activity.
+      AI agents must never read, write, truncate, or delete system log files.
+      Disabling syslog or auditd services to evade detection is a critical security event.
+      Remove all log manipulation code and review why the agent requires log access.
+
+  - id: fs-003
+    name: System Account File Access
+    description: "Detects reads of system authentication and authorization files"
+    category: file-system-abuse
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 55
+    patterns:
+      - type: regex
+        pattern: '/etc/passwd'
+        weight: 85
+        description: "Access to /etc/passwd — user account enumeration"
+      - type: regex
+        pattern: '/etc/shadow'
+        weight: 95
+        description: "Access to /etc/shadow — password hash theft"
+      - type: regex
+        pattern: '/etc/sudoers'
+        weight: 95
+        description: "Access to /etc/sudoers — privilege escalation configuration"
+      - type: regex
+        pattern: '/etc/group'
+        weight: 85
+        description: "Access to /etc/group — group membership enumeration"
+      - type: regex
+        pattern: 'open\s*\(\s*[''"]\/etc\/(passwd|shadow|sudoers|group)'
+        weight: 90
+        description: "Python/shell open() of system account files"
+      - type: regex
+        pattern: 'readFile.*\/etc\/(passwd|shadow|sudoers|group)'
+        weight: 90
+        description: "Node.js readFile of system account files"
+      - type: regex
+        pattern: 'cat\s+/etc/(passwd|shadow|sudoers|group)'
+        weight: 90
+        description: "Shell cat of system account files"
+    remediation: |
+      Reading system account files (/etc/passwd, /etc/shadow, /etc/sudoers, /etc/group)
+      is a strong indicator of credential harvesting or privilege escalation preparation.
+      /etc/shadow contains password hashes and must never be accessed by an AI agent.
+      Remove all access to these files. Use dedicated APIs for any legitimate user lookup needs.
+
+  - id: fs-004
+    name: Symlink Attack
+    description: "Detects creation of symbolic links pointing to sensitive system paths"
+    category: file-system-abuse
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 65
+    patterns:
+      - type: regex
+        pattern: 'ln\s+-s.*(/etc/|/root/|/home/|\.ssh|\.aws|\.env)'
+        weight: 80
+        description: "Shell symlink creation targeting sensitive path"
+      - type: regex
+        pattern: 'fs\.symlinkSync'
+        weight: 80
+        description: "Node.js synchronous symlink creation"
+      - type: regex
+        pattern: 'fs\.symlink\s*\('
+        weight: 80
+        description: "Node.js asynchronous symlink creation"
+      - type: regex
+        pattern: 'os\.symlink\s*\('
+        weight: 80
+        description: "Python os.symlink() call"
+    remediation: |
+      Symlink creation targeting sensitive paths (/etc, /root, ~/.ssh, ~/.aws) is a
+      common privilege escalation and path traversal technique.
+      AI agents should never create symlinks without explicit, scoped authorization.
+      Remove symlink creation code and audit the intent behind any file redirection logic.
+
+  - id: fs-005
+    name: Kernel Memory Access
+    description: "Detects access to kernel memory devices and raw memory operations"
+    category: file-system-abuse
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: '/dev/mem'
+        weight: 95
+        description: "Access to /dev/mem — physical memory device"
+      - type: regex
+        pattern: '/dev/kmem'
+        weight: 95
+        description: "Access to /dev/kmem — kernel virtual memory device"
+      - type: regex
+        pattern: '/dev/port'
+        weight: 95
+        description: "Access to /dev/port — I/O port memory device"
+      - type: regex
+        pattern: 'mmap.*PROT_EXEC'
+        weight: 95
+        description: "mmap with execute permission — code injection vector"
+      - type: regex
+        pattern: 'dd\s+if=/dev/mem'
+        weight: 95
+        description: "Dump physical memory using dd"
+    remediation: |
+      Access to kernel memory devices (/dev/mem, /dev/kmem, /dev/port) is an extreme
+      security violation that enables arbitrary memory reads, rootkit installation,
+      and kernel-level compromise. mmap with PROT_EXEC is a code injection technique.
+      This code must be removed immediately. No AI agent should ever touch kernel memory.
+
+  - id: fs-006
+    name: Insecure File Permissions
+    description: "Detects creation of files or directories with world-writable or overly permissive modes"
+    category: file-system-abuse
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 65
+    patterns:
+      - type: regex
+        pattern: 'chmod\s+777'
+        weight: 75
+        description: "chmod 777 — world-readable, world-writable, world-executable"
+      - type: regex
+        pattern: 'chmod\s+666'
+        weight: 70
+        description: "chmod 666 — world-readable and world-writable"
+      - type: regex
+        pattern: 'os\.chmod.*0o777'
+        weight: 75
+        description: "Python os.chmod with octal 0o777"
+      - type: regex
+        pattern: 'fs\.chmodSync.*0o777'
+        weight: 75
+        description: "Node.js fs.chmodSync with octal 0o777"
+      - type: regex
+        pattern: 'fs\.chmod\s*\(.*0o777'
+        weight: 75
+        description: "Node.js fs.chmod with octal 0o777"
+      - type: regex
+        pattern: 'umask\s*\(\s*0\s*\)'
+        weight: 70
+        description: "umask(0) — disables all permission masking for new files"
+    remediation: |
+      Overly permissive file modes (777, 666) allow any user on the system to read or
+      modify files, undermining access control and enabling privilege escalation.
+      umask(0) is particularly dangerous as it makes all subsequently created files world-accessible.
+      Use the principle of least privilege: apply only the minimum permissions required.
+      Prefer 640 for files and 750 for directories. Never use 777 in production code.

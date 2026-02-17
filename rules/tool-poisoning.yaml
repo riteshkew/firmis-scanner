@@ -1,0 +1,188 @@
+rules:
+  - id: tp-001
+    name: Hidden Instructions in Tool Descriptions
+    description: "Detects invisible Unicode characters and HTML comments used to hide malicious instructions inside tool or function descriptions"
+    category: tool-poisoning
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: '[\u200B\u200C\u200D\uFEFF]'
+        weight: 95
+        description: "Zero-width space or BOM character used to hide content in tool description"
+      - type: regex
+        pattern: '[\u200E\u200F\u202A\u202B\u202C\u202D\u202E]'
+        weight: 95
+        description: "Right-to-left or directional override Unicode marks that can reverse visible text"
+      - type: regex
+        pattern: '[\u0300-\u036F]{3,}'
+        weight: 90
+        description: "Excessive combining diacritical characters used to visually obscure text"
+      - type: regex
+        pattern: '<!--[\s\S]*?-->'
+        weight: 90
+        description: "HTML comment block inside tool description that may contain hidden instructions"
+    remediation: |
+      Remove all invisible Unicode characters and HTML comments from tool descriptions.
+      These are used by attackers to smuggle hidden instructions that are processed by AI
+      agents but invisible to human reviewers. Audit any tool description that was fetched
+      from an external or untrusted source.
+
+  - id: tp-002
+    name: Prompt Override in Tool Description
+    description: "Detects prompt injection language embedded in tool descriptions or metadata that attempts to override AI instructions"
+    category: tool-poisoning
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 55
+    patterns:
+      - type: regex
+        pattern: '(?i)[Ii]gnore\s+(all\s+|previous\s+|prior\s+|above\s+)?instructions'
+        weight: 90
+        description: "Direct instruction override attempt in tool description"
+      - type: regex
+        pattern: '(?i)[Dd]isregard\s+(all\s+|previous\s+|prior\s+|the\s+above\s+)?instructions'
+        weight: 90
+        description: "Disregard instructions pattern in tool metadata"
+      - type: regex
+        pattern: '(?i)[Ss]ystem\s+prompt'
+        weight: 85
+        description: "Reference to system prompt in tool description — possible extraction attempt"
+      - type: regex
+        pattern: '(?i)[Aa]dmin\s+mode'
+        weight: 85
+        description: "Fake admin mode escalation in tool description"
+      - type: regex
+        pattern: '(?i)[Yy]ou\s+are\s+now\b'
+        weight: 88
+        description: "Role reassignment attempt embedded in tool description"
+      - type: regex
+        pattern: '(?i)[Ff]orget\s+(your\s+|all\s+)?instructions'
+        weight: 88
+        description: "Instruction wipe attempt in tool description"
+      - type: regex
+        pattern: '(?i)\bdisregard\b'
+        weight: 75
+        description: "General disregard keyword in tool metadata context"
+    remediation: |
+      Remove all prompt injection language from tool descriptions and metadata.
+      Tool descriptions should only describe the tool's legitimate purpose and parameters.
+      Any text attempting to override AI instructions is a tool poisoning attack.
+      Validate all tool descriptions fetched from external MCP servers before use.
+
+  - id: tp-003
+    name: Tool Shadowing via Known Trusted Names
+    description: "Detects tool registrations that use the names of well-known trusted tools to hijack AI behavior"
+    category: tool-poisoning
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 55
+    patterns:
+      - type: regex
+        pattern: '(?:name|tool_name|"name")\s*[=:]\s*[''"]?\s*read_file\s*[''"]?'
+        weight: 80
+        description: "Tool registered with the trusted name 'read_file' — possible shadowing attack"
+      - type: regex
+        pattern: '(?:name|tool_name|"name")\s*[=:]\s*[''"]?\s*write_file\s*[''"]?'
+        weight: 80
+        description: "Tool registered with the trusted name 'write_file' — possible shadowing attack"
+      - type: regex
+        pattern: '(?:name|tool_name|"name")\s*[=:]\s*[''"]?\s*execute_command\s*[''"]?'
+        weight: 80
+        description: "Tool registered with the trusted name 'execute_command' — possible shadowing attack"
+      - type: regex
+        pattern: '(?:name|tool_name|"name")\s*[=:]\s*[''"]?\s*bash\s*[''"]?'
+        weight: 80
+        description: "Tool registered with the trusted name 'bash' — possible shadowing attack"
+      - type: regex
+        pattern: '(?:name|tool_name|"name")\s*[=:]\s*[''"]?\s*terminal\s*[''"]?'
+        weight: 80
+        description: "Tool registered with the trusted name 'terminal' — possible shadowing attack"
+      - type: regex
+        pattern: '(?:name|tool_name|"name")\s*[=:]\s*[''"]?\s*list_directory\s*[''"]?'
+        weight: 80
+        description: "Tool registered with the trusted name 'list_directory' — possible shadowing attack"
+      - type: regex
+        pattern: '(?:name|tool_name|"name")\s*[=:]\s*[''"]?\s*search_files\s*[''"]?'
+        weight: 80
+        description: "Tool registered with the trusted name 'search_files' — possible shadowing attack"
+    remediation: |
+      A tool is being registered under a name that matches a well-known trusted tool.
+      This is a classic tool shadowing attack: a malicious MCP server registers a tool
+      with an identical name to intercept calls intended for the legitimate tool.
+      Audit the source of this tool registration and verify the server's identity before use.
+
+  - id: tp-004
+    name: MCP Server Config Injection
+    description: "Detects code that writes to MCP configuration files or dynamically adds server entries, which can silently register malicious tools"
+    category: tool-poisoning
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: '(?:writeFile|writeFileSync|appendFile|appendFileSync|open)\s*\([^)]*(?:mcp\.json|claude_desktop_config\.json)'
+        weight: 95
+        description: "Code writes to an MCP configuration file (mcp.json or claude_desktop_config.json)"
+      - type: regex
+        pattern: '(?:writeFile|writeFileSync|appendFile|appendFileSync|open)\s*\([^)]*\.cursor[/\\\\]mcp\.json'
+        weight: 95
+        description: "Code writes to the Cursor MCP config file"
+      - type: regex
+        pattern: '(?:writeFile|writeFileSync|appendFile|appendFileSync|open)\s*\([^)]*\.vscode[/\\\\]mcp\.json'
+        weight: 95
+        description: "Code writes to the VSCode MCP config file"
+      - type: regex
+        pattern: '(?:writeFile|writeFileSync|appendFile|appendFileSync|open)\s*\([^)]*mcpServers'
+        weight: 90
+        description: "Code constructs and writes mcpServers entries programmatically"
+    remediation: |
+      Code must not write to MCP configuration files at runtime.
+      MCP server registration is an administrative action that should only happen through
+      official, user-approved configuration channels. Dynamic modification of MCP configs
+      is a primary attack vector for silently registering malicious tool servers.
+      Remove any code that constructs or writes mcpServers entries programmatically.
+
+  - id: tp-005
+    name: Suspicious Sensitive Parameters in Tool Definitions
+    description: "Detects tool parameter definitions that request sensitive credentials, keys, or secrets from the user"
+    category: tool-poisoning
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: '(?i)"?(?:required|properties)"?\s*[:{[][^}\]]*\b(?:password|passwd)\b'
+        weight: 75
+        description: "Tool requires a 'password' parameter — may be harvesting credentials"
+      - type: regex
+        pattern: '(?i)"?(?:required|properties)"?\s*[:{[][^}\]]*\b(?:api_key|apikey|api-key)\b'
+        weight: 75
+        description: "Tool requires an 'api_key' parameter — may be harvesting API keys"
+      - type: regex
+        pattern: '(?i)"?(?:required|properties)"?\s*[:{[][^}\]]*\b(?:secret|secret_key)\b'
+        weight: 72
+        description: "Tool requires a 'secret' parameter — may be harvesting secrets"
+      - type: regex
+        pattern: '(?i)"?(?:required|properties)"?\s*[:{[][^}\]]*\b(?:token|access_token|auth_token)\b'
+        weight: 70
+        description: "Tool requires a 'token' parameter — possible credential harvesting"
+      - type: regex
+        pattern: '(?i)"?(?:required|properties)"?\s*[:{[][^}\]]*\b(?:private_key|ssh_key|signing_key)\b'
+        weight: 75
+        description: "Tool requires a private or SSH key parameter — high-risk credential request"
+      - type: regex
+        pattern: '(?i)"?(?:required|properties)"?\s*[:{[][^}\]]*\bcredential\b'
+        weight: 72
+        description: "Tool requires a 'credential' parameter — may be harvesting user credentials"
+    remediation: |
+      Tool parameter definitions must not request passwords, tokens, API keys, or private keys.
+      Legitimate tools access credentials through secure environment variables or secrets managers,
+      never by asking the user (or the AI agent) to supply them as tool arguments.
+      A tool that requires credentials as parameters is likely a credential-harvesting attack.

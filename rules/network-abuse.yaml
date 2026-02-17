@@ -1,0 +1,196 @@
+rules:
+  - id: net-001
+    name: Bind Shell
+    description: "Detects server-side bind shell patterns that open a listening port for incoming attacker connections"
+    category: network-abuse
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: 'net\.createServer.*listen\s*\(\s*(4444|1337|31337|8888|9999)'
+        weight: 95
+        description: "Node.js net.createServer listening on a well-known attack port"
+      - type: regex
+        pattern: 'socket\s*\.\s*bind\s*\(.*\d{4,5}.*\).*socket\s*\.\s*listen\s*\('
+        weight: 90
+        description: "Python-style socket bind followed by listen"
+      - type: regex
+        pattern: 'socket\.bind\s*\(\s*\(.*\d{4,5}\)'
+        weight: 85
+        description: "Python socket bind to a high-numbered port"
+      - type: regex
+        pattern: 'nc\s+-l.*-p\s+\d+'
+        weight: 92
+        description: "Netcat listening on a port (bind shell via nc -l -p)"
+      - type: regex
+        pattern: 'ncat.*--listen'
+        weight: 92
+        description: "Ncat explicit listen mode bind shell"
+    remediation: |
+      Bind shells open a network listener that an attacker can connect to directly.
+      AI agents should never create raw TCP listeners. Remove all socket.bind/listen
+      and net.createServer patterns unless they are part of a documented, sandboxed
+      service with explicit user consent.
+
+  - id: net-002
+    name: Raw Socket Creation
+    description: "Detects creation of raw network sockets that bypass normal OS protocol stacks, enabling packet crafting and sniffing"
+    category: network-abuse
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 65
+    patterns:
+      - type: regex
+        pattern: 'socket\.AF_PACKET'
+        weight: 90
+        description: "Linux AF_PACKET raw socket for layer-2 access"
+      - type: regex
+        pattern: 'SOCK_RAW'
+        weight: 88
+        description: "SOCK_RAW constant — raw socket creation"
+      - type: regex
+        pattern: 'socket\.IPPROTO_RAW'
+        weight: 88
+        description: "IPPROTO_RAW protocol for raw IP socket"
+      - type: regex
+        pattern: 'dgram\.createSocket\s*\(\s*[''"]raw[''"]'
+        weight: 85
+        description: "Node.js dgram raw socket creation"
+      - type: regex
+        pattern: 'require\s*\(\s*[''"]raw-socket[''"]'
+        weight: 85
+        description: "Import of the raw-socket npm package"
+    remediation: |
+      Raw sockets allow crafting arbitrary network packets and capturing all traffic
+      on an interface. This capability is not required by legitimate AI agents.
+      Remove raw socket usage and use higher-level network APIs instead.
+
+  - id: net-003
+    name: SSH Tunneling
+    description: "Detects SSH-based tunneling and port-forwarding patterns used to bypass firewalls or exfiltrate data covertly"
+    category: network-abuse
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: 'ssh\s+-[RLD]'
+        weight: 85
+        description: "SSH remote (-R), local (-L), or dynamic (-D) port forwarding"
+      - type: regex
+        pattern: 'ssh.*-o\s+ProxyCommand'
+        weight: 82
+        description: "SSH ProxyCommand used to chain connections through intermediaries"
+      - type: regex
+        pattern: 'ssh.*-W\s'
+        weight: 80
+        description: "SSH -W flag for stdio forwarding (tunnel chaining)"
+      - type: regex
+        pattern: 'autossh'
+        weight: 83
+        description: "autossh — persistent SSH tunnel manager"
+      - type: regex
+        pattern: 'socat.*TCP.*EXEC'
+        weight: 85
+        description: "socat TCP relay with command execution (tunnel + shell)"
+      - type: regex
+        pattern: 'chisel\s+(server|client)'
+        weight: 88
+        description: "chisel fast TCP/UDP tunnel over HTTP"
+    remediation: |
+      SSH tunneling can be used to bypass network controls, exfiltrate data, or
+      grant reverse access to internal systems. AI agents should not establish
+      SSH port-forwards or tunnels. Remove these patterns entirely.
+
+  - id: net-004
+    name: Proxy and Tor Usage
+    description: "Detects use of SOCKS proxies, proxy chaining tools, and the Tor network to anonymize or reroute network traffic"
+    category: network-abuse
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 65
+    patterns:
+      - type: regex
+        pattern: 'socks5://'
+        weight: 78
+        description: "SOCKS5 proxy URI scheme"
+      - type: regex
+        pattern: 'socks4://'
+        weight: 75
+        description: "SOCKS4 proxy URI scheme"
+      - type: regex
+        pattern: '--proxy\s+socks'
+        weight: 78
+        description: "CLI --proxy flag pointing to a SOCKS proxy"
+      - type: regex
+        pattern: 'tor-browser'
+        weight: 72
+        description: "Reference to Tor Browser binary or path"
+      - type: regex
+        pattern: 'stem\.control'
+        weight: 80
+        description: "Python stem library Tor controller — programmatic Tor control"
+      - type: regex
+        pattern: 'require\s*\(\s*[''"]socks[''"]'
+        weight: 76
+        description: "Import of the socks npm package for SOCKS proxy support"
+      - type: regex
+        pattern: 'proxychains'
+        weight: 82
+        description: "proxychains — forces TCP connections through proxy chains"
+      - type: regex
+        pattern: 'tsocks'
+        weight: 78
+        description: "tsocks — transparent SOCKS proxy wrapper"
+    remediation: |
+      Proxy and Tor usage in agent code can be used to anonymize malicious activity
+      or bypass network monitoring. AI agents should use direct connections only.
+      Remove SOCKS proxy configuration and Tor-related dependencies.
+
+  - id: net-005
+    name: DNS Covert Channel
+    description: "Detects DNS-over-HTTPS used as a covert communication channel and DNS tunneling tools that encode data in DNS queries"
+    category: network-abuse
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: 'dns\.google/resolve'
+        weight: 82
+        description: "Google DNS-over-HTTPS resolve endpoint used as covert channel"
+      - type: regex
+        pattern: 'cloudflare-dns\.com/dns-query'
+        weight: 82
+        description: "Cloudflare DNS-over-HTTPS endpoint used as covert channel"
+      - type: regex
+        pattern: '1\.1\.1\.1/dns-query'
+        weight: 80
+        description: "Cloudflare DoH IP endpoint used as covert channel"
+      - type: regex
+        pattern: 'dns\.quad9\.net'
+        weight: 80
+        description: "Quad9 DNS-over-HTTPS endpoint used as covert channel"
+      - type: regex
+        pattern: 'iodine'
+        weight: 85
+        description: "iodine DNS tunneling tool"
+      - type: regex
+        pattern: 'dnscat'
+        weight: 88
+        description: "dnscat DNS tunneling tool — encrypted C2 over DNS"
+      - type: regex
+        pattern: 'dns2tcp'
+        weight: 85
+        description: "dns2tcp DNS tunneling tool"
+    remediation: |
+      DNS covert channels encode data in DNS query subdomains or use DoH endpoints
+      to bypass firewalls while exfiltrating data or maintaining C2 communication.
+      AI agents should not use DNS-over-HTTPS programmatically or invoke DNS
+      tunneling tools. Remove all such patterns and use standard HTTPS APIs instead.
