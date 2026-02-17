@@ -85,30 +85,6 @@ describe('Integration: Golden Paths - Known-Safe Codebases', () => {
     })
   })
 
-  describe('Supabase Secure Fixture', () => {
-    let result: ScanResult
-
-    beforeAll(async () => {
-      const config: FirmisConfig = {
-        platforms: ['supabase'],
-        targetPath: path.join(fixturesPath, 'supabase-secure'),
-        severity: 'low',
-        output: 'terminal',
-        verbose: false,
-        concurrency: 4,
-      }
-
-      const scanEngine = new ScanEngine(config)
-      await scanEngine.initialize()
-      result = await scanEngine.scan()
-    })
-
-    it('secure Supabase project produces grade A', () => {
-      expect(result.score).toBe('A')
-      expect(result.summary.threatsFound).toBe(0)
-    })
-  })
-
   describe('Codex Plugins Fixture', () => {
     let result: ScanResult
 

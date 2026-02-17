@@ -16,7 +16,6 @@ import { RuleEngine } from '../rules/index.js'
 import { PlatformRegistry } from './platforms/index.js'
 import { PlatformDiscovery } from './discovery.js'
 import { FileAnalyzer } from './analyzer.js'
-import { SupabaseSemanticAnalyzer } from './platforms/supabase/semantic-analyzer.js'
 import { FirmisIgnore } from './ignore.js'
 import { runOsvCheck } from './osv.js'
 
@@ -24,7 +23,6 @@ export class ScanEngine {
   private ruleEngine: RuleEngine
   private discovery: PlatformDiscovery
   private analyzer: FileAnalyzer
-  private supabaseSemanticAnalyzer: SupabaseSemanticAnalyzer
   private ignore: FirmisIgnore
   private config: FirmisConfig
 
@@ -33,7 +31,6 @@ export class ScanEngine {
     this.ruleEngine = new RuleEngine()
     this.discovery = new PlatformDiscovery()
     this.analyzer = new FileAnalyzer()
-    this.supabaseSemanticAnalyzer = new SupabaseSemanticAnalyzer()
     this.ignore = new FirmisIgnore()
   }
 
@@ -202,20 +199,6 @@ export class ScanEngine {
         filesNotAnalyzed++
         if (this.config.verbose) {
           console.error(`Failed to analyze ${fileAnalysis.filePath}:`, error)
-        }
-      }
-    }
-
-    // Run semantic analysis for Supabase projects
-    if (platformType === 'supabase') {
-      try {
-        const sqlFiles = filePaths.filter(f => f.endsWith('.sql'))
-        const configFile = filePaths.find(f => f.endsWith('config.toml'))
-        const semanticThreats = await this.supabaseSemanticAnalyzer.analyze(sqlFiles, configFile)
-        threats.push(...semanticThreats)
-      } catch (error) {
-        if (this.config.verbose) {
-          console.error('Supabase semantic analysis failed:', error)
         }
       }
     }

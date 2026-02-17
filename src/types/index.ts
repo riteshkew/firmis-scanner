@@ -61,12 +61,3 @@ export {
   EarlyExitError,
   isFirmisError,
 } from './errors.js'
-
-// Supabase types
-export type {
-  SupabaseTable,
-  SupabasePolicy,
-  SupabaseBucket,
-  SupabaseAuthConfig,
-  SupabaseProject,
-} from './supabase.js'

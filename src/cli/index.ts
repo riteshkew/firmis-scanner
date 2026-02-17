@@ -35,7 +35,6 @@ async function main(): Promise<void> {
   program.addCommand(scanCommand)
   program.addCommand(listCommand)
   program.addCommand(validateCommand)
-
   await program.parseAsync(process.argv)
 }
 

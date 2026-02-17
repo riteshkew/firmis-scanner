@@ -1,7 +1,8 @@
 # Firmis Scanner Security Audit Report
-**Date:** 2026-02-16
+**Date:** 2026-02-16 (updated 2026-02-17)
 **Auditor:** Staff Security Engineer Review
-**Scanner Version:** 1.1.0
+**Scanner Version:** 1.1.0 -> 1.2.0
+**Note:** Supabase platform scanner was removed in v1.2.0 (infrastructure security, not agentic). All Supabase-specific findings in this report are historical.
 
 ---
 
