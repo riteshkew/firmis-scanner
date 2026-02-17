@@ -1,18 +1,22 @@
 # Firmis Unified Plan v5.0
 
-**The Immune System for AI Agents**
+**The Immune System for AI Agents** (Internal Architecture Document)
 
 **Date:** 2026-02-17
-**Version:** 5.0 (supersedes PRDv2.0.md/v4.0, ARCHITECTURE.md v2.0)
+**Version:** 5.2 (supersedes PRDv2.0.md/v4.0, ARCHITECTURE.md v2.0)
 **Status:** Master Plan — Source of Truth
 **Stack:** TypeScript/Node.js CLI (scanner + monitor-free + pentest) + Lasso MCP Gateway/Python (monitor-paid) + API wrappers (web scanners) + Next.js Landing
-**Target:** Prosumer / SMB / Vibe Coders building with AI agents
+**Target:** Two-ring ICP — Outer: any developer running AI agents (free adoption). Inner: agent builders deploying for business clients (paid).
+**Customer-Facing Positioning:** "The security layer for AI agents" (Agentic Security category)
+**Internal Architecture Model:** Immune System (7 layers) — repackage externally as "Agentic Security Maturity Model"
 
 ---
 
 ## 1. The Immune System Thesis
 
 Firmis is an immune system for AI agents. Not a scanner. Not a firewall. Not a dashboard. An immune system — the only architecture that defends an open system against unbounded unknown threats without shutting it down.
+
+> **Customer-Facing Note:** The immune system model is the internal architecture thesis. Externally, position as "Agentic Security" — the category buyers and auditors recognize. The 7-layer model should be published as the "Agentic Security Maturity Model" — an industry framework for assessing agent security posture. This is a long-term moat: if auditors adopt the framework, Firmis becomes the default tool.
 
 ### Why "Immune System" Is the Correct Architecture
 
@@ -25,14 +29,14 @@ No single mechanism is sufficient. mcp-scan gives you innate pattern matching on
 | Immune Layer | Biological Function | Firmis Component | Command | Status |
 |---|---|---|---|---|
 | **Physical barriers** | Skin, mucous membranes | Docker sandboxes, E2B (not us) | — | We complement, don't replace |
-| **Innate immunity** | Pattern recognition (PAMPs), phagocytes | Static scan — YAML rules + secret detection + YARA patterns | `firmis scan` | 90% built, M0 completes |
+| **Innate immunity** | Pattern recognition (PAMPs), phagocytes | Static scan — YAML rules + secret detection + YARA patterns | `firmis scan` | **SHIPPED** (176+ rules, YARA engine) |
 | **Immune surveillance** | Dendritic cells sampling tissues | Auto-detect all frameworks, tools, models | `firmis discover` | Partial, M1 formalizes |
 | **Cellular registry** | MHC presentation — "what cells exist" | Agent Bill of Materials (CycloneDX) | `firmis bom` | Not built, M1 |
 | **Inoculation / Stress test** | Vaccine challenge, immune stress test | Active pentesting — adversarial probing of MCP servers and agents | `firmis pentest` | Not built, M2 |
 | **Inflammatory response** | Cytokines, neutrophil recruitment | Quarantine, credential rotation, config hardening | `firmis fix` | Not built, M2 |
 | **Adaptive patrol** | T-cells, B-cells circulating | MCP stdio proxy, runtime policy enforcement | `firmis monitor` | Not built, M3 |
 | **Medical record** | Patient history, treatment record | HTML report with AI fix prompts, scan history | `firmis report` | Partial, M0 enhances |
-| **Immune memory** | Memory B/T cells — instant recall | Known-malicious blocklist, IOC database | Internal | Partial (50+ blocklist) |
+| **Immune memory** | Memory B/T cells — instant recall | Known-malicious blocklist, IOC database, YARA signatures | Internal | Partial (50+ blocklist, 6 YARA sigs) |
 | **Vaccination** | Pre-exposure priming, herd immunity | Community threat feed, anonymous telemetry | Cloud | Not built, M4 |
 
 ### The Inoculation Layer (New in v5)
@@ -53,22 +57,35 @@ This is the difference between checking that a lock exists (scan) and actually t
 
 ---
 
-## 2. What Exists Today (v1.2.0)
+## 2. What Exists Today (v1.3.0)
 
 ### Shipped
 
 - 8 platform analyzers: OpenClaw, MCP, Claude, CrewAI, Cursor, Codex, AutoGPT, Nanobot
-- 144+ YAML rules across 11 rule files, 16 threat categories
+- 176+ YAML rules across 15 rule files, 14 threat categories
 - 60 secret-detection rules (Gitleaks-style patterns)
+- 6 YARA malware signature rules (pure TS engine — obfuscated payloads, reverse shells, credential stealers, package hijacking, coin miners, RAT/backdoor)
 - OSV vulnerability scanning via api.osv.dev batch API
 - Three-tier confidence model (suspicious / likely / confirmed)
 - Context-aware matching (code vs docs vs config) with documentation multiplier
-- 4 reporters: terminal (A-F grade), JSON, SARIF, HTML (enhanced with AI fix prompts)
+- 4 reporters: terminal (A-F grade), JSON, SARIF, HTML (enhanced with AI fix prompts, dark theme)
 - 3 CLI commands: `scan`, `list`, `validate`
+- 5 rule matchers: regex, AST, network, string-literal, YARA
 - Babel AST for JS/TS
 - Known-malicious blocklist (50+ skills, 10+ authors, C2 infrastructure)
 - `.firmisignore` support, `--ignore`, `--quiet`, `--fail-on` flags
+- 219 tests passing across 19 test files
 - Published on npm as `firmis-scanner`
+
+### Sprint A Deliverables (2026-02-17)
+
+- 3 new rule files: `tool-poisoning.yaml` (5 rules), `network-abuse.yaml` (5 rules), `file-system-abuse.yaml` (6 rules)
+- Extended `agent-memory-poisoning.yaml` (+3 rules: Copilot, AGENTS.md/Codex, .aider/)
+- Extended `credential-harvesting.yaml` (+4 rules: Azure CLI, AWS SSO, Vault tokens, container env)
+- YARA-like pattern matching engine (`src/rules/matchers/yara-matcher.ts`) with text/hex/regex string types and condition evaluator
+- `rules/malware-signatures.yaml` — 6 YARA rules for obfuscated payloads, reverse shells, credential stealers, package hijacking, coin miners, RAT/backdoor patterns
+- Removed comment-line filter in regex matcher (was suppressing valid detections)
+- All 3 previously empty threat categories now have active rules (tool-poisoning, network-abuse, file-system-abuse)
 
 ### Current Dependencies
 
@@ -111,8 +128,8 @@ These decisions override ARCHITECTURE.md v2.0 and PRDv2.0.md where they conflict
 | **Runtime monitor** | Lasso MCP Gateway Python plugin | **Two-tier:** Free = TypeScript MCP proxy via `@modelcontextprotocol/sdk`. Paid = Lasso MCP Gateway + FirmisPlugin (Python) | Free tier stays zero-install TS. Paid tier leverages Lasso's battle-tested gateway + plugin API — don't reinvent the wheel. |
 | **Policy language** | Invariant `.gr` (Python) | YAML runtime rules (adapted from `.gr` design) | Reuses existing rule engine. `.gr` is Python-only with Snyk acquisition risk. |
 | **BOM format** | Not planned | CycloneDX 1.7 ML-BOM via `@cyclonedx/cyclonedx-library` | Emerging compliance requirement. Apache-2.0. No competitor does this for prosumers. |
-| **Website scanner** | Not in CLI | HTTP Observatory API (MPL-2.0) + Nuclei file templates (MIT) | Wraps OSS tools, adds Firmis UX. Open-source module, wrapped in API for web frontend. |
-| **Supabase scanner** | Custom regex only | **Removed** — infrastructure security, not agentic. Generic secret-detection covers key leaks. |
+| **Website scanner** | Not in CLI | **KILLED** — different market, different competitors, dilutes agentic security positioning | Not building. Website security scanning is a red ocean with no connection to our agentic security wedge. |
+| **Supabase scanner** | Custom regex only | **REMOVED** (v1.2.0) — infrastructure security, not agentic | Generic secret-detection rules catch Supabase keys alongside AWS/GitHub/etc. Standalone scanner killed. |
 | **PII detection** | Not planned | Presidio patterns (MIT) ported to TS regex | Credential redaction in MCP tool responses at runtime. |
 
 ### Design Principles
@@ -128,47 +145,51 @@ These decisions override ARCHITECTURE.md v2.0 and PRDv2.0.md where they conflict
 
 ## 4. Product Funnel
 
+### Two-Ring ICP Model
+
+**Outer Ring (Free Adoption):** Any developer running AI agents — curious, nervous, or proactive about security. Finds Firmis through content, SEO, community. Runs free scan. May never pay.
+
+**Inner Ring (Paid Monetization):** Agent builders deploying solutions for business clients. Client asks "is this secure?" — builder needs proof. Converts to paid compliance report + monitoring.
+
 ```
-Awareness (blog, HN, Reddit, Product Hunt, SEO)
-    |
-    +-- firmislabs.com/ai-scanner       -> Vibe Coder Vince
-    +-- firmislabs.com/website-scanner  -> SMB Founder Sara
+Education content (blog, build-in-public, research)
     |
     v
 npx firmis scan (free, no signup, 30 seconds)
     | -> Terminal: A-F grade, plain English findings
-    | -> Fear: "Your MCP config exposes AWS keys to all 5 servers"
+    | -> Education: "Here's what your MCP config exposes"
     |
     v
-firmis report (free, email-gated)
-    | -> HTML report with AI fix prompts
-    | -> "Copy this into Claude to fix the issue"
+firmis report (free basic, email-gated)
+    | -> Basic PDF: security grade + findings
     | -> Lead magnet: captures email for nurture sequence
     |
     v
-firmis pentest (free tier: basic probes, paid: full red-team)
+Client asks "is this secure?"
+    | -> Compliance report (paid): SOC2/AI Act/GDPR gap analysis
+    | -> Branded, client-shareable PDF with AI fix prompts
+    |
+    v
+firmis pentest (free basic: 10 probes, paid full: 50+ probes)
     | -> Active testing of MCP servers for tool poisoning, auth bypass
-    | -> "We tried to extract credentials via your GitHub MCP server - and succeeded"
+    | -> "We tried to extract credentials via your MCP server — and succeeded"
     |
     v
-firmis fix + firmis monitor (Paid tier — pricing TBD)
-    | -> Auto-remediation + continuous runtime protection
-    | -> Slack/email alerts for new threats
+firmis monitor (paid, per deployment)
+    | -> Continuous runtime protection
+    | -> "Fire and forget" — deploy once, always protected
     |
     v
-Revenue: Paid subscribers (pricing TBD post-build)
+Revenue: Paid per deployment (pricing TBD post-build)
 ```
 
-### Scanner Acquisition Funnels
+### Distribution Strategy
 
-Each scanner targets a different persona, captures a different SEO keyword cluster, and feeds the same email list / paid funnel.
-
-| Scanner | Target | Format | OSS Foundation | Firmis Value-Add |
-|---|---|---|---|---|
-| **AI Agent Scanner** | Vince (vibe coder) | CLI: `npx firmis scan` | Custom 144+ rules, 8 analyzers | Platform context, fear UX, A-F grade |
-| **Website Scanner** | Sara (SMB founder) | Web: firmislabs.com/website-scanner | HTTP Observatory API (MPL-2.0), Nuclei (MIT) | Unified A-F score, plain English, fear UX |
-
-Both share: same email list (tagged by source), same nurture sequence, same paid tier (pricing TBD).
+- **Content-led, build-in-public:** Education-first content. Original research. Share development journey.
+- **SEO:** Target platform-specific searches ("is OpenClaw safe", "MCP security", "agentic security")
+- **Community:** r/ClaudeAI, r/LocalLLaMA, OpenClaw community, Hacker News
+- **Partnerships:** Agent harness vendors (complementary, not competitive)
+- **CI/CD:** GitHub Action for automated scanning (M1+)
 
 ---
 
@@ -276,10 +297,10 @@ src/cli/commands/
 
 | # | Deliverable | OSS Foundation | License | Priority |
 |---|---|---|---|---|
-| M0.1 | **Secret detection engine** | Port ~230 Gitleaks TOML regex patterns + Shannon entropy | MIT | P0 |
-| M0.2 | **OSV vulnerability scanning** | `fetch` to `api.osv.dev/v1/querybatch` | CC-BY-4.0 | P0 |
-| M0.3 | **Enhanced HTML report** | Internal — AI fix prompts, severity chart, email CTA | — | P0 |
-| M0.4 | **YARA-X pattern matching** | Port YARA text+regex rules to TS matchers | BSD-3 | P1 |
+| M0.1 | **Secret detection engine** | Port ~230 Gitleaks TOML regex patterns + Shannon entropy | MIT | **SHIPPED** (60 rules) |
+| M0.2 | **OSV vulnerability scanning** | `fetch` to `api.osv.dev/v1/querybatch` | CC-BY-4.0 | **SHIPPED** |
+| M0.3 | **Enhanced HTML report** | Internal — AI fix prompts, severity chart, email CTA | — | **SHIPPED** |
+| M0.4 | **YARA-X pattern matching** | Port YARA text+regex rules to TS matchers | BSD-3 | **SHIPPED** |
 
 **M0.1 — Secret Detection:**
 - Create `src/integrations/secrets.ts` — pure TS engine
@@ -308,6 +329,8 @@ src/cli/commands/
 - "Share this report" CTA -> email capture (waitlist API POST)
 - Inline CSS, dark theme, single self-contained HTML file
 - Email gate: report requires email to download (`firmis report --no-email` for CI)
+- Compliance gap indicators: map findings to SOC2 CC6/CC7, AI Act Article 9/15, GDPR Article 32
+- Two-tier report: Free (grade + findings), Paid (compliance mapping + client branding + AI fix prompts)
 
 **M0.4 — YARA-X Pattern Matching:**
 - Create `src/integrations/yara-ts.ts` — pure TS YARA-like engine
@@ -359,7 +382,7 @@ src/cli/commands/
 | M2.4 | **Tier 2 prompted fixes** (interactive) | Internal | P0 |
 | M2.5 | **Backup + undo system** | Internal | P0 |
 | M2.6 | **Enhanced `firmis report`** | Internal | P1 |
-| M2.7 | **Native tool poisoning detection** | Independent implementation (Invariant research as reference) | P0 |
+| M2.7 | **Native tool poisoning detection** | Independent implementation (Invariant research as reference) | **Partial** (5 YAML rules shipped, deeper semantic analysis remaining) |
 | M2.8 | **Rug pull detection** | Internal (BOM diff from M1) | P1 |
 
 **M2.1 — Pentest Command (promptfoo integration):**
@@ -581,61 +604,67 @@ User A encounters malicious skill X -> telemetry reports hash -> cloud adds to b
 |---|---|
 | Scanner CLI | `scan`, `list`, `validate`, `discover`, `bom`, `ci` |
 | Platform Analyzers | All 8 platforms |
-| Rule Engine + Rules | 144+ core rules + secrets + malware signatures |
+| Rule Engine + Rules | 176+ core rules + secrets + YARA malware signatures |
 | Integrations | Secrets engine, OSV client, YARA-TS matcher |
-| Reporters | Terminal, JSON, SARIF |
+| Reporters | Terminal, JSON, SARIF, Basic PDF report (grade + findings) |
 | Pentest (basic tier) | 10 probe types: tool poisoning detection, basic auth testing, known injection patterns |
 | Programmatic API | `ScanEngine`, `RuleEngine` exports |
-| Website Scanner module | HTTP Observatory + Nuclei patterns, wrappable in API |
 
 ### Proprietary (Paid Tier — Pricing TBD)
 
 | Component | Description |
 |---|---|
-| HTML Report | Email-gated, AI fix prompts, "share report" CTA |
+| Compliance Report | Branded client-shareable PDF, compliance gap analysis (SOC2/AI Act/GDPR), AI fix prompts |
 | Auto-Fix Engine | `firmis fix` — quarantine, rotation, hardening |
 | Pentest (full tier) | 50+ probe types: multi-turn attacks, adaptive evasion, LLM-as-judge, custom probes |
 | Runtime Monitor | `firmis monitor` — Free: TS MCP proxy. Paid: Lasso Gateway + FirmisPlugin |
+| Per-Deployment Monitoring | Continuous runtime protection, priced per deployment/project |
 | Continuous Pentesting | Scheduled weekly re-probing of MCP servers |
 | Runtime Policy Rules | YAML runtime rules for sequence detection |
 | Cloud Threat Intel | Real-time blocklist updates, threat enrichment API |
 | Alerting | Slack/email alerts |
 | Dashboard (M5+) | Web UI |
 
-### Scanner API Wrappers
+### Pricing Model
 
-The Website scanner is an open-source TS module wrapped in an API endpoint for firmislabs.com:
-
-```
-firmislabs.com/api/scan/website    -> HTTP Observatory API + Nuclei patterns
-firmislabs.com/api/scan/agent      -> ScanEngine (full CLI scan)
-```
-
-API wrappers are proprietary (email gate, analytics, rate limiting). Underlying scanner modules remain MIT.
+Per-deployment/per-project for monitoring and compliance reports. Specific pricing TBD — will be determined through experimentation post-build. Free tier has no limitations on scan frequency or basic reports.
 
 ---
 
 ## 8. Competitive Landscape
 
-| Dimension | Firmis | Snyk (post-Invariant) | mcp-scan (Cisco) | Lasso Gateway | promptfoo | LlamaFirewall |
-|---|---|---|---|---|---|---|
-| **Target** | Prosumer/SMB | Enterprise | Security teams | Enterprise | DevOps/QA | Enterprise |
-| **Price** | Free + Paid (TBD) | Enterprise pricing | Free | Enterprise | Free + paid | Free |
-| **Platforms** | 9 agent platforms | MCP + OpenClaw | MCP only | MCP only | Any LLM/MCP | Generic LLM |
-| **Static scan** | Yes (144+ rules) | Yes | Yes (YARA + LLM) | No | No | No |
-| **Active pentest** | Yes (promptfoo) | No | Partial (behavioral) | No | Yes (core) | No |
-| **Runtime** | Yes (TS proxy + Lasso paid) | Limited | No | Yes (Python) | No | Yes |
-| **Auto-fix** | Yes | No | No | No | No | No |
-| **AI-BOM** | Yes (CycloneDX) | Emerging | No | No | No | No |
-| **Immune layers** | All 7 | 2 | 1 | 1 | 1 (inoculation) | 1 |
+| Dimension | Firmis | SecureClaw (Adversa AI) | Snyk (post-Invariant) | Cisco mcp-scan | OpenClaw built-in | Lasso Gateway | promptfoo |
+|---|---|---|---|---|---|---|---|
+| **Target** | Agent builders (prosumer/SMB) | OpenClaw developers | Enterprise | Security teams | OpenClaw users | Enterprise | DevOps/QA |
+| **Price** | Free + paid per deployment (TBD) | Free (OSS) | Enterprise pricing | Free | Free (built-in) | Enterprise | Free + paid |
+| **Platforms** | **8 agent environments** | OpenClaw only | MCP + OpenClaw | MCP only | OpenClaw only | MCP only | Any LLM/MCP |
+| **Static scan** | Yes (176+ rules + YARA) | 51 audit checks | Yes | Yes (YARA + LLM) | Audit + VirusTotal | No | No |
+| **Active pentest** | Yes (promptfoo) | No | No | Partial (behavioral) | No | No | Yes (core) |
+| **Runtime** | Yes (TS proxy + Lasso paid) | Behavioral rules (15) | Limited | No | No | Yes (Python) | No |
+| **Auto-fix** | Yes | Hardening (5 modules) | No | No | No | No | No |
+| **AI-BOM** | Yes (CycloneDX) | No | Emerging | No | No | No | No |
+| **Compliance** | Yes (SOC2, AI Act, GDPR) | OWASP Agentic Top 10 | Enterprise only | No | No | No | No |
+| **Client reports** | Yes (branded PDF) | No | Enterprise only | No | No | No | No |
+| **Immune layers** | All 7 | 1-2 | 2 | 1 | 1 | 1 | 1 (inoculation) |
 
 ### Why We Win
 
-- **vs Snyk:** Prosumer-priced, 8 platforms vs 2, auto-fix + pentest, zero-config. They went upmarket post-Invariant (enterprise floor pricing).
-- **vs Cisco mcp-scan:** MCP-only, no remediation, no runtime, no BOM. We optionally wrap their tool for enhanced analysis.
-- **vs Lasso:** Enterprise Python proxy. Our free tier is zero-config TypeScript. Our paid tier leverages Lasso as infrastructure — we add the security intelligence layer.
-- **vs promptfoo:** Red-teaming only, no static scanning, no fix, no monitor. We integrate their engine as one layer of a full immune system.
-- **vs DIY:** 144+ rules + 230 secret patterns + 50+ blocklist + 8 analyzers + active pentesting encode years of security expertise.
+**Primary moat: Multi-platform breadth.** Every competitor is single-platform: SecureClaw (OpenClaw-only), Cisco mcp-scan (MCP-only), OpenClaw built-in (OpenClaw-only), Lasso (MCP-only). Firmis is the only tool scanning the entire agent stack (8 platforms) in one command. This is the Wiz playbook: they won not by being deeper on AWS than AWS-native tools, but by covering AWS + Azure + GCP before anyone else covered two.
+
+**Secondary moat: Unique capabilities nobody else has:**
+- Compliance gap mapping (SOC2, AI Act, GDPR) — nobody else does this for prosumers
+- Client-facing branded reports (B2D2B model) — nobody helps builders prove security to their clients
+- Active pentesting (promptfoo) — nobody else combines static scanning + active probing
+- Fire-and-forget all-in-one (scan + pentest + monitor + fix) — everyone else is a point solution
+
+**Competitive positioning:**
+- **vs SecureClaw:** OpenClaw-only, 51 checks. We have 176+ rules across 8 platforms + secret detection + pentesting + compliance. They harden OpenClaw. We secure the entire agent stack.
+- **vs OpenClaw built-in:** Platform vendor doing basic audit + VirusTotal hash scanning. Prompt injection payloads evade VirusTotal (their own caveat). We do deep static analysis + active pentesting + runtime monitoring.
+- **vs Snyk:** Enterprise pricing, enterprise sales cycles. We own agentic security for prosumers.
+- **vs Cisco mcp-scan:** MCP-only, no remediation, no runtime, no BOM, no compliance.
+- **vs Lasso:** Enterprise Python proxy requiring infrastructure. We're zero-config CLI.
+- **vs promptfoo:** Red-teaming only. We integrate their engine as one layer of a full system.
+- **Compliance for the rest of us:** SOC2/AI Act/GDPR tools are built for enterprises. We surface the same gaps for agent builders deploying for clients.
 
 ---
 
@@ -674,13 +703,6 @@ API wrappers are proprietary (email gate, analytics, rate limiting). Underlying 
 | Firmis Plugin | FirmisPlugin (GuardrailPlugin API) | Policy engine, PII redaction, cloud sync |
 | PII detection | Presidio patterns (MIT) | Credential redaction in responses |
 
-### Web Scanner API
-
-| Component | Technology | Purpose |
-|---|---|---|
-| Website | HTTP Observatory API (MPL-2.0) | Headers grading |
-| Website | Nuclei file templates (MIT) | Pattern matching |
-
 ### Cloud (M4+)
 
 | Component | Technology | Purpose |
@@ -694,18 +716,26 @@ API wrappers are proprietary (email gate, analytics, rate limiting). Underlying 
 
 ## 10. Target Personas
 
-### Vibe Coder Vince
-- Solo dev, 22-35, builds with OpenClaw/Claude/Cursor
-- No security background, installs skills without reading code
-- **Entry:** `npx firmis scan` (CLI)
-- **Trigger:** "341 malicious skills found on ClawHub" article
-- **Message:** "One command. 30 seconds. Know if you're safe."
+### Two-Ring ICP Model
 
-### SMB Founder Sara
-- Running 5-15 person startup, uses AI agents for productivity
-- Client asked "how do you protect our data from your AI tools?" — no answer
-- **Entry:** firmislabs.com/website-scanner (web)
-- **Message:** "Security that works while you sleep."
+**Primary Persona: The Agent Builder**
+
+Encompasses both rings — the same person at different stages of their journey.
+
+**Outer Ring (Free Adoption):**
+- Solo dev or small team, 22-40, builds with OpenClaw/Claude/Cursor/CrewAI/MCP
+- No security background, installs skills without reading code
+- Entry: `npx firmis scan` (CLI) via content/SEO/community
+- Trigger: "341 malicious skills found on ClawHub" article, or general security awareness
+- Message: "One command. 30 seconds. Know if your agents are secure."
+
+**Inner Ring (Paid Monetization):**
+- Same person, but now deploying agent solutions for a business client
+- Client asks "how do you protect our data from your AI tools?" — no answer
+- Entry: Compliance report need, triggered by client security questionnaire
+- Trigger: Client asks for proof of security or compliance documentation
+- Message: "Prove your agents are secure. Share the report with your client."
+- Pays for: Compliance report (per-project), monitoring (per-deployment), full pentest
 
 ---
 
@@ -739,9 +769,6 @@ firmis-scanner/
       secrets.ts            # Gitleaks pattern port (M0)
       osv.ts                # OSV API client (M0)
       yara-ts.ts            # YARA pattern matcher (M0)
-      website/
-        observatory.ts      # HTTP Observatory API
-        nuclei-patterns.ts  # Nuclei file templates
     pentest/                # (M2)
       engine.ts             # Orchestrator
       promptfoo-adapter.ts  # promptfoo Node.js API wrapper
@@ -783,8 +810,8 @@ firmis-scanner/
     prompt-injection.yaml
     suspicious-behavior.yaml
     secret-detection.yaml       # 60 rules - Gitleaks-style patterns (SHIPPED)
-    malware-signatures.yaml     # NEW (M0) - YARA patterns
-    tool-poisoning.yaml         # NEW (M2) - MCP tool desc analysis
+    malware-signatures.yaml     # SHIPPED (M0.4) - YARA patterns
+    tool-poisoning.yaml         # SHIPPED (Sprint A) - MCP tool desc analysis
     runtime/                    # NEW (M3)
       credential-exfil.yaml
       blocklist.yaml
@@ -812,7 +839,7 @@ firmis-scanner/
 | True positive rate (known-malicious) | >95% |
 | Regex validation | 100% |
 | Platform coverage | 8 platforms |
-| Rule count (open source) | 144+ shipped, 250+ target (M0 YARA + M2 tool poisoning) |
+| Rule count (open source) | 176+ shipped, 250+ target (M2 depth + M5 advanced) |
 | Pentest probe types (free) | 10 |
 | Pentest probe types (paid) | 50+ |
 
@@ -823,8 +850,8 @@ firmis-scanner/
 | npm downloads | 5,000/month |
 | GitHub stars | 1,000 |
 | Emails captured | 5,000 |
-| Paid subscribers | 200+ |
-| MRR | Pricing TBD post-build |
+| Paid deployments | Target: 200+ monitored deployments |
+| Compliance reports generated | 500+ |
 
 ### Performance
 
@@ -852,6 +879,10 @@ firmis-scanner/
 | Semgrep rules directly | Restrictive license. Write equivalent rules independently |
 | ARTEMIS/PentAGI/CAI | Network pentest tools, too heavy, wrong attack surface |
 | Custom MCP gateway from scratch | Free tier composes MCP SDK Client+Server. Paid tier uses Lasso Gateway — don't reinvent battle-tested proxy infrastructure |
+| Website Scanner | Different market (SecurityScorecard, Qualys, ImmuniWeb), different competitors, zero connection to agentic security wedge. Killed. |
+| Standalone Supabase Scanner | Infrastructure security, not agentic. Removed in v1.2.0. Generic secret-detection stays. |
+| Depth-only single-platform strategy | OpenClaw security space is crowded (SecureClaw, ClawShield, Cisco, VirusTotal, built-in audit). Multi-platform breadth is the moat, not depth on one platform. Adding new platforms is strategic. |
+| Vanta-style compliance platform | We surface compliance gaps, not manage full compliance workflows. Compliance-adjacent, not compliance-primary. |
 
 ---
 
@@ -865,8 +896,6 @@ firmis-scanner/
 | **promptfoo** | MIT | Red-team engine for MCP/LLM testing | npm library import (TypeScript-native) |
 | **Cisco mcp-scanner** | Apache-2.0 | Behavioral code analysis + YARA | Optional Python subprocess |
 | **CycloneDX** | Apache-2.0 | ML-BOM format + TS library | npm dependency |
-| **HTTP Observatory** | MPL-2.0 | Security headers grading API | REST API call |
-| **Nuclei Templates** | MIT | File-category vuln patterns | YAML parse + port |
 | **Presidio** | MIT | PII regex patterns | Port to TS |
 | **MCP TypeScript SDK** | MIT | MCP client/server for proxy | npm dependency |
 | **Lasso MCP Gateway** | MIT | Battle-tested MCP proxy + GuardrailPlugin API | Paid tier runtime gateway (Python) |
@@ -882,16 +911,17 @@ This document supersedes and unifies:
 |---|---|---|
 | `docs/PRDv2.0.md` (labeled v4.0 inside) | **Superseded** | Funnel, competitive landscape, revenue model |
 | `docs/ARCHITECTURE.md` v2.0 | **Needs update** to align with v5 | Data flow diagrams, ADRs |
-| `docs/MARKETING.md` v2.0 | **Still active** | Personas, messaging, SEO, 3-scanner strategy |
+| `docs/MARKETING.md` v2.0 | **Updated v3.0** — Agentic Security positioning, two-ring ICP, education-first content | Personas, messaging, SEO, 3-scanner strategy |
 | `docs/PRIVACY.md` | **Still active** | Telemetry policy |
 | `docs/FIRMISIGNORE.md` | **Still active** | .firmisignore docs |
 | `docs/SCANNER-AUDIT-2026-02-16.md` | **Historical reference** | Bugs found/fixed, architectural gaps |
 | `docs/plans/2026-02-12-supabase-scanner.md` | **Archived** | Supabase removed in v1.2.0 (not agentic security) |
 | User prompt (v5 roadmap) | **Incorporated** | M0-M2 milestones, pure-TS philosophy |
+| Positioning decisions (2026-02-17 session) | **Incorporated** | Agentic Security category, two-ring ICP, multi-platform breadth as moat, compliance urgency, education-first content, build-in-public distribution |
 
 ---
 
-*Document Version: 5.1*
+*Document Version: 5.2*
 *Last Updated: 2026-02-17*
-*Changes in 5.1: Removed Supabase platform (not agentic security), updated state to v1.2.0, incorporated FN audit findings*
-*Next Review: After M0 YARA completion*
+*Changes in 5.2: Updated to v1.3.0, M0 all shipped (secrets, OSV, HTML, YARA), Sprint A deliverables (tool-poisoning, network-abuse, file-system-abuse rules + YARA engine), 176+ rules across 15 files*
+*Next Review: After M1 Discovery + BOM completion*
