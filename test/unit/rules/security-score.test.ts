@@ -92,4 +92,52 @@ describe('Security Score (A-F Grade)', () => {
       expect(computeSecurityGrade(summary)).toBe('B')
     })
   })
+
+  describe('coverage-based grade capping', () => {
+    it('caps at B when >20% files not analyzable and no threats', () => {
+      const summary = makeSummary({
+        filesAnalyzed: 7,
+        filesNotAnalyzed: 3,
+        threatsFound: 0,
+      })
+      expect(computeSecurityGrade(summary)).toBe('B')
+    })
+
+    it('returns A when <=20% files not analyzable and no threats', () => {
+      const summary = makeSummary({
+        filesAnalyzed: 9,
+        filesNotAnalyzed: 1,
+        threatsFound: 0,
+      })
+      expect(computeSecurityGrade(summary)).toBe('A')
+    })
+
+    it('returns A when all files analyzed and no threats', () => {
+      const summary = makeSummary({
+        filesAnalyzed: 10,
+        filesNotAnalyzed: 0,
+        threatsFound: 0,
+      })
+      expect(computeSecurityGrade(summary)).toBe('A')
+    })
+
+    it('severity still overrides coverage cap', () => {
+      const summary = makeSummary({
+        filesAnalyzed: 7,
+        filesNotAnalyzed: 3,
+        threatsFound: 1,
+        bySeverity: { low: 0, medium: 0, high: 0, critical: 1 },
+      })
+      expect(computeSecurityGrade(summary)).toBe('F')
+    })
+
+    it('returns A when zero files scanned and no threats', () => {
+      const summary = makeSummary({
+        filesAnalyzed: 0,
+        filesNotAnalyzed: 0,
+        threatsFound: 0,
+      })
+      expect(computeSecurityGrade(summary)).toBe('A')
+    })
+  })
 })
