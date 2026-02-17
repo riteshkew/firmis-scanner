@@ -4,6 +4,9 @@ import { Command } from 'commander'
 import { scanCommand } from './commands/scan.js'
 import { listCommand } from './commands/list.js'
 import { validateCommand } from './commands/validate.js'
+import { discoverCommand } from './commands/discover.js'
+import { bomCommand } from './commands/bom.js'
+import { ciCommand } from './commands/ci.js'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -35,6 +38,9 @@ async function main(): Promise<void> {
   program.addCommand(scanCommand)
   program.addCommand(listCommand)
   program.addCommand(validateCommand)
+  program.addCommand(discoverCommand)
+  program.addCommand(bomCommand)
+  program.addCommand(ciCommand)
   await program.parseAsync(process.argv)
 }
 
