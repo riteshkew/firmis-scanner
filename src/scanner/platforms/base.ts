@@ -5,6 +5,21 @@ import type {
   DetectedPlatform,
 } from '../../types/index.js'
 
+/** Directories that should never be treated as agent components. */
+const DEFAULT_EXCLUDE_DIRS = new Set([
+  'node_modules',
+  'dist',
+  'build',
+  'out',
+  '.git',
+  'vendor',
+  'venv',
+  '.venv',
+  '__pycache__',
+  'coverage',
+  '.nyc_output',
+])
+
 export abstract class BasePlatformAnalyzer {
   abstract readonly platformType: PlatformType
   abstract readonly name: string
@@ -16,6 +31,23 @@ export abstract class BasePlatformAnalyzer {
   abstract analyze(component: DiscoveredComponent): Promise<string[]>
 
   abstract getMetadata(component: DiscoveredComponent): Promise<ComponentMetadata>
+
+  /** Returns true if a directory name should be skipped during discovery. */
+  protected shouldExcludeDir(name: string): boolean {
+    return name.startsWith('.') || DEFAULT_EXCLUDE_DIRS.has(name)
+  }
+
+  /**
+   * Returns true if a directory name is a valid component name.
+   * Rejects path traversal sequences, null bytes, overly long names,
+   * and HTML/template injection markers.
+   */
+  protected isValidComponentName(name: string): boolean {
+    if (name.includes('..') || name.includes('\0')) return false
+    if (name.length > 255) return false
+    if (/[<>{}|]/.test(name)) return false
+    return true
+  }
 
   protected expandHome(path: string): string {
     if (path.startsWith('~/')) {

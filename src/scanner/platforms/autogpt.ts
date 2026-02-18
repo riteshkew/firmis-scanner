@@ -63,13 +63,10 @@ export class AutoGPTAnalyzer extends BasePlatformAnalyzer {
       const entries = await readdir(expandedPath, { withFileTypes: true })
 
       for (const entry of entries) {
-        if (
-          !entry.isDirectory() ||
-          entry.name.startsWith('.') ||
-          entry.name.startsWith('__')
-        ) {
+        if (!entry.isDirectory() || this.shouldExcludeDir(entry.name)) {
           continue
         }
+        if (!this.isValidComponentName(entry.name)) continue
 
         const pluginPath = join(expandedPath, entry.name)
         const manifestPath = await this.findManifest(pluginPath)

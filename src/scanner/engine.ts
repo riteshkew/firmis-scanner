@@ -18,6 +18,7 @@ import { PlatformDiscovery } from './discovery.js'
 import { FileAnalyzer } from './analyzer.js'
 import { FirmisIgnore } from './ignore.js'
 import { runOsvCheck } from './osv.js'
+import { deduplicateCrossPlatformThreats } from './dedup.js'
 
 export class ScanEngine {
   private ruleEngine: RuleEngine
@@ -88,16 +89,24 @@ export class ScanEngine {
       platformResults.push(osvResult)
     }
 
+    // Deduplicate threats across platforms when doing path-based scanning.
+    // The same file can be scanned by multiple platforms (e.g., Claude + MCP
+    // both index the same src/ tree), producing identical findings. We keep
+    // the first occurrence per (ruleId, file, line) triple and drop the rest.
+    const deduplicatedResults = this.config.targetPath
+      ? deduplicateCrossPlatformThreats(platformResults)
+      : platformResults
+
     const completedAt = new Date()
     const duration = completedAt.getTime() - startedAt.getTime()
-    const summary = this.calculateSummary(platformResults)
+    const summary = this.calculateSummary(deduplicatedResults)
 
     return {
       id: scanId,
       startedAt,
       completedAt,
       duration,
-      platforms: platformResults,
+      platforms: deduplicatedResults,
       summary,
       score: computeSecurityGrade(summary),
       runtimeRisksNotCovered: [
@@ -166,7 +175,20 @@ export class ScanEngine {
     analyzer: ReturnType<typeof PlatformRegistry.getAnalyzer>,
     platformType: string
   ): Promise<ComponentResult> {
-    const filePaths = await analyzer.analyze(component)
+    const MAX_FILES_PER_COMPONENT = 500
+    const allFiles = await analyzer.analyze(component)
+    const filePaths =
+      allFiles.length > MAX_FILES_PER_COMPONENT
+        ? allFiles.slice(0, MAX_FILES_PER_COMPONENT)
+        : allFiles
+
+    if (allFiles.length > MAX_FILES_PER_COMPONENT && this.config.verbose) {
+      console.warn(
+        `Component ${component.name}: ${allFiles.length} files exceeds limit of ${MAX_FILES_PER_COMPONENT}, ` +
+          `scanning first ${MAX_FILES_PER_COMPONENT} only`
+      )
+    }
+
     const fileAnalyses = await this.analyzer.analyzeFilesParallel(
       filePaths,
       this.config.concurrency

@@ -22,12 +22,12 @@ rules:
         description: Request to tunneling service
       - type: regex
         pattern: 'requests\.(post|put)\s*\('
-        weight: 60
-        description: Python requests library POST/PUT (potential exfiltration)
+        weight: 35
+        description: Python requests library POST/PUT — low weight, only suspicious when combined with other indicators
       - type: regex
         pattern: 'urllib\.(request\.urlopen|parse)'
-        weight: 50
-        description: Python urllib network access
+        weight: 30
+        description: Python urllib network access — low weight, only suspicious when combined with other indicators
     remediation: |
       Review all external HTTP requests. Ensure they go to legitimate, expected endpoints.
 

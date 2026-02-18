@@ -57,9 +57,10 @@ export class ClaudeSkillsAnalyzer extends BasePlatformAnalyzer {
       const entries = await readdir(expandedPath, { withFileTypes: true })
 
       for (const entry of entries) {
-        if (!entry.isDirectory() || entry.name.startsWith('.')) {
+        if (!entry.isDirectory() || this.shouldExcludeDir(entry.name)) {
           continue
         }
+        if (!this.isValidComponentName(entry.name)) continue
 
         const skillPath = join(expandedPath, entry.name)
         const skillJsonPath = join(skillPath, 'skill.json')
