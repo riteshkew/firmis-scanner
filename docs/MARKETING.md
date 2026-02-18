@@ -89,9 +89,9 @@ $ npx firmis scan
 **Secondary CTA:** Get notified when compliance reports launch → [email input] → Join Waitlist
 
 **Three pills below CTA:**
-- Scan (Free) — Find every threat in your agent stack
-- Report (Free) — Security grade + findings for you and your clients
-- Monitor + Fix (Paid) — Continuous runtime protection per deployment
+- Scan — Find every threat in your agent stack
+- Report — Security grade + findings in plain English
+- Monitor + Fix — Continuous protection and auto-remediation
 
 ### Section 2: The Problem (Education Section)
 
@@ -120,17 +120,17 @@ $ npx firmis scan
 
 **Headline:** Three layers of protection. One command to start.
 
-**Step 1 — Scan (Free)**
+**Step 1 — Scan**
 - `npx firmis scan` — works in 30 seconds, no signup
 - Scans 8 agent environments: OpenClaw, MCP, Claude, CrewAI, Cursor, AutoGPT, Codex, Nanobot
 - 176+ detection rules across 14 threat categories
 - Security grade (A through F) with plain-English findings
 
-**Step 2 — Report (Free basic / Paid compliance)**
+**Step 2 — Report**
 - Free: Security grade A-F, findings in plain English, email-gated
 - Paid: Compliance gap analysis (SOC2, AI Act, GDPR), branded client-shareable PDF, AI-powered fix prompts
 
-**Step 3 — Monitor + Fix (Paid, per deployment)**
+**Step 3 — Monitor + Fix**
 - `firmis monitor` — continuous runtime protection
 - `firmis fix` — auto-remediation
 - Real-time alerts: blocks credential exfiltration, detects prompt injection, prevents unauthorized network calls
@@ -222,11 +222,13 @@ A: That's exactly who we built this for. Instead of cryptic error codes, you get
 **Q: Will this slow down my AI tools?**
 A: The scan takes about 30 seconds and runs completely offline — it reads your config files, it doesn't touch your running agents. The paid monitoring tier watches your agents in real-time with no noticeable delay.
 
+**Q: What AI tools does Firmis check?**
+A: We scan 8 agent environments: OpenClaw, MCP servers, Claude, CrewAI, Cursor, AutoGPT, Codex, and Nanobot. If you use any AI coding assistant or agent framework, we probably cover it. One command, all platforms — no need to run a different tool for each one.
+
+*Not on landing page (inner-ring only):*
+
 **Q: Who built this?**
 A: Security veterans who've been protecting enterprise companies since 2018. We saw that AI security tools were only available to big enterprises, so we built Firmis to give everyone the same protection for free.
-
-**Q: What AI tools does Firmis check?**
-A: We scan 8 agent environments: OpenClaw, MCP servers, Claude, CrewAI, Cursor, AutoGPT, Codex, and Nanobot. If you use any AI coding assistant or agent framework, we probably cover it.
 
 **Q: Can I share the report with my clients?**
 A: Yes. The compliance report is designed to be shared — it includes a security grade, detailed findings, and compliance gap analysis for SOC2, AI Act, and GDPR. It's the answer to "how do you protect our data from your AI tools?"
@@ -243,43 +245,52 @@ A: Yes. The compliance report is designed to be shared — it includes a securit
 
 ---
 
-## 5. Competitive Differentiation Matrix
+## 5. Competitive Differentiation
 
-### Direct Competitors
+### The Landscape
 
-| Dimension | Firmis | SecureClaw (Adversa AI) | Snyk (Invariant) | Cisco mcp-scan | OpenClaw built-in | Lasso Gateway |
-|-----------|--------|------------------------|-------------------|----------------|-------------------|---------------|
-| **Target** | Prosumer / agent builders | OpenClaw developers | Enterprise | Security researchers | OpenClaw users | Enterprise |
-| **Scope** | **8 agent environments** | OpenClaw only | MCP + OpenClaw | MCP only | OpenClaw only | MCP only |
-| **Approach** | Scan + Pentest + Monitor + Fix + Compliance | Audit + Harden + Behavioral | Static scan | YARA + LLM analysis | Audit + VirusTotal | Runtime proxy |
-| **Compliance** | **SOC2, AI Act, GDPR** | OWASP Agentic Top 10 | Enterprise only | No | No | No |
-| **Client reports** | **Yes (branded PDF)** | No | Enterprise only | No | No | No |
-| **Auto-fix** | Yes | Hardening modules (5) | No | No | No | No |
-| **Pentesting** | Yes (promptfoo) | No | No | No | No | No |
-| **Runtime monitoring** | Yes (MCP proxy) | Behavioral rules | Limited | No | No | Yes (proxy) |
-| **Price** | Free + paid per deployment (TBD) | Free (OSS) | Enterprise pricing | Free (OSS) | Free (built-in) | Enterprise |
+The agentic security space has two tiers:
 
-### Why We Win
+**Enterprise tier:** Snyk (acquired Invariant Labs), Lasso Gateway, Cisco AI Defense. Enterprise pricing, enterprise sales cycles. They validate the category and spend marketing dollars educating the market. We ride that tailwind. We never mention them publicly — different ICP entirely.
 
-**The only tool that scans your entire agent stack.** SecureClaw protects your OpenClaw. Cisco scans your MCP. We scan everything — OpenClaw AND MCP AND Claude AND CrewAI AND Cursor AND Codex AND AutoGPT AND Nanobot — in one command. This is the Wiz vs AWS Security Hub positioning: they went deep on one cloud, Wiz covered them all.
+**Free/OSS tier:** What our ICP actually uses today:
+- **mcp-scan** (~500 GitHub stars): MCP-only. Good for MCP config scanning. No other platforms, no remediation, no secrets.
+- **OpenClaw built-in audit**: Config-level checks + VirusTotal hash scanning. Doesn't inspect skill source code. VirusTotal misses prompt injection payloads.
+- **Gitleaks** (18k+ stars): Excellent generic secret scanner (700+ patterns). But not agent-aware — treats agent configs as regular files. Doesn't understand that `~/.aws/credentials` is exposed to 5 connected MCP servers.
+- **HackMyAgent** (14 stars): 4 platforms, 147 checks, web-only UI. Early/small.
 
-**vs SecureClaw:** OpenClaw-only. 51 checks for one platform. Firmis has 176+ rules across 8 platforms + secret detection + compliance mapping + pentesting. They harden OpenClaw. We secure your entire agent stack.
+### How Firmis Is Different
 
-**vs OpenClaw built-in:** Platform vendor doing basic audit + VirusTotal hash scanning. VirusTotal themselves said "not a silver bullet" — prompt injection payloads evade it. We do deep static analysis, active pentesting, and runtime monitoring.
+We don't compete on any single dimension. We're different because we're the only tool that covers the full agent stack:
 
-**vs Snyk:** Enterprise pricing, enterprise sales cycles. We own agentic security for prosumers.
+1. **Breadth** — 8 platforms in one command. Every alternative covers 1, maybe 4. A developer would need mcp-scan + OpenClaw audit + Gitleaks + manual review to approximate what `npx firmis scan` does.
 
-**vs Cisco mcp-scan:** MCP-only. No remediation, no runtime, no compliance.
+2. **Agent-aware detection** — Our secret scanner understands agent topology. It doesn't just find a secret in a file — it tells you which tools can reach it and what that means. Generic scanners treat agent configs like any other file.
 
-**vs Lasso:** Enterprise infrastructure. We're zero-config CLI.
+3. **Full lifecycle** — Scan, report, fix, pentest, monitor. Alternatives stop at "here's a list of findings." We remediate (`firmis fix`), actively test (`firmis pentest`), and watch continuously (`firmis monitor`).
 
-**vs DIY:** 176+ rules + 60 secret patterns + YARA signatures + 50+ blocklist + 8 analyzers + compliance mapping. Years of expertise, one command.
+4. **Zero friction** — `npx firmis scan`. No install, no account, no config, no API key. mcp-scan is close here. OpenClaw audit requires the OpenClaw CLI. Gitleaks requires Homebrew or Docker.
 
-**Unique to Firmis:**
-- Multi-platform scanning (nobody else does this)
-- Compliance gap mapping (SOC2, AI Act, GDPR)
-- Client-facing branded reports (B2D2B model)
-- Fire-and-forget all-in-one (scan + pentest + monitor + fix)
+### What We Don't Say Publicly
+
+- Never name Snyk, Lasso, or Cisco — enterprise tier, different market
+- Never create comparison grids on the landing page — elevates competitors, narrows audience
+- Landing page communicates differentiation through benefits ("agent-aware," "8 platforms," "not just one"), not competitor names
+- Comparisons go in dedicated SEO blog posts (see Content Strategy)
+
+---
+
+## 5.5 Adopted Industry Vocabulary
+
+Terms becoming standard in agentic security. Use them to align with the emerging category.
+
+| Term | What it means | Firmis feature | Where to use |
+|------|--------------|---------------|-------------|
+| Tool Poisoning | A malicious skill/tool that appears helpful but steals data | Threat category in rules + pentest probes | Landing page (with explanation), blog, docs |
+| AI-BOM | Bill of materials for AI agent components | `firmis bom` (CycloneDX 1.7) | Technical blog, docs. Too jargony for landing page. |
+| Shadow AI | AI tools running in your environment that you don't know about | `firmis discover` | Blog, docs. Landing page reframe: "tools you forgot you installed" |
+| Agentic Security | Security for AI agent deployments (the category) | Firmis = "the security layer for AI agents" | Category label everywhere. Not a tagline. |
+| Agent-Aware | Understanding the agent→tool→credential topology | Detection engine, secret scanner | Landing page (as benefit), everywhere else |
 
 ---
 
@@ -316,6 +327,19 @@ A: Yes. The compliance report is designed to be shared — it includes a securit
 - **GitHub stars:** MIT-licensed scanner repo
 - **Outcome stats:** "Found X exposed passwords this week" (aggregate anonymized)
 - **Enterprise heritage:** "Built by security veterans · Protecting enterprise companies since 2018"
+
+### Competitive SEO Blog Posts
+
+Capture developers searching for alternatives. Each post is educational, not fear-based.
+
+| Post Title | Target Keywords | Angle |
+|------------|----------------|-------|
+| "mcp-scan vs Firmis: Which MCP security tool?" | mcp-scan, MCP security scanner | Complement, not compete. mcp-scan for MCP, Firmis for everything. |
+| "Why Gitleaks isn't enough for AI agent security" | Gitleaks AI agents, secret scanning agents | Agent-aware detection vs generic patterns |
+| "OpenClaw security: Built-in audit vs full stack scanning" | OpenClaw security, OpenClaw audit | Config checks vs deep static analysis |
+| "The best AI agent security tools in 2026" | AI agent security tools, agent scanner comparison | Listicle. Firmis = full stack, others = single platform. |
+| "What is tool poisoning? A guide for developers" | tool poisoning, MCP tool poisoning | Category education. Captures "tool poisoning" searches. |
+| "What is an AI-BOM and why your agent stack needs one" | AI BOM, AI bill of materials | Technical education. Links to `firmis bom`. |
 
 ### SEO Keyword Targets
 

@@ -3,8 +3,17 @@ import type { PatternMatch, MatchContext } from '../../types/index.js'
 const isVerbose = (): boolean =>
   typeof process !== 'undefined' && process.env['FIRMIS_VERBOSE'] === '1'
 
+/** Dependency manifests that end in .txt but are config, not docs */
+const DEPENDENCY_MANIFEST_NAMES = new Set([
+  'requirements.txt',
+  'constraints.txt',
+  'requirements-dev.txt',
+  'requirements-test.txt',
+])
+
 export function detectMatchContext(filePath: string): MatchContext {
   const lower = filePath.toLowerCase()
+  const basename = lower.split('/').pop() ?? lower
 
   if (
     lower.endsWith('.json') ||
@@ -12,12 +21,14 @@ export function detectMatchContext(filePath: string): MatchContext {
     lower.endsWith('.yml') ||
     lower.endsWith('.toml') ||
     lower.endsWith('.env') ||
-    lower.endsWith('.ini')
+    lower.endsWith('.ini') ||
+    lower.endsWith('.cfg') ||
+    DEPENDENCY_MANIFEST_NAMES.has(basename)
   ) {
     return 'config'
   }
 
-  if (!lower.endsWith('/skill.md')) {
+  if (!lower.endsWith('/skill.md') && basename !== 'skill.md') {
     if (
       lower.endsWith('.md') ||
       lower.endsWith('.mdx') ||
@@ -144,17 +155,29 @@ export function matchStringLiteral(
   return matches
 }
 
+/** Home directory alternation covering Node.js and Python idioms */
+const HOME_DIR_ALT = [
+  '~',
+  'homedir\\(\\)',
+  'process\\.env\\.HOME',
+  'Path\\.home\\(\\)',
+  'expanduser\\([\'"]~[\'"]\\)',
+  'os\\.environ\\.get\\([\'"]HOME[\'"]\\)',
+  'os\\.environ\\[[\'"]HOME[\'"]\\]',
+].join('|')
+
 export function matchFileAccess(
   pattern: string,
   content: string,
   description: string,
   weight: number
 ): PatternMatch[] {
+  // Escape dots/wildcards/slashes BEFORE expanding ~ to avoid double-escaping
   const regexPattern = pattern
-    .replace(/~/g, '(~|homedir\\(\\)|process\\.env\\.HOME)')
-    .replace(/\//g, '[\\\\/]')
-    .replace(/\*/g, '[^\\s\'"]*')
     .replace(/\./g, '\\.')
+    .replace(/\*/g, '[^\\s\'"]*')
+    .replace(/\//g, '[\\\\/]')
+    .replace(/~/g, `(${HOME_DIR_ALT})`)
 
   return matchRegex(regexPattern, content, description, weight)
 }

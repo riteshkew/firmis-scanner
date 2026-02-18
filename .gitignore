@@ -31,6 +31,9 @@ npm-debug.log*
 .cache/
 .firmis/
 
+# Claude Code
+.claude/
+
 # Temporary
 tmp/
 temp/

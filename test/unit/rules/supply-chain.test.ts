@@ -83,10 +83,7 @@ describe('Supply Chain Rules', () => {
     expect(postinstallThreat?.severity).toBe('high')
   })
 
-  // Note: Python package detection in requirements.txt files works but may have lower confidence
-  // due to the file format. Skipping these tests for now - Python supply chain rules
-  // will be improved in a future PR with proper requirements.txt parsing.
-  it.skip('should detect known malicious Python package (colourama)', async () => {
+  it('should detect known malicious Python package (colourama)', async () => {
     const content = 'colourama==1.0.0'
 
     const threats = await engine.analyze(content, 'requirements.txt', null, 'claude')
@@ -97,7 +94,7 @@ describe('Supply Chain Rules', () => {
     expect(pythonMaliciousThreat?.severity).toBe('critical')
   })
 
-  it.skip('should detect Python typosquat (requessts)', async () => {
+  it('should detect Python typosquat (requessts)', async () => {
     const content = 'requessts==2.28.0'
 
     const threats = await engine.analyze(content, 'requirements.txt', null, 'claude')

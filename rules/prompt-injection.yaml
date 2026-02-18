@@ -226,3 +226,67 @@ rules:
         description: Script tag with external source
     remediation: |
       Sanitize markdown and HTML content. These may execute malicious code.
+
+  - id: prompt-011
+    name: Homoglyph Mixed-Script Attack
+    description: Detects Cyrillic/Greek/Armenian characters mixed with Latin text (homoglyph attacks)
+    category: prompt-injection
+    severity: medium
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: "[a-zA-Z]+[\\u0400-\\u04FF]+[a-zA-Z]+"
+        weight: 65
+        description: Latin-Cyrillic-Latin mixed text (homoglyph attack)
+      - type: regex
+        pattern: "[\\u0400-\\u04FF]+[a-zA-Z]+[\\u0400-\\u04FF]+"
+        weight: 65
+        description: Cyrillic-Latin-Cyrillic mixed text (homoglyph attack)
+      - type: regex
+        pattern: "[a-zA-Z]+[\\u0370-\\u03FF]+[a-zA-Z]+"
+        weight: 65
+        description: Latin-Greek-Latin mixed text (homoglyph attack)
+      - type: regex
+        pattern: "[a-zA-Z]+[\\u0530-\\u058F]+[a-zA-Z]+"
+        weight: 65
+        description: Latin-Armenian-Latin mixed text (homoglyph attack)
+    remediation: |
+      Remove mixed-script text. Homoglyph attacks use visually identical characters from different scripts to bypass filters.
+
+  - id: prompt-012
+    name: Non-Latin Override Instructions
+    description: Detects override keywords combined with non-Latin script characters
+    category: prompt-injection
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: "(?i)(ignore|disregard|forget|override|bypass)[\\s\\S]{0,40}[\\u0400-\\u04FF\\u0370-\\u03FF\\u0530-\\u058F\\u0600-\\u06FF]{2,}"
+        weight: 85
+        description: Override keyword followed by non-Latin script
+      - type: regex
+        pattern: "(?i)[\\u0400-\\u04FF\\u0370-\\u03FF\\u0530-\\u058F\\u0600-\\u06FF]{2,}[\\s\\S]{0,40}(ignore|disregard|forget|override|bypass)"
+        weight: 85
+        description: Non-Latin script followed by override keyword
+    remediation: |
+      Remove override instructions combined with non-Latin text. This is a multi-lingual injection technique to bypass Latin-only filters.
+
+  - id: prompt-013
+    name: Unicode Tag Characters
+    description: Detects Unicode tag characters (U+E0001-U+E007F) used to hide invisible markup
+    category: prompt-injection
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    patterns:
+      - type: regex
+        pattern: "\\uDB40[\\uDC01-\\uDC7F]"
+        weight: 90
+        description: Unicode tag character (surrogate pair for U+E0001-U+E007F)
+    remediation: |
+      Remove Unicode tag characters. These are invisible characters that can hide malicious instructions.

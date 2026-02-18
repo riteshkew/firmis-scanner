@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  Detect malicious behavior in Claude Skills, MCP Servers, OpenClaw Skills, Nanobot Agents, and other AI agent frameworks before they compromise your system.
+  Detect malicious behavior in Claude Skills, MCP Servers, OpenClaw Skills, Nanobot Agents, Supabase projects, and other AI agent frameworks before they compromise your system.
 </p>
 
 ---
@@ -63,6 +63,40 @@ firmis scan --sarif --output results.sarif
 | **AutoGPT Plugins** | `~/.autogpt/plugins/` | Full |
 | **OpenClaw Skills** | `~/.openclaw/skills/`, workspace `skills/` | Full |
 | **Nanobot Agents** | `nanobot.yaml`, `agents/*.md` | Full |
+| **Supabase** | `supabase/migrations/`, `config.toml` | Full |
+
+### Supabase Security
+
+Firmis auto-detects Supabase projects and scans for:
+
+- **Row Level Security**: Tables without RLS, missing policies, overly permissive `USING (true)` clauses
+- **Storage Buckets**: Public buckets, buckets without access policies
+- **API Keys**: `service_role` key in client code, `.env` files in git, hardcoded credentials
+- **Auth Config**: Email confirmation disabled, OTP expiry too long, missing SMTP
+- **Functions**: `SECURITY DEFINER` functions that bypass RLS
+
+```bash
+# Scan Supabase project
+firmis scan --platform supabase
+
+# Example output
+  Firmis Scanner v1.1.0
+
+  Detecting platforms...
+  ✓ Supabase: 8 migrations found
+
+  THREAT DETECTED
+     Platform: Supabase
+     Component: supabase-project
+     Risk: CRITICAL
+     Category: access-control
+
+     Evidence:
+       - Table 'profiles' has RLS disabled
+       - Policy 'allow_all' uses USING (true)
+
+     Location: supabase/migrations/001_profiles.sql:12
+```
 
 ## Example Output
 
@@ -100,7 +134,7 @@ Scan for security threats.
 
 ```bash
 Options:
-  -p, --platform <name>   Scan specific platform (claude|mcp|codex|cursor|crewai|autogpt|openclaw|nanobot)
+  -p, --platform <name>   Scan specific platform (claude|mcp|codex|cursor|crewai|autogpt|openclaw|nanobot|supabase)
   -a, --all               Scan all detected platforms (default)
   -j, --json              Output as JSON
   --sarif                 Output as SARIF (GitHub Security)
@@ -138,6 +172,8 @@ Options:
 | **prompt-injection** | MEDIUM-HIGH | Attempting to manipulate AI behavior |
 | **privilege-escalation** | HIGH-CRITICAL | sudo, setuid, kernel modules |
 | **suspicious-behavior** | LOW-MEDIUM | Obfuscation, anti-debugging, persistence |
+| **access-control** | HIGH-CRITICAL | RLS misconfigurations, missing policies |
+| **insecure-config** | MEDIUM-HIGH | Auth settings, OTP expiry, SMTP config |
 
 ## CI/CD Integration
 

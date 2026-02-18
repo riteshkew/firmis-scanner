@@ -138,3 +138,251 @@ rules:
         description: "Typosquat of requests (Python HTTP library)"
     remediation: |
       This Python package is known to be malicious. Remove it immediately and audit your system.
+
+  - id: supply-006
+    name: Known Malicious NPM Package (Extended)
+    description: "Dependency on an npm package known to be malicious or compromised (extended list)"
+    category: supply-chain
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 40
+    patterns:
+      - type: string-literal
+        pattern: '"coa"'
+        weight: 90
+        description: "coa — hijacked to install malware (Nov 2021)"
+      - type: string-literal
+        pattern: '"rc"'
+        weight: 85
+        description: "rc — hijacked alongside coa to install malware"
+      - type: string-literal
+        pattern: '"flatmap-stream"'
+        weight: 95
+        description: "flatmap-stream — injected into event-stream for crypto theft"
+      - type: string-literal
+        pattern: '"eslint-scope"'
+        weight: 90
+        description: "eslint-scope — hijacked to steal npm tokens"
+      - type: string-literal
+        pattern: '"crossenv"'
+        weight: 95
+        description: "crossenv — typosquat of cross-env, steals env variables"
+      - type: string-literal
+        pattern: '"babelcli"'
+        weight: 95
+        description: "babelcli — typosquat of babel-cli"
+      - type: string-literal
+        pattern: '"mongose"'
+        weight: 95
+        description: "mongose — typosquat of mongoose"
+      - type: string-literal
+        pattern: '"jquey"'
+        weight: 95
+        description: "jquey — typosquat of jquery"
+      - type: string-literal
+        pattern: '"discordi.js"'
+        weight: 95
+        description: "discordi.js — typosquat of discord.js"
+      - type: string-literal
+        pattern: '"twilio-npm"'
+        weight: 95
+        description: "twilio-npm — malicious impersonation of twilio"
+      - type: string-literal
+        pattern: '"@aspect-build/rules_js"'
+        weight: 80
+        description: "@aspect-build/rules_js — compromised package"
+      - type: string-literal
+        pattern: '"getcookies"'
+        weight: 90
+        description: "getcookies — backdoor package used in supply chain attack"
+      - type: string-literal
+        pattern: '"mailparser-mit"'
+        weight: 90
+        description: "mailparser-mit — malicious clone of mailparser"
+      - type: string-literal
+        pattern: '"nodemailer-js"'
+        weight: 95
+        description: "nodemailer-js — typosquat of nodemailer"
+      - type: string-literal
+        pattern: '"nodemaiiler"'
+        weight: 95
+        description: "nodemaiiler — typosquat of nodemailer"
+      - type: string-literal
+        pattern: '"http-proxy-agent-js"'
+        weight: 95
+        description: "http-proxy-agent-js — typosquat of http-proxy-agent"
+      - type: string-literal
+        pattern: '"grpc-js"'
+        weight: 85
+        description: "grpc-js — typosquat of @grpc/grpc-js"
+      - type: string-literal
+        pattern: '"electorn"'
+        weight: 95
+        description: "electorn — typosquat of electron"
+      - type: string-literal
+        pattern: '"loadash"'
+        weight: 95
+        description: "loadash — typosquat of lodash"
+      - type: string-literal
+        pattern: '"d3.js"'
+        weight: 85
+        description: "d3.js — malicious package impersonating d3"
+      - type: string-literal
+        pattern: '"mariadb"'
+        weight: 70
+        description: "mariadb (npm) — typosquat targeting mariadb users"
+      - type: string-literal
+        pattern: '"mysqljs"'
+        weight: 90
+        description: "mysqljs — typosquat of mysql"
+      - type: string-literal
+        pattern: '"node-fabric"'
+        weight: 85
+        description: "node-fabric — malicious package"
+      - type: string-literal
+        pattern: '"bootsrap"'
+        weight: 95
+        description: "bootsrap — typosquat of bootstrap"
+      - type: string-literal
+        pattern: '"ember-power-timepicker"'
+        weight: 90
+        description: "ember-power-timepicker — compromised ember addon"
+    remediation: |
+      This package is known to be malicious or compromised. Remove it immediately and use the legitimate version.
+
+  - id: supply-007
+    name: Known Malicious Python Package (Extended)
+    description: "Dependency on a Python package known to be malicious (extended list)"
+    category: supply-chain
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 40
+    patterns:
+      - type: regex
+        pattern: '\bpython3-dateutil\b'
+        weight: 95
+        description: "python3-dateutil — typosquat of python-dateutil (steals creds)"
+      - type: regex
+        pattern: '\bnumppy\b'
+        weight: 95
+        description: "numppy — typosquat of numpy"
+      - type: regex
+        pattern: '\bbeautifulsoup\b'
+        weight: 90
+        description: "beautifulsoup — typosquat of beautifulsoup4"
+      - type: regex
+        pattern: '\bcolorma\b'
+        weight: 95
+        description: "colorma — typosquat of colorama"
+      - type: regex
+        pattern: '\bcryptography-patched\b'
+        weight: 95
+        description: "cryptography-patched — malicious fork of cryptography"
+      - type: regex
+        pattern: '\bopencv-python-headless-gpu\b'
+        weight: 90
+        description: "opencv-python-headless-gpu — malicious impersonation"
+      - type: regex
+        pattern: '\bdjango-logg\b'
+        weight: 95
+        description: "django-logg — typosquat of django-log"
+      - type: regex
+        pattern: '\bpip-system-certs\b'
+        weight: 85
+        description: "pip-system-certs — malicious certificate package"
+      - type: regex
+        pattern: '\bsetuptools-rust-src\b'
+        weight: 90
+        description: "setuptools-rust-src — malicious build dependency"
+      - type: regex
+        pattern: '\bflask-caching-redis\b'
+        weight: 90
+        description: "flask-caching-redis — malicious redis integration"
+      - type: regex
+        pattern: '\bscipy-light\b'
+        weight: 90
+        description: "scipy-light — malicious lightweight scipy impersonation"
+      - type: regex
+        pattern: '\bpandasgui\b'
+        weight: 75
+        description: "pandasgui — known to contain suspicious functionality"
+      - type: regex
+        pattern: '\btensorflow-macos-gpu\b'
+        weight: 90
+        description: "tensorflow-macos-gpu — malicious impersonation"
+      - type: regex
+        pattern: '\bpymongo-auth\b'
+        weight: 90
+        description: "pymongo-auth — malicious pymongo extension"
+      - type: regex
+        pattern: '\bnodejs-base64\b'
+        weight: 85
+        description: "nodejs-base64 — malicious pip package despite the name"
+      - type: regex
+        pattern: '\bpython-mysql\b'
+        weight: 85
+        description: "python-mysql — typosquat targeting mysql-connector-python"
+      - type: regex
+        pattern: '\bpycrpto\b'
+        weight: 95
+        description: "pycrpto — typosquat of pycrypto"
+      - type: regex
+        pattern: '\burllib4\b'
+        weight: 95
+        description: "urllib4 — typosquat of urllib3"
+      - type: regex
+        pattern: '\bdjango-server\b'
+        weight: 85
+        description: "django-server — malicious django impersonation"
+      - type: regex
+        pattern: '\bpip-review-all\b'
+        weight: 85
+        description: "pip-review-all — malicious pip review tool"
+    remediation: |
+      This Python package is known to be malicious. Remove it immediately and audit your system.
+
+  - id: supply-008
+    name: Common Typosquatting Heuristics
+    description: "Detects common typosquatting patterns of popular packages"
+    category: supply-chain
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: '"(lod_sh|l0dash|lodahs|loadsh|lodaash)"'
+        weight: 90
+        description: "Typosquats of lodash"
+      - type: regex
+        pattern: '"(axois|axiosx|axos|axiios)"'
+        weight: 90
+        description: "Typosquats of axios"
+      - type: regex
+        pattern: '"(momnet|moemnt|momnent|momeent)"'
+        weight: 90
+        description: "Typosquats of moment"
+      - type: regex
+        pattern: '"(challk|chak|chalkk|chaalk)"'
+        weight: 90
+        description: "Typosquats of chalk"
+      - type: regex
+        pattern: '"(webpak|webpacck|wepback|webpackk)"'
+        weight: 90
+        description: "Typosquats of webpack"
+      - type: regex
+        pattern: '"(reqeusts|requstes|requsets)"'
+        weight: 90
+        description: "Typosquats of requests (Python)"
+      - type: regex
+        pattern: '"(djnago|dajngo|djangoo)"'
+        weight: 90
+        description: "Typosquats of django"
+      - type: regex
+        pattern: '"(flaask|flaskk|flaks)"'
+        weight: 90
+        description: "Typosquats of flask"
+    remediation: |
+      Verify the package name is correct. This appears to be a typosquat of a popular package.
