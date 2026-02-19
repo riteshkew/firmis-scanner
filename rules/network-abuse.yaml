@@ -194,3 +194,180 @@ rules:
       to bypass firewalls while exfiltrating data or maintaining C2 communication.
       AI agents should not use DNS-over-HTTPS programmatically or invoke DNS
       tunneling tools. Remove all such patterns and use standard HTTPS APIs instead.
+
+  - id: na-006
+    name: DNS Exfiltration via Long Subdomain Queries
+    description: "Detects patterns of DNS exfiltration where data is encoded into unusually long subdomain labels to bypass network monitoring"
+    category: network-abuse
+    severity: high
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    patterns:
+      - type: regex
+        pattern: '[a-zA-Z0-9+/]{32,}\.[a-zA-Z0-9-]{3,}\.[a-zA-Z]{2,}'
+        weight: 65
+        description: "Unusually long base64-like subdomain label (32+ chars) — DNS exfiltration pattern"
+      - type: regex
+        pattern: '(?:nslookup|dig|host|resolve)\s+[a-zA-Z0-9+/]{20,}\.'
+        weight: 75
+        description: "DNS lookup with long encoded subdomain via nslookup/dig"
+      - type: regex
+        pattern: 'dns\.resolve\s*\(\s*[''"][a-zA-Z0-9+/]{20,}\.'
+        weight: 78
+        description: "Programmatic DNS resolution of long encoded subdomain"
+      - type: regex
+        pattern: 'Resolve-DnsName\s+[a-zA-Z0-9+/]{20,}\.'
+        weight: 78
+        description: "PowerShell Resolve-DnsName with encoded subdomain"
+    remediation: |
+      DNS exfiltration encodes stolen data as subdomains of attacker-controlled domains.
+      Each DNS query carries a fragment of exfiltrated content that bypasses HTTP/HTTPS
+      monitoring. Implement DNS monitoring and block queries with unusually long labels.
+      AI agents must not construct or resolve dynamically-encoded DNS queries.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM02 Insecure Output"
+      - "https://atlas.mitre.org/techniques/AML.T0049"
+
+  - id: na-007
+    name: Reverse Shell Patterns
+    description: "Detects reverse shell one-liners that connect back to an attacker-controlled host, providing interactive shell access"
+    category: network-abuse
+    severity: critical
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: 'bash\s+-i\s*>&?\s*/dev/tcp/'
+        weight: 98
+        description: "Classic bash reverse shell via /dev/tcp"
+      - type: regex
+        pattern: 'nc\s+(?:-e|-c)\s+(?:/bin/(?:bash|sh)|cmd\.exe)'
+        weight: 98
+        description: "Netcat reverse shell with -e/-c executing shell"
+      - type: regex
+        pattern: 'python\d*\s+-c\s+[''"].*socket.*exec.*[''"]'
+        weight: 95
+        description: "Python socket reverse shell one-liner"
+      - type: regex
+        pattern: 'perl\s+-e\s+[''"].*socket.*exec.*[''"]'
+        weight: 95
+        description: "Perl socket reverse shell one-liner"
+      - type: regex
+        pattern: 'ruby\s+-rsocket\s+-e'
+        weight: 95
+        description: "Ruby socket reverse shell one-liner"
+      - type: regex
+        pattern: 'php\s+-r\s+[''"].*fsockopen.*exec.*[''"]'
+        weight: 95
+        description: "PHP reverse shell via fsockopen"
+    remediation: |
+      Reverse shells provide attackers with interactive command execution on compromised systems.
+      These are unambiguous attack payloads — no legitimate use case exists for reverse shell
+      one-liners in agent code. Remove immediately and investigate the source of this code.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM06 Excessive Agency"
+      - "https://atlas.mitre.org/techniques/AML.T0049"
+
+  - id: na-008
+    name: Cryptocurrency Mining Endpoints
+    description: "Detects connections to known cryptocurrency mining pool endpoints and mining-related protocol patterns"
+    category: network-abuse
+    severity: high
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: '(?:stratum\+tcp|stratum\+ssl)://'
+        weight: 95
+        description: "Stratum mining protocol URI — cryptocurrency pool connection"
+      - type: regex
+        pattern: '(?:xmrig|cgminer|bfgminer|cpuminer|t-rex|phoenixminer|nbminer)'
+        weight: 90
+        description: "Known cryptocurrency miner binary or process name"
+      - type: regex
+        pattern: '(?:pool\.supportxmr\.com|pool\.minexmr\.com|xmrpool\.eu|monerohash\.com)'
+        weight: 95
+        description: "Monero mining pool domain"
+      - type: regex
+        pattern: 'coinhive|cryptonight|randomx|ethash\s*algorithm'
+        weight: 85
+        description: "Cryptocurrency mining algorithm or library reference"
+      - type: regex
+        pattern: '(?:mining_threads|hashrate|miner_config)\s*[=:]'
+        weight: 75
+        description: "Mining configuration parameter"
+    remediation: |
+      Cryptocurrency mining in agent environments consumes unauthorized compute resources
+      and may indicate a broader supply-chain compromise. Remove all mining software,
+      pool connections, and mining algorithm references. Investigate how this code was introduced.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM05 Supply Chain"
+      - "https://atlas.mitre.org/techniques/AML.T0049"
+
+  - id: na-009
+    name: Tor Network and Anonymizing Proxy Connections
+    description: "Detects .onion domain connections and Tor/proxy configurations used to anonymize malicious network activity"
+    category: network-abuse
+    severity: medium
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    patterns:
+      - type: regex
+        pattern: '[a-z2-7]{16,56}\.onion'
+        weight: 90
+        description: ".onion domain address — Tor hidden service connection"
+      - type: regex
+        pattern: '(?:SOCKS5|socks5h?)://(?:127\.0\.0\.1|localhost):9050'
+        weight: 88
+        description: "Connection via Tor's default SOCKS5 proxy port 9050"
+      - type: regex
+        pattern: '(?:SOCKS5|socks5h?)://(?:127\.0\.0\.1|localhost):9150'
+        weight: 88
+        description: "Connection via Tor Browser's SOCKS5 proxy port 9150"
+      - type: regex
+        pattern: 'torify\s+[a-zA-Z]|torsocks\s+[a-zA-Z]'
+        weight: 85
+        description: "torify or torsocks command wrapping network traffic through Tor"
+      - type: regex
+        pattern: 'HiddenServicePort|HiddenServiceDir'
+        weight: 85
+        description: "Tor hidden service configuration directives"
+    remediation: |
+      Tor and .onion connections are used to anonymize communication with C2 servers
+      and exfiltrate data beyond network monitoring. AI agents must use direct,
+      auditable connections only. Remove all Tor proxy configurations and .onion references.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM02 Insecure Output"
+      - "https://atlas.mitre.org/techniques/AML.T0049"
+
+  - id: na-010
+    name: Non-Standard Port Usage for HTTP/HTTPS
+    description: "Detects HTTP or HTTPS traffic on non-standard ports, commonly used to bypass firewall rules and evade traffic inspection"
+    category: network-abuse
+    severity: low
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 45
+    patterns:
+      - type: regex
+        pattern: 'https?://[a-zA-Z0-9._-]+:(?:8443|8080|8888|9090|9999|4444|1337|31337)/'
+        weight: 55
+        description: "HTTP/HTTPS connection on commonly-abused non-standard port"
+      - type: regex
+        pattern: '(?:connect|fetch|request)\s*\([^)]*:[4-9][0-9]{3,4}[^0-9]'
+        weight: 45
+        description: "Network connection to high-numbered non-standard port"
+      - type: regex
+        pattern: 'port\s*[=:]\s*(?:4444|1337|31337|8888|9999|6666|6667)'
+        weight: 65
+        description: "Configuration setting for a well-known attack/IRC port"
+    remediation: |
+      Non-standard ports are frequently used to evade port-based firewall rules and
+      network monitoring configured for standard ports (80, 443). Review all network
+      connections using non-standard ports to ensure they are documented and authorized.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM02 Insecure Output"

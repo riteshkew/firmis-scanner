@@ -1,0 +1,145 @@
+rules:
+  - id: ic-001
+    name: Debug Mode Enabled in Production Config
+    description: "Detects debug mode flags enabled in application or agent configurations, which expose stack traces, internal state, and disable security controls"
+    category: insecure-config
+    severity: medium
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 50
+    platforms:
+      - claude
+      - mcp
+      - codex
+      - cursor
+      - crewai
+      - autogpt
+      - openclaw
+      - nanobot
+    patterns:
+      - type: regex
+        pattern: '(?i)\bDEBUG\s*[=:]\s*(?:true|True|TRUE|1|yes|on)\b'
+        weight: 60
+        description: "DEBUG flag set to true/1/yes in config"
+      - type: regex
+        pattern: '(?i)\bdebug_mode\s*[=:]\s*(?:true|True|TRUE|1|yes|on)\b'
+        weight: 65
+        description: "debug_mode enabled in configuration"
+      - type: regex
+        pattern: '(?i)app\.(?:run|debug)\s*\([^)]*debug\s*=\s*True'
+        weight: 70
+        description: "Flask/Django app.run() with debug=True"
+      - type: regex
+        pattern: '(?i)NODE_ENV\s*[=:]\s*[''"]?development[''"]?'
+        weight: 55
+        description: "NODE_ENV set to development (disables production security features)"
+      - type: regex
+        pattern: '(?i)\bverbose_errors\s*[=:]\s*(?:true|True|1|yes)\b'
+        weight: 60
+        description: "verbose_errors enabled — exposes internal error details"
+    remediation: |
+      Debug mode exposes detailed error messages, stack traces, and internal state
+      that attackers can use to understand application structure and find vulnerabilities.
+      In production: set DEBUG=false, NODE_ENV=production, and disable verbose error pages.
+      Use structured logging to capture diagnostic information without exposing it to end users.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM08 Excessive Permissions"
+
+  - id: ic-002
+    name: SSL/TLS Verification Disabled
+    description: "Detects configurations that disable SSL/TLS certificate verification, enabling man-in-the-middle attacks on agent network connections"
+    category: insecure-config
+    severity: critical
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 60
+    platforms:
+      - claude
+      - mcp
+      - codex
+      - cursor
+      - crewai
+      - autogpt
+      - openclaw
+      - nanobot
+    patterns:
+      - type: regex
+        pattern: '(?i)\bverify\s*=\s*False\b'
+        weight: 90
+        description: "Python requests verify=False disables SSL certificate validation"
+      - type: regex
+        pattern: '(?i)rejectUnauthorized\s*:\s*false\b'
+        weight: 90
+        description: "Node.js TLS rejectUnauthorized: false disables cert validation"
+      - type: regex
+        pattern: '(?i)ssl_verify\s*[=:]\s*(?:false|False|FALSE|0|no)\b'
+        weight: 88
+        description: "ssl_verify disabled in configuration"
+      - type: regex
+        pattern: '(?i)CURL_SSL_VERIFYPEER\s*,\s*(?:0|false|FALSE)\b'
+        weight: 90
+        description: "PHP/C cURL SSL peer verification disabled"
+      - type: regex
+        pattern: '(?i)InsecureSkipVerify\s*:\s*true\b'
+        weight: 92
+        description: "Go TLS InsecureSkipVerify: true disables certificate validation"
+      - type: regex
+        pattern: '(?i)check_hostname\s*=\s*False\b'
+        weight: 88
+        description: "Python ssl.check_hostname = False disables hostname verification"
+    remediation: |
+      Disabling SSL/TLS verification allows man-in-the-middle attacks where an attacker
+      intercepts and modifies all HTTPS traffic without detection. This is never acceptable
+      in production code. Remove all verify=False, rejectUnauthorized:false, and
+      InsecureSkipVerify:true configurations. Use a proper CA bundle for self-signed certs.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM08 Excessive Permissions"
+      - "https://atlas.mitre.org/techniques/AML.T0049"
+
+  - id: ic-003
+    name: Default or Hardcoded Credentials in Config Files
+    description: "Detects default, well-known, or hardcoded credentials in configuration files that should use secrets management instead"
+    category: insecure-config
+    severity: high
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    platforms:
+      - claude
+      - mcp
+      - codex
+      - cursor
+      - crewai
+      - autogpt
+      - openclaw
+      - nanobot
+    patterns:
+      - type: regex
+        pattern: '(?i)(?:password|passwd)\s*[=:]\s*[''"](?:admin|password|123456|changeme|default|root|test|secret|pass)\b'
+        weight: 85
+        description: "Well-known default password value in configuration"
+      - type: regex
+        pattern: '(?i)(?:username|user)\s*[=:]\s*[''"](?:admin|root|administrator|sa|test)\b'
+        weight: 70
+        description: "Default or well-known username in configuration"
+      - type: regex
+        pattern: '(?i)(?:db_password|database_password|DB_PASS)\s*[=:]\s*[''"][a-zA-Z0-9]{3,20}[''"]'
+        weight: 72
+        description: "Database password hardcoded in config (not from environment variable)"
+      - type: regex
+        pattern: '(?i)(?:api_key|apikey)\s*[=:]\s*[''"][a-zA-Z0-9_\-]{8,64}[''"]'
+        weight: 68
+        description: "API key hardcoded directly in config file"
+      - type: regex
+        pattern: '(?i)(?:secret_key|SECRET_KEY)\s*[=:]\s*[''"](?:secret|changeme|dev-secret|insecure|default)[''"]'
+        weight: 85
+        description: "Well-known default secret key value in config"
+    remediation: |
+      Hardcoded credentials in configuration files are a critical security risk.
+      They are committed to version control, visible to all team members, and cannot
+      be rotated without code changes. Use environment variables, secrets managers
+      (Vault, AWS Secrets Manager, Azure Key Vault), or .env files (gitignored).
+      Rotate all credentials that may have been exposed in version history.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM08 Excessive Permissions"
+      - "https://atlas.mitre.org/techniques/AML.T0043"

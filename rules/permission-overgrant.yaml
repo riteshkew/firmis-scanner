@@ -88,3 +88,169 @@ rules:
         description: "Direct shell tool access"
     remediation: |
       Minimize tool access in skill declarations. Use the most restrictive tools that accomplish the task.
+
+  - id: po-004
+    name: MCP Server Wildcard Tool Permissions
+    description: "Detects MCP server configurations that request wildcard or all-tools permissions, granting unrestricted tool access"
+    category: permission-overgrant
+    severity: high
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    platforms:
+      - mcp
+      - claude
+      - openclaw
+    patterns:
+      - type: regex
+        pattern: '(?i)"?tools"?\s*:\s*\[?\s*"\*"\s*\]?'
+        weight: 90
+        description: "MCP tools field set to wildcard '*'"
+      - type: regex
+        pattern: '(?i)tools_allowed\s*[=:]\s*[''"]?\*[''"]?'
+        weight: 88
+        description: "tools_allowed set to wildcard"
+      - type: regex
+        pattern: '(?i)allow_all_tools\s*[=:]\s*true'
+        weight: 85
+        description: "allow_all_tools: true in MCP server config"
+      - type: regex
+        pattern: '(?i)tool_permissions\s*[=:]\s*[''"]?(?:all|any|\*)[''"]?'
+        weight: 85
+        description: "tool_permissions set to all/any/* in MCP config"
+    remediation: |
+      MCP servers must declare the minimum set of tools required.
+      Wildcard tool permissions grant agents access to every registered tool,
+      including dangerous ones. Enumerate the specific tools needed explicitly.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM08 Excessive Permissions"
+      - "https://atlas.mitre.org/techniques/AML.T0043"
+
+  - id: po-005
+    name: Agent Filesystem Write to Sensitive Directories
+    description: "Detects agent configurations or code requesting write access to sensitive system directories like /etc, /root, or ~/.ssh"
+    category: permission-overgrant
+    severity: critical
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 60
+    platforms:
+      - claude
+      - mcp
+      - codex
+      - cursor
+      - crewai
+      - autogpt
+      - openclaw
+      - nanobot
+    patterns:
+      - type: regex
+        pattern: '(?:write|append|create).*(?:/etc/|/root/|/boot/|/usr/bin/|/usr/sbin/)'
+        weight: 85
+        description: "File write operation targeting critical system directory"
+      - type: regex
+        pattern: 'filesystem:write.*(?:/etc|/root|/boot)'
+        weight: 88
+        description: "Explicit filesystem write permission to system directory"
+      - type: regex
+        pattern: '(?:writeFile|writeFileSync|open.*[''"]w[''"])\s*\([^)]*(?:/etc/|/root/|\.ssh/)'
+        weight: 90
+        description: "Code writing to /etc, /root, or .ssh directory"
+      - type: regex
+        pattern: 'path_write\s*[=:]\s*[''"]?/(?:etc|root|boot|sys|proc)/'
+        weight: 85
+        description: "Agent config granting write path to sensitive system root"
+    remediation: |
+      Agents must not write to system directories (/etc, /root, /boot, ~/.ssh).
+      Confine filesystem write permissions to the application's own data directory.
+      Use explicit path allowlists, never path-prefix grants to system locations.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM08 Excessive Permissions"
+      - "https://atlas.mitre.org/techniques/AML.T0049"
+
+  - id: po-006
+    name: Overly Broad CORS Configuration
+    description: "Detects CORS policies that allow all origins, enabling cross-origin attacks on agent APIs"
+    category: permission-overgrant
+    severity: medium
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    platforms:
+      - claude
+      - mcp
+      - codex
+      - cursor
+      - crewai
+      - autogpt
+      - openclaw
+      - nanobot
+    patterns:
+      - type: regex
+        pattern: '(?i)Access-Control-Allow-Origin\s*:\s*\*'
+        weight: 75
+        description: "CORS header allowing all origins (*)"
+      - type: regex
+        pattern: '(?i)cors\s*\(\s*\{\s*origin\s*:\s*[''"]?\*[''"]?'
+        weight: 78
+        description: "Express/Node.js CORS middleware configured for all origins"
+      - type: regex
+        pattern: '(?i)allow_origins\s*[=:]\s*\[?\s*[''"]?\*[''"]?\s*\]?'
+        weight: 75
+        description: "allow_origins set to wildcard in CORS config"
+      - type: regex
+        pattern: '(?i)CorsPolicy.*AllowAnyOrigin'
+        weight: 80
+        description: "ASP.NET CORS policy AllowAnyOrigin()"
+    remediation: |
+      CORS wildcard (Access-Control-Allow-Origin: *) allows any website to make
+      cross-origin requests to your agent API, enabling data theft and CSRF attacks.
+      Restrict allowed origins to an explicit allowlist of trusted domains.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM08 Excessive Permissions"
+
+  - id: po-007
+    name: Allow-All Network Policy
+    description: "Detects network policies or firewall rules that permit all inbound or outbound traffic, removing network isolation"
+    category: permission-overgrant
+    severity: high
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    platforms:
+      - claude
+      - mcp
+      - codex
+      - cursor
+      - crewai
+      - autogpt
+      - openclaw
+      - nanobot
+    patterns:
+      - type: regex
+        pattern: '(?i)network_policy\s*[=:]\s*[''"]?(?:allow_all|\*)[''"]?'
+        weight: 80
+        description: "network_policy config explicitly set to allow-all or wildcard"
+      - type: regex
+        pattern: 'ingress\s*\{\s*[^}]*from\s*\[\s*\]\s*[^}]*\}'
+        weight: 75
+        description: "Kubernetes NetworkPolicy ingress from empty selector (allow all)"
+      - type: regex
+        pattern: 'egress\s*\{\s*[^}]*to\s*\[\s*\]\s*[^}]*\}'
+        weight: 75
+        description: "Kubernetes NetworkPolicy egress to empty selector (allow all)"
+      - type: regex
+        pattern: '(?i)firewall.*allow\s+all|iptables.*-j\s+ACCEPT\s+-s\s+0\.0\.0\.0/0'
+        weight: 80
+        description: "Firewall rule accepting all source IPs"
+      - type: regex
+        pattern: '(?i)network_access\s*[=:]\s*[''"]?(?:all|unrestricted|any|\*)[''"]?'
+        weight: 82
+        description: "network_access config set to all/unrestricted/any"
+    remediation: |
+      Allow-all network policies remove critical isolation for agent environments.
+      Define explicit allowlists for permitted endpoints and ports.
+      Apply zero-trust network principles: deny by default, allow by exception.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM08 Excessive Permissions"
+      - "https://atlas.mitre.org/techniques/AML.T0049"

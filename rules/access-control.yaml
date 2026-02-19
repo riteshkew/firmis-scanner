@@ -1,0 +1,136 @@
+rules:
+  - id: ac-001
+    name: API Key or Token in URL Query Parameter
+    description: "Detects API keys, tokens, and secrets passed as URL query parameters instead of headers, exposing credentials in logs and browser history"
+    category: access-control
+    severity: high
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    platforms:
+      - claude
+      - mcp
+      - codex
+      - cursor
+      - crewai
+      - autogpt
+      - openclaw
+      - nanobot
+    patterns:
+      - type: regex
+        pattern: '[?&](?:api_key|apikey|api-key|token|access_token|auth_token|secret|key)=[A-Za-z0-9_\-+/=]{8,}'
+        weight: 85
+        description: "API key or token passed as URL query parameter"
+      - type: regex
+        pattern: '[?&](?:password|passwd|pass|pwd)=[^&\s]{4,}'
+        weight: 90
+        description: "Password passed as URL query parameter"
+      - type: regex
+        pattern: '(?:fetch|axios|request|urllib|requests\.get)\s*\([^)]*[?&](?:api_key|token|secret)='
+        weight: 88
+        description: "HTTP request function call with credential in query string"
+      - type: regex
+        pattern: 'url\s*[+=]\s*[''"][^''"]*[?&](?:api_key|token|key|secret)='
+        weight: 82
+        description: "URL string construction embedding credential in query string"
+    remediation: |
+      API keys and tokens in URL query parameters are logged by web servers, proxies,
+      CDNs, and browser history in plaintext. Use HTTP Authorization headers or
+      request body parameters instead. Never embed secrets in URLs.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM08 Excessive Permissions"
+      - "https://atlas.mitre.org/techniques/AML.T0043"
+
+  - id: ac-002
+    name: Authentication Bypass Patterns
+    description: "Detects hardcoded boolean flags and query parameters used to bypass authentication checks in agent code or configurations"
+    category: access-control
+    severity: critical
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 60
+    platforms:
+      - claude
+      - mcp
+      - codex
+      - cursor
+      - crewai
+      - autogpt
+      - openclaw
+      - nanobot
+    patterns:
+      - type: regex
+        pattern: '(?i)\b(?:is_admin|isAdmin)\s*[=:]\s*true\b'
+        weight: 85
+        description: "Hardcoded is_admin: true or isAdmin = true flag"
+      - type: regex
+        pattern: '(?i)\b(?:skip_auth|skipAuth|bypass_auth|no_auth|disable_auth)\s*[=:]\s*true\b'
+        weight: 90
+        description: "Authentication skip/bypass flag set to true"
+      - type: regex
+        pattern: '[?&]admin=(?:true|1|yes)'
+        weight: 85
+        description: "admin=true passed as URL query parameter for auth bypass"
+      - type: regex
+        pattern: '(?i)if\s+(?:not\s+)?(?:auth_required|authentication_required)\s*==\s*False'
+        weight: 80
+        description: "Python conditional disabling authentication requirement"
+      - type: regex
+        pattern: '(?i)auth_bypass\s*[=:]\s*(?:true|1|yes|enabled)'
+        weight: 90
+        description: "auth_bypass configuration set to enabled"
+    remediation: |
+      Authentication bypass flags are critical vulnerabilities that remove access controls.
+      Remove all hardcoded is_admin, skip_auth, and bypass_auth flags from agent code.
+      Authentication decisions must be made by the identity provider, not boolean flags
+      that can be trivially modified. Use role-based access control (RBAC) instead.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM08 Excessive Permissions"
+      - "https://atlas.mitre.org/techniques/AML.T0043"
+
+  - id: ac-003
+    name: JWT None Algorithm or Weak Signing
+    description: "Detects JWT configurations using the 'none' algorithm or weak symmetric secrets, enabling token forgery attacks"
+    category: access-control
+    severity: critical
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 60
+    platforms:
+      - claude
+      - mcp
+      - codex
+      - cursor
+      - crewai
+      - autogpt
+      - openclaw
+      - nanobot
+    patterns:
+      - type: regex
+        pattern: '(?i)(?:algorithm|alg)\s*[=:]\s*[''"]none[''"]'
+        weight: 95
+        description: "JWT algorithm set to 'none' — signature verification disabled"
+      - type: regex
+        pattern: '(?i)jwt\.(?:encode|decode|sign)\s*\([^)]*[''"]none[''"]'
+        weight: 95
+        description: "jwt.encode/decode called with 'none' algorithm"
+      - type: regex
+        pattern: '(?i)verify\s*[=:]\s*(?:false|False|FALSE|0)\b'
+        weight: 75
+        description: "JWT verification disabled via verify: false flag"
+      - type: regex
+        pattern: '(?i)jwt\s*\.\s*(?:decode|verify)\s*\([^)]*(?:options\s*:\s*\{[^}]*algorithms\s*:\s*\[[''"]none[''"])'
+        weight: 95
+        description: "JWT decode with algorithms: ['none'] option"
+      - type: regex
+        pattern: '(?i)sign(?:ature)?\s*[=:]\s*[''"](?:secret|password|changeme|12345)[''"]'
+        weight: 80
+        description: "JWT signed with a weak, well-known default secret"
+    remediation: |
+      JWT 'none' algorithm allows forging tokens without a valid signature.
+      Always use RS256 or ES256 (asymmetric) for production systems.
+      Never disable JWT verification. Reject tokens with 'none' algorithm explicitly.
+      Use cryptographically random secrets of at least 256 bits for HS256.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM08 Excessive Permissions"
+      - "https://atlas.mitre.org/techniques/AML.T0043"

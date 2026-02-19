@@ -245,3 +245,151 @@ rules:
       umask(0) is particularly dangerous as it makes all subsequently created files world-accessible.
       Use the principle of least privilege: apply only the minimum permissions required.
       Prefer 640 for files and 750 for directories. Never use 777 in production code.
+
+  - id: fs-007
+    name: Symlink Attack to Sensitive Files
+    description: "Detects creation of symbolic links pointing to sensitive system files or directories, enabling path traversal and unauthorized access"
+    category: file-system-abuse
+    severity: high
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    patterns:
+      - type: regex
+        pattern: 'ln\s+-s\s+[^\s]*(?:/etc/shadow|/etc/passwd|/etc/sudoers|/root/\.ssh)'
+        weight: 95
+        description: "Symlink created pointing directly to a critical system credential file"
+      - type: regex
+        pattern: 'ln\s+-s\s+[^\s]*(?:\.ssh/id_rsa|\.aws/credentials|\.env)\b'
+        weight: 90
+        description: "Symlink targeting SSH key, AWS credentials, or .env secrets"
+      - type: regex
+        pattern: 'os\.symlink\s*\(\s*[''"][^\s]*(?:/etc/shadow|/root/|\.ssh/)[^\s]*[''"]'
+        weight: 90
+        description: "Python os.symlink() targeting a sensitive system path"
+      - type: regex
+        pattern: 'fs\.symlinkSync\s*\(\s*[''"][^\s]*(?:/etc/|/root/|\.ssh/)[^\s]*[''"]'
+        weight: 90
+        description: "Node.js symlinkSync targeting a sensitive path"
+    remediation: |
+      Symlinks to credential files (/etc/shadow, ~/.ssh/id_rsa, ~/.aws/credentials)
+      enable path traversal attacks where a process reading an "innocent" path is
+      redirected to a sensitive file. Remove all symlinks to sensitive paths.
+      Ensure tmp directories are on separate filesystems to prevent symlink races.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM06 Excessive Agency"
+      - "https://atlas.mitre.org/techniques/AML.T0049"
+
+  - id: fs-008
+    name: Temp Directory Code Execution
+    description: "Detects patterns of writing executable code to /tmp and then executing it — a classic malware staging technique"
+    category: file-system-abuse
+    severity: critical
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 60
+    patterns:
+      - type: regex
+        pattern: '(?:spawn|execSync|execFile|subprocess\.run|subprocess\.call|os\.system)\s*\([^)]*(?:/tmp/|\\\\temp\\\\)'
+        weight: 88
+        description: "Executing a file from /tmp or TEMP directory via process spawn"
+      - type: regex
+        pattern: 'chmod\s+[+0-9]*x\s+/tmp/'
+        weight: 90
+        description: "Making a /tmp file executable — staging step before execution"
+      - type: regex
+        pattern: 'wget\s+[^\s]+\s+-O\s+/tmp/'
+        weight: 75
+        description: "wget downloading a file directly into /tmp directory"
+      - type: regex
+        pattern: 'bash\s+/tmp/|sh\s+/tmp/|python\s+/tmp/|node\s+/tmp/'
+        weight: 90
+        description: "Direct interpreter invocation of a file from /tmp"
+    remediation: |
+      Writing code to /tmp and executing it is a standard malware staging technique.
+      /tmp is world-writable and persists across processes, making it ideal for staging payloads.
+      AI agents must never write executable content to temporary directories.
+      Use secure temporary file handling with mode 600 and never execute temp files.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM06 Excessive Agency"
+      - "https://atlas.mitre.org/techniques/AML.T0049"
+
+  - id: fs-009
+    name: Audit Log Manipulation
+    description: "Detects truncation, clearing, or deletion of audit and application log files to destroy forensic evidence"
+    category: file-system-abuse
+    severity: high
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    patterns:
+      - type: regex
+        pattern: 'truncate\s+-s\s+0\s+[^\s]*(?:audit|access|security|syslog|auth).*\.log'
+        weight: 90
+        description: "Truncate audit or security log file to zero bytes"
+      - type: regex
+        pattern: 'echo\s*(?:-n\s+)?[''"][''"]?\s*>\s+[^\s]*(?:audit|access|security|auth).*\.log'
+        weight: 88
+        description: "Empty redirect to clear an audit or security log"
+      - type: regex
+        pattern: 'rm\s+(?:-[rRf]+\s+)?[^\s]*(?:audit|access|security|auth).*\.log\b'
+        weight: 85
+        description: "Deleting an audit or security log file"
+      - type: regex
+        pattern: 'auditctl\s+-e\s+0\b'
+        weight: 95
+        description: "auditctl -e 0 disables the Linux audit subsystem"
+      - type: regex
+        pattern: 'service\s+(?:auditd|rsyslog|syslog-ng)\s+stop'
+        weight: 88
+        description: "Stopping the audit daemon or syslog service"
+      - type: regex
+        pattern: 'logger\s+-p\s+auth\b.*>>\s*/dev/null'
+        weight: 80
+        description: "Suppressing auth log entries by redirecting to /dev/null"
+    remediation: |
+      Log manipulation is a critical anti-forensic action. Audit logs are the primary
+      mechanism for detecting and reconstructing security incidents.
+      AI agents must never truncate, delete, or disable logging systems.
+      Implement log integrity controls (append-only, remote syslog) to prevent tampering.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM06 Excessive Agency"
+      - "https://atlas.mitre.org/techniques/AML.T0049"
+
+  - id: fs-010
+    name: Recursive Directory Deletion
+    description: "Detects recursive deletion commands targeting system or application directories, which can cause irreversible data destruction"
+    category: file-system-abuse
+    severity: critical
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    patterns:
+      - type: regex
+        pattern: 'rm\s+-[rRf]*[rR][rRf]*\s+(?:/|~|\$HOME|\$\{HOME\})'
+        weight: 95
+        description: "Recursive rm targeting root filesystem, home, or shell variable path"
+      - type: regex
+        pattern: 'rm\s+-rf\s+/(?:etc|usr|var|opt|home|boot|sys)\b'
+        weight: 95
+        description: "rm -rf targeting a critical system directory"
+      - type: regex
+        pattern: 'rimraf\s*\(\s*[''"]?/'
+        weight: 85
+        description: "Node.js rimraf targeting an absolute path"
+      - type: regex
+        pattern: 'shutil\.rmtree\s*\(\s*[''"]?/'
+        weight: 85
+        description: "Python shutil.rmtree targeting an absolute system path"
+      - type: regex
+        pattern: 'Remove-Item\s+(?:-Recurse\s+)?(?:-Force\s+)?(?:C:\\\\|/)'
+        weight: 85
+        description: "PowerShell Remove-Item with recurse/force on root path"
+    remediation: |
+      Recursive deletion of system or application directories is destructive and irreversible.
+      AI agents must never delete directories recursively without strict path validation.
+      Implement path allowlists for deletion operations. Never allow deletion of paths
+      matching /, ~, $HOME, or well-known system directories.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM06 Excessive Agency"
+      - "https://atlas.mitre.org/techniques/AML.T0049"

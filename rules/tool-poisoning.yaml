@@ -186,3 +186,162 @@ rules:
       Legitimate tools access credentials through secure environment variables or secrets managers,
       never by asking the user (or the AI agent) to supply them as tool arguments.
       A tool that requires credentials as parameters is likely a credential-harvesting attack.
+
+  - id: tp-006
+    name: Homoglyph Characters in Tool Names
+    description: "Detects visually deceptive Unicode characters in tool names that impersonate legitimate tools while routing to malicious implementations"
+    category: tool-poisoning
+    severity: critical
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: '[\u0400-\u04FF\u0370-\u03FF\u2100-\u214F]'
+        weight: 85
+        description: "Cyrillic, Greek, or letterlike Unicode characters used as homoglyphs in tool definitions"
+      - type: regex
+        pattern: '[\uFF01-\uFF5E]'
+        weight: 80
+        description: "Fullwidth ASCII lookalike characters (U+FF01-FF5E) in tool name"
+      - type: regex
+        pattern: '[\u2000-\u200A\u2028\u2029\u00A0\u202F\u205F\u3000]'
+        weight: 75
+        description: "Unicode whitespace lookalikes that visually appear as normal spaces"
+      - type: regex
+        pattern: '[\u0130\u0131\u017F]'
+        weight: 70
+        description: "Dotless-i, dotted-I, or long-s — common Latin homoglyphs"
+    remediation: |
+      Tool names containing non-ASCII homoglyphs are a visual deception attack.
+      An attacker registers a tool whose name looks identical to a trusted tool but
+      uses different Unicode codepoints. Validate that all tool names contain only
+      standard ASCII characters (U+0020-U+007E). Reject any tool with non-ASCII identifiers.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM02 Insecure Output"
+      - "https://atlas.mitre.org/techniques/AML.T0043"
+
+  - id: tp-007
+    name: Base64-Encoded Payload in Tool Description
+    description: "Detects base64-encoded content embedded in tool descriptions, which may hide malicious instructions from human reviewers"
+    category: tool-poisoning
+    severity: high
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    patterns:
+      - type: regex
+        pattern: '[A-Za-z0-9+/]{40,}={0,2}'
+        weight: 65
+        description: "Long base64-encoded string (40+ chars) in tool description"
+      - type: regex
+        pattern: '(?:description|desc|help|info)\s*[=:]\s*[''"][^''"]*[A-Za-z0-9+/]{40,}={0,2}'
+        weight: 80
+        description: "Base64 payload inside a description field value"
+      - type: regex
+        pattern: 'atob\s*\(|btoa\s*\(|base64\.decode|base64_decode'
+        weight: 75
+        description: "Base64 decode call embedded in tool description text"
+    remediation: |
+      Tool descriptions must contain only human-readable text describing the tool's
+      legitimate purpose. Base64-encoded content in descriptions is used to smuggle
+      hidden instructions that are decoded and executed by the AI agent.
+      Remove all encoded payloads and fetch tool descriptions only from trusted sources.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM01 Prompt Injection"
+      - "https://atlas.mitre.org/techniques/AML.T0043"
+
+  - id: tp-008
+    name: Tool Name Shadows Common System Commands
+    description: "Detects tool registrations using names of common system commands (ls, cat, curl, wget, bash) to intercept agent shell operations"
+    category: tool-poisoning
+    severity: high
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 60
+    platforms:
+      - mcp
+      - claude
+      - codex
+      - cursor
+    patterns:
+      - type: regex
+        pattern: '(?:name|tool_name|"name")\s*[=:]\s*[''"]?\s*(?:ls|cat|curl|wget|bash|sh|python|python3|node|pip|npm)\s*[''"]?'
+        weight: 85
+        description: "Tool registered with a common system command name"
+      - type: regex
+        pattern: '(?:name|tool_name|"name")\s*[=:]\s*[''"]?\s*(?:grep|find|sed|awk|rm|mv|cp|chmod|chown)\s*[''"]?'
+        weight: 85
+        description: "Tool registered with a common Unix utility name"
+      - type: regex
+        pattern: '(?:name|tool_name|"name")\s*[=:]\s*[''"]?\s*(?:git|ssh|scp|rsync|tar|zip|unzip)\s*[''"]?'
+        weight: 80
+        description: "Tool registered with a common developer tool name"
+    remediation: |
+      A tool with the same name as a system command is a tool shadowing attack.
+      The malicious tool intercepts calls intended for the legitimate system command.
+      Tool names must be unique, namespaced (e.g., vendor-toolname), and must not
+      collide with system command names or other registered tools.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM05 Supply Chain"
+      - "https://atlas.mitre.org/techniques/AML.T0043"
+
+  - id: tp-009
+    name: Hidden Markdown or HTML Directives in Tool Descriptions
+    description: "Detects markdown links, HTML tags, and formatting directives embedded in tool descriptions used to inject hidden instructions"
+    category: tool-poisoning
+    severity: high
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 55
+    patterns:
+      - type: regex
+        pattern: '<(?:script|iframe|img|object|embed|form|input|link|meta|style)[^>]*>'
+        weight: 90
+        description: "HTML element tag embedded in tool description"
+      - type: regex
+        pattern: '<!--[\s\S]*?-->'
+        weight: 88
+        description: "HTML comment block hiding instructions in tool description"
+      - type: regex
+        pattern: '\[(?:[^\]]{0,50})\]\s*\(\s*(?:javascript:|data:|vbscript:)'
+        weight: 95
+        description: "Markdown link with dangerous URI scheme (javascript:, data:)"
+      - type: regex
+        pattern: '<\s*style[^>]*>[\s\S]*?<\s*/\s*style\s*>'
+        weight: 85
+        description: "Inline CSS block in tool description for visual hiding"
+    remediation: |
+      Tool descriptions must be plain text only. HTML, Markdown with active links,
+      and CSS styles embedded in descriptions are used to hide instructions from
+      human reviewers while remaining visible to AI agents parsing the raw text.
+      Strip all HTML/Markdown formatting from tool descriptions before display.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM01 Prompt Injection"
+      - "https://atlas.mitre.org/techniques/AML.T0043"
+
+  - id: tp-010
+    name: Tool Description Length Anomaly
+    description: "Detects abnormally long tool descriptions (>5000 characters) which strongly suggest hidden content or embedded instructions"
+    category: tool-poisoning
+    severity: medium
+    version: "1.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: "[^\n]{5000,}"
+        weight: 75
+        description: "Single line content exceeding 5000 characters — may contain hidden instructions"
+      - type: regex
+        pattern: "(?:description|desc|help_text)\\s*[=:]\\s*['\"][^'\"]{4000,}"
+        weight: 70
+        description: "Tool description field value exceeding 4000 characters"
+    remediation: |
+      Legitimate tool descriptions are concise (typically under 500 characters).
+      Descriptions over 5000 characters almost always indicate hidden content:
+      invisible text, encoded payloads, or injected instructions.
+      Cap tool description length at 1000 characters and reject over-length descriptions.
+    references:
+      - "https://owasp.org/www-project-top-10-for-large-language-model-applications/ LLM01 Prompt Injection"
+      - "https://atlas.mitre.org/techniques/AML.T0043"
