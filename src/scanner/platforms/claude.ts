@@ -61,6 +61,7 @@ export class ClaudeSkillsAnalyzer extends BasePlatformAnalyzer {
           continue
         }
         if (!this.isValidComponentName(entry.name)) continue
+        if (await this.isGitignored(expandedPath, entry.name)) continue
 
         const skillPath = join(expandedPath, entry.name)
         const skillJsonPath = join(skillPath, 'skill.json')
@@ -84,10 +85,11 @@ export class ClaudeSkillsAnalyzer extends BasePlatformAnalyzer {
     const files: string[] = []
 
     try {
+      const ignorePatterns = await this.getIgnorePatterns(component.path)
       const matchedFiles = await fg(this.filePatterns, {
         cwd: component.path,
         absolute: true,
-        ignore: ['**/node_modules/**', '**/.git/**'],
+        ignore: ignorePatterns,
       })
 
       files.push(...matchedFiles)

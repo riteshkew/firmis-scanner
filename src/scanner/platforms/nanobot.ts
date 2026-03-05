@@ -184,10 +184,11 @@ export class NanobotAnalyzer extends BasePlatformAnalyzer {
       : component.path
 
     try {
+      const ignorePatterns = await this.getIgnorePatterns(basePath)
       const matchedFiles = await fg(this.filePatterns, {
         cwd: basePath,
         absolute: true,
-        ignore: ['**/node_modules/**', '**/.git/**', '**/vendor/**', '**/.venv/**'],
+        ignore: [...ignorePatterns, '**/vendor/**'],
       })
 
       files.push(...matchedFiles)

@@ -4,6 +4,8 @@ export type {
   SeverityLevel,
   OutputFormat,
   FirmisConfig,
+  ProgressEventType,
+  ProgressEvent,
 } from './config.js'
 
 export { DEFAULT_CONFIG, SEVERITY_ORDER, meetsMinimumSeverity } from './config.js'

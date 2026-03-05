@@ -4,6 +4,7 @@ import type {
   ComponentMetadata,
   DetectedPlatform,
 } from '../../types/index.js'
+import { readGitignorePatterns } from '../ignore.js'
 
 /** Directories that should never be treated as agent components. */
 const DEFAULT_EXCLUDE_DIRS = new Set([
@@ -92,5 +93,37 @@ export abstract class BasePlatformAnalyzer {
     const { createHash } = await import('node:crypto')
     const hash = createHash('md5').update(`${name}:${basePath}`).digest('hex')
     return hash.substring(0, 12)
+  }
+
+  /** Standard ignore patterns for fast-glob, including .gitignore */
+  protected async getIgnorePatterns(rootPath: string): Promise<string[]> {
+    const gitignore = await readGitignorePatterns(rootPath)
+    return [
+      '**/node_modules/**',
+      '**/.git/**',
+      '**/venv/**',
+      '**/__pycache__/**',
+      ...gitignore,
+    ]
+  }
+
+  /**
+   * Check if a directory name should be skipped based on parent .gitignore.
+   * Used during component discovery to skip gitignored directories.
+   */
+  protected async isGitignored(parentPath: string, dirName: string): Promise<boolean> {
+    const patterns = await readGitignorePatterns(parentPath)
+    // Check if any pattern would match this directory name
+    for (const pattern of patterns) {
+      // Patterns like **/test-data/** or **/dist/**
+      const stripped = pattern
+        .replace(/^\*\*\//, '')
+        .replace(/\/\*\*$/, '')
+        .replace(/\*\*$/, '')
+      if (stripped && (dirName === stripped || dirName + '/' === stripped)) {
+        return true
+      }
+    }
+    return false
   }
 }

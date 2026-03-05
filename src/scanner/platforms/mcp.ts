@@ -106,6 +106,7 @@ export class MCPAnalyzer extends BasePlatformAnalyzer {
           continue
         }
         if (!this.isValidComponentName(entry.name)) continue
+        if (await this.isGitignored(expandedPath, entry.name)) continue
 
         const serverPath = join(expandedPath, entry.name)
         const packageJsonPath = join(serverPath, 'package.json')
@@ -168,10 +169,11 @@ export class MCPAnalyzer extends BasePlatformAnalyzer {
         '**/go.mod',
       ]
 
+      const ignorePatterns = await this.getIgnorePatterns(component.path)
       const matchedFiles = await fg(patterns, {
         cwd: component.path,
         absolute: true,
-        ignore: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/build/**'],
+        ignore: [...ignorePatterns, '**/dist/**', '**/build/**'],
       })
 
       // Deduplicate in case configPath is already in matched files

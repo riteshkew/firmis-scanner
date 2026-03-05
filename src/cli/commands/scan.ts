@@ -1,12 +1,13 @@
 import { resolve } from 'node:path'
 import { Command } from 'commander'
 import { ScanEngine } from '../../scanner/engine.js'
-import { ReporterFactory } from '../../reporters/index.js'
+import { ReporterFactory, HtmlReporter } from '../../reporters/index.js'
 import { createSpinner } from '../utils/progress.js'
 import {
   printHeader,
   printThreat,
   printSummary,
+  printCompactSummary,
   printDetectedPlatforms,
   printVerbose,
   printError,
@@ -43,6 +44,12 @@ async function action(targetPath: string | undefined, options: ScanOptions): Pro
     printHeader()
   }
 
+  config.onProgress = (event) => {
+    if (spinner) {
+      spinner.text = event.message
+    }
+  }
+
   const scanEngine = new ScanEngine(config)
 
   const spinner = (config.output === 'terminal' && !config.quiet) ? createSpinner('Loading rules...') : null
@@ -50,11 +57,6 @@ async function action(targetPath: string | undefined, options: ScanOptions): Pro
 
   try {
     await scanEngine.initialize()
-
-    if (spinner) {
-      spinner.succeed('Rules loaded')
-      spinner.start('Detecting platforms...')
-    }
 
     printVerbose('Starting platform discovery', config.verbose)
 
@@ -70,24 +72,37 @@ async function action(targetPath: string | undefined, options: ScanOptions): Pro
     }
 
     if (config.output === 'terminal' && !config.quiet) {
-      const detectedPlatforms = result.platforms.map((p) => ({
-        type: p.platform,
-        name: formatPlatformName(p.platform),
-        basePath: p.basePath,
-        componentCount: p.components.length,
-      }))
+      if (config.verbose) {
+        const detectedPlatforms = result.platforms.map((p) => ({
+          type: p.platform,
+          name: formatPlatformName(p.platform),
+          basePath: p.basePath,
+          componentCount: p.components.length,
+        }))
 
-      printDetectedPlatforms(detectedPlatforms)
+        printDetectedPlatforms(detectedPlatforms)
 
-      for (const platform of result.platforms) {
-        for (const component of platform.components) {
-          for (const threat of component.threats) {
-            printThreat(threat, formatPlatformName(platform.platform))
+        for (const platform of result.platforms) {
+          for (const component of platform.components) {
+            for (const threat of component.threats) {
+              printThreat(threat, formatPlatformName(platform.platform))
+            }
           }
         }
-      }
 
-      printSummary(result)
+        printSummary(result)
+      } else {
+        // Auto-generate HTML report when threats exist and terminal is interactive
+        let reportPath: string | undefined
+        if (result.summary.threatsFound > 0 && process.stdout.isTTY) {
+          const reportName = `firmis-report-${new Date().toISOString().slice(0, 10)}.html`
+          reportPath = resolve(process.cwd(), reportName)
+          const htmlReporter = new HtmlReporter(reportPath)
+          await htmlReporter.report(result)
+        }
+
+        printCompactSummary(result, reportPath)
+      }
     } else if (config.output !== 'terminal') {
       const reporter = ReporterFactory.create({
         format: config.output,

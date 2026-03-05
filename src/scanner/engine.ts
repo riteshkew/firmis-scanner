@@ -37,6 +37,7 @@ export class ScanEngine {
 
   async initialize(): Promise<void> {
     await this.ruleEngine.load(this.config.customRules)
+    this.config.onProgress?.({ type: 'rules_loaded', message: 'Rules loaded' })
     this.ignore = await FirmisIgnore.load()
   }
 
@@ -50,6 +51,11 @@ export class ScanEngine {
 
     const discoveryResult = await this.discovery.discover(this.config)
 
+    this.config.onProgress?.({
+      type: 'discovery_complete',
+      message: `Discovered ${discoveryResult.platforms.length} platform(s)`,
+    })
+
     if (this.config.verbose) {
       console.log(`Discovered ${discoveryResult.platforms.length} platforms`)
       console.log(`Total components: ${discoveryResult.totalComponents}`)
@@ -58,6 +64,12 @@ export class ScanEngine {
     const platformResults: PlatformScanResult[] = []
 
     for (const detectedPlatform of discoveryResult.platforms) {
+      this.config.onProgress?.({
+        type: 'platform_start',
+        message: `Scanning ${detectedPlatform.name}`,
+        platform: detectedPlatform.name,
+      })
+
       try {
         const platformResult = await this.scanPlatform(detectedPlatform)
         platformResults.push(platformResult)
@@ -131,10 +143,22 @@ export class ScanEngine {
     const allThreats: Threat[] = []
 
     for (const component of components) {
+      this.config.onProgress?.({
+        type: 'component_start',
+        message: `Scanning ${component.name}`,
+        component: component.name,
+      })
+
       try {
         const componentResult = await this.scanComponent(component, analyzer, detectedPlatform.type)
         componentResults.push(componentResult)
         allThreats.push(...componentResult.threats)
+
+        this.config.onProgress?.({
+          type: 'component_complete',
+          message: `Done: ${component.name} (${componentResult.threats.length} threats)`,
+          component: component.name,
+        })
 
         if (this.config.failFast && componentResult.riskLevel === 'critical') {
           throw new EarlyExitError('Critical threat in component, stopping scan', componentResult.threats)

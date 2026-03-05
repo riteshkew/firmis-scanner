@@ -1,6 +1,65 @@
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
+import { join, dirname } from 'node:path'
 import { homedir } from 'node:os'
+
+// ---------------------------------------------------------------------------
+// .gitignore pattern support
+// ---------------------------------------------------------------------------
+
+const gitignoreCache = new Map<string, string[]>()
+
+function convertGitignorePatterns(content: string): string[] {
+  return content
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l && !l.startsWith('#'))
+    .map(l => {
+      if (l.endsWith('/')) return `**/${l}**`
+      if (!l.includes('/')) return `**/${l}`
+      return l.startsWith('/') ? l.slice(1) : `**/${l}`
+    })
+}
+
+/**
+ * Read and convert .gitignore patterns to fast-glob compatible ignore patterns.
+ * Walks up to 3 parent directories to find .gitignore files.
+ * Results are cached per path.
+ */
+export async function readGitignorePatterns(startPath: string): Promise<string[]> {
+  if (gitignoreCache.has(startPath)) {
+    return gitignoreCache.get(startPath)!
+  }
+
+  const allPatterns: string[] = []
+  let current = startPath
+  const home = homedir()
+
+  // Walk up to 3 levels looking for .gitignore files
+  for (let i = 0; i < 4; i++) {
+    const gitignorePath = join(current, '.gitignore')
+    if (existsSync(gitignorePath)) {
+      try {
+        const content = await readFile(gitignorePath, 'utf-8')
+        allPatterns.push(...convertGitignorePatterns(content))
+      } catch {
+        // skip unreadable files
+      }
+    }
+
+    const parent = dirname(current)
+    // Stop at filesystem root or home directory
+    if (parent === current || current === home) break
+    current = parent
+  }
+
+  gitignoreCache.set(startPath, allPatterns)
+  return allPatterns
+}
+
+// ---------------------------------------------------------------------------
+// .firmisignore support
+// ---------------------------------------------------------------------------
 
 export interface IgnoreRule {
   ruleId?: string

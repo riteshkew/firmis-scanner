@@ -76,10 +76,11 @@ export class CrewAIAnalyzer extends BasePlatformAnalyzer {
     const files: string[] = []
 
     try {
+      const ignorePatterns = await this.getIgnorePatterns(component.path)
       const matchedFiles = await fg(this.filePatterns, {
         cwd: component.path,
         absolute: true,
-        ignore: ['**/node_modules/**', '**/.git/**', '**/venv/**', '**/__pycache__/**'],
+        ignore: ignorePatterns,
       })
 
       files.push(...matchedFiles)

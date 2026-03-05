@@ -1,4 +1,24 @@
 /**
+ * Progress event types emitted during scanning
+ */
+export type ProgressEventType =
+  | 'rules_loaded'
+  | 'discovery_complete'
+  | 'platform_start'
+  | 'component_start'
+  | 'component_complete'
+
+/**
+ * Progress event emitted at key scan milestones
+ */
+export interface ProgressEvent {
+  type: ProgressEventType
+  message: string
+  platform?: string
+  component?: string
+}
+
+/**
  * Platform types supported by Firmis Scanner
  */
 export type PlatformType =
@@ -63,6 +83,9 @@ export interface FirmisConfig {
 
   /** Exit with code 1 only if threats at this severity or above */
   failOnSeverity?: SeverityLevel
+
+  /** Callback fired at key scan milestones */
+  onProgress?: (event: ProgressEvent) => void
 }
 
 /**

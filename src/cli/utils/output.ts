@@ -175,6 +175,94 @@ export function printSummary(result: ScanResult): void {
   console.log()
 }
 
+export function printCompactSummary(result: ScanResult, reportPath?: string): void {
+  const allThreats = result.platforms.flatMap(p =>
+    p.components.flatMap(c =>
+      c.threats.map(t => ({
+        ...t,
+        platformName: formatPlatformName(p.platform),
+      }))
+    )
+  )
+
+  const severityOrder: Record<SeverityLevel, number> = { critical: 3, high: 2, medium: 1, low: 0 }
+  const sorted = [...allThreats].sort((a, b) => severityOrder[b.severity] - severityOrder[a.severity])
+
+  const platformSummary = result.platforms
+    .filter(p => p.components.length > 0)
+    .map(p => {
+      const count = p.components.length
+      return `${formatPlatformName(p.platform)} (${count} ${count === 1 ? 'component' : 'components'})`
+    })
+    .join(' \u00B7 ')
+
+  console.log()
+  if (platformSummary) {
+    console.log(chalk.dim(`  Scanned: ${platformSummary}`))
+  }
+  console.log()
+
+  const BAR = chalk.dim('\u2501'.repeat(51))
+  console.log(`  ${BAR}`)
+
+  const grade = result.score
+  const gradeColors: Record<string, (s: string) => string> = {
+    A: chalk.bold.green,
+    B: chalk.bold.green,
+    C: chalk.bold.yellow,
+    D: chalk.bold.red,
+    F: chalk.bold.red,
+  }
+  const gradeColor = gradeColors[grade] ?? chalk.bold
+  console.log(`  Security Grade: ${gradeColor(grade)}`)
+
+  const { summary } = result
+  const counts = [
+    summary.bySeverity.critical > 0 ? chalk.bold.red(`${summary.bySeverity.critical} critical`) : null,
+    summary.bySeverity.high > 0 ? chalk.red(`${summary.bySeverity.high} high`) : null,
+    summary.bySeverity.medium > 0 ? chalk.hex('#FFA500')(`${summary.bySeverity.medium} medium`) : null,
+    summary.bySeverity.low > 0 ? chalk.yellow(`${summary.bySeverity.low} low`) : null,
+  ].filter(Boolean)
+  console.log(`  ${counts.length > 0 ? counts.join(' \u00B7 ') : chalk.green('No threats detected')}`)
+  console.log(`  ${BAR}`)
+  console.log()
+
+  const TOP_N = 3
+  const shown = sorted.slice(0, TOP_N)
+
+  for (const threat of shown) {
+    const sev = formatSeverity(threat.severity).padEnd(18)
+    console.log(`  ${sev} ${chalk.white(threat.message)}`)
+    console.log(`${' '.repeat(20)}${chalk.dim(threat.platformName)}`)
+    console.log(`${' '.repeat(20)}\u2192 ${chalk.dim(`${threat.location.file}:${threat.location.line}`)}`)
+    console.log()
+  }
+
+  if (allThreats.length > TOP_N) {
+    console.log(chalk.dim(`  ... and ${allThreats.length - TOP_N} more finding${allThreats.length - TOP_N === 1 ? '' : 's'}`))
+    console.log()
+  }
+
+  if (reportPath) {
+    console.log(`  ${chalk.cyan(`Full report: ${reportPath}`)}`)
+    console.log(`  ${chalk.dim(`Open with: open ${reportPath.split('/').pop()}`)}`)
+    console.log()
+  }
+
+  if (allThreats.length > 0) {
+    console.log(`  ${chalk.bold('Next steps:')}`)
+    console.log(`    ${chalk.cyan('firmis scan --verbose')}        See all findings with evidence`)
+    if (!reportPath) {
+      console.log(`    ${chalk.cyan('firmis scan --html -o r.html')} Full report with fix guidance`)
+    }
+    console.log()
+  }
+
+  const duration = (result.duration / 1000).toFixed(2)
+  console.log(`  ${chalk.dim(`Completed in ${duration}s`)}`)
+  console.log()
+}
+
 export function formatPlatformList(platforms: DetectedPlatform[]): void {
   if (platforms.length === 0) {
     console.log(chalk.dim('  No platforms detected'))

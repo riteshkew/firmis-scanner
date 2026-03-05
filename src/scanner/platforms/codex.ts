@@ -61,6 +61,7 @@ export class CodexAnalyzer extends BasePlatformAnalyzer {
           continue
         }
         if (!this.isValidComponentName(entry.name)) continue
+        if (await this.isGitignored(expandedPath, entry.name)) continue
 
         const pluginPath = join(expandedPath, entry.name)
         const manifestPath = await this.findManifest(pluginPath)
@@ -84,10 +85,11 @@ export class CodexAnalyzer extends BasePlatformAnalyzer {
     const files: string[] = []
 
     try {
+      const ignorePatterns = await this.getIgnorePatterns(component.path)
       const matchedFiles = await fg(this.filePatterns, {
         cwd: component.path,
         absolute: true,
-        ignore: ['**/node_modules/**', '**/.git/**', '**/venv/**', '**/__pycache__/**'],
+        ignore: ignorePatterns,
       })
 
       files.push(...matchedFiles)
