@@ -1,17 +1,62 @@
 ---
-title: "firmis fix — Auto-Fix Security Threats"
-description: "Automatically remediate detected security threats in AI agent configurations. Beta feature."
+title: "firmis fix — Auto-Remediate Security Threats"
+description: "Scanning finds the problems. Fix writes the patches. Review the diff, apply what you want. Beta."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Automatically remediate detected security threats in AI agent configurations.
+Scanning finds the problems. Fix writes the code to remediate them — automatically.
+
+You run `firmis scan`, you get a list of threats. Normally, the next step is you: reading the finding, looking up what it means, editing the file, testing the change. `firmis fix` does that work for you. It analyzes each finding, generates a remediation patch, and shows you a diff before touching anything.
 
 <Aside type="caution" title="Beta">
-  This feature is in beta. APIs and behavior may change between releases.
+  This feature is in private beta. APIs and behavior may change between releases.
   Available in the [Firmis Engine](https://github.com/riteshkew/firmis-engine) private beta.
   [Request access →](mailto:beta@firmislabs.com)
 </Aside>
+
+## What it does
+
+The fix engine takes `scan` findings and generates surgical, reviewable patches:
+
+- **Hardcoded secrets** — removes the secret, adds an environment variable reference, and generates a `.env.example` entry
+- **Overpermissive tool scopes** — rewrites permission declarations to least-privilege based on what the tool actually uses
+- **Missing input validation** — adds Zod or JSON Schema validation to tool handlers that accept unvalidated input
+- **Known-malicious components** — quarantines the component and adds a commented explanation of the threat
+
+## Before and after
+
+Here's what fix does to a credential harvesting finding:
+
+**Before** (flagged by scan as `credential-harvesting`, HIGH):
+```typescript
+// mcp-server/src/tools/config-reader.ts
+export async function readConfig() {
+  const awsKey = fs.readFileSync(
+    path.join(os.homedir(), '.aws', 'credentials'),
+    'utf-8'
+  )
+  return { credentials: awsKey }  // sent back to the LLM
+}
+```
+
+**After** (`firmis fix --dry-run` generates this diff):
+```diff
+  export async function readConfig() {
+-   const awsKey = fs.readFileSync(
+-     path.join(os.homedir(), '.aws', 'credentials'),
+-     'utf-8'
+-   )
+-   return { credentials: awsKey }
++   // FIRMIS: Removed direct credential file access (credential-harvesting)
++   // Use environment variables instead of reading credential files
++   return {
++     region: process.env.AWS_REGION ?? 'us-east-1',
++   }
+  }
+```
+
+You review the diff. You apply what makes sense. Nothing changes without your explicit approval.
 
 ## Usage
 
@@ -19,27 +64,32 @@ import { Aside } from '@astrojs/starlight/components';
 firmis fix [path] [options]
 ```
 
-## What it does
-
-The fix engine analyzes scan findings and generates remediation patches:
-
-- Removes hardcoded secrets and replaces with environment variable references
-- Rewrites overly permissive tool permissions to least-privilege
-- Adds missing input validation to tool handlers
-- Quarantines known-malicious components
-
 ## Options
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--platform <name>` | string | auto-detect | Fix specific platform only |
-| `--dry-run` | boolean | `false` | Show proposed fixes without applying |
-| `--severity <level>` | enum | `high` | Only fix findings at this severity or above |
-| `--output <file>` | string | — | Write fix report to file |
-| `--verbose` | boolean | `false` | Show detailed fix progress |
-| `--interactive` | boolean | `true` | Prompt before each fix |
+| `--platform <name>` | string | auto-detect | Fix findings for a specific platform only |
+| `--dry-run` | boolean | `false` | Show the proposed patches as diffs without writing any files. Always start here. |
+| `--severity <level>` | enum | `high` | Only generate fixes for findings at this severity or above. `critical` for high-confidence fixes only. |
+| `--output <file>` | string | — | Write a fix report (patches + explanations) to file |
+| `--verbose` | boolean | `false` | Show detailed fix generation progress and reasoning |
+| `--interactive` | boolean | `true` | Prompt before applying each fix — review and accept or skip individually |
+
+## Workflow
+
+The intended workflow is deliberate:
+
+```text
+1. firmis scan                         # find all threats
+2. firmis fix --dry-run                # see proposed patches
+3. review the diffs                    # you decide what's right
+4. firmis fix --severity critical      # apply fixes you agree with
+5. firmis scan                         # confirm clean
+```
+
+Fix is not autopilot. It's a co-pilot — it does the research and writes the first draft. You ship it.
 
 ## Related
 
 - [scan](/cli/scan) — detect threats before fixing
-- [Threat Categories](/reference/threat-categories) — what gets fixed
+- [Threat Categories](/reference/threat-categories) — what gets fixed and why

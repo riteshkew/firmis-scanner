@@ -1,11 +1,11 @@
 ---
 title: SARIF Output Reference
-description: SARIF 2.1.0 output format produced by Firmis — field mappings, generation commands, GitHub Security tab integration, and a complete example.
+description: GitHub, VS Code, and every major SAST dashboard speaks SARIF. Firmis outputs standard SARIF 2.1.0 — field mappings, generation commands, and a complete example.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Firmis outputs standard SARIF 2.1.0, the Static Analysis Results Interchange Format. SARIF is the format required by the GitHub Security tab, accepted by VS Code's SARIF Viewer, and supported by most CI security dashboards.
+GitHub, VS Code, and every major SAST dashboard speaks SARIF. Firmis outputs SARIF 2.1.0 natively — so your findings land directly in the GitHub Security tab, the VS Code Problems panel, and any CI security dashboard your team uses.
 
 ## What is SARIF?
 
@@ -256,10 +256,10 @@ This produces `results.sarif` alongside `agent-bom.json`. Both can be archived a
 
 ---
 
-## Related
+## What to do next
 
-- [firmis scan](/cli/scan) — CLI reference including `--sarif` flag
-- [firmis ci](/cli/ci) — CI pipeline command
-- [GitHub Actions integration](/integrations/github-actions) — full workflow example
-- [CycloneDX BOM](/reference/cyclonedx-bom) — agent BOM output format
-- [Threat Categories](/reference/threat-categories) — what each ruleId maps to
+- [firmis scan →](/cli/scan) — CLI reference including `--sarif` flag
+- [firmis ci →](/cli/ci) — CI pipeline command
+- [GitHub Actions integration →](/integrations/github-actions) — full workflow example with SARIF upload
+- [CycloneDX BOM →](/reference/cyclonedx-bom) — the agent inventory output format
+- [Threat Categories →](/reference/threat-categories) — what each ruleId maps to across 16 categories

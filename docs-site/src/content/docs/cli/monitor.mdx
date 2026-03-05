@@ -1,17 +1,60 @@
 ---
 title: "firmis monitor — Runtime Monitoring"
-description: "Monitor AI agent behavior in real-time using Claude Code hooks and MCP proxy. Beta feature."
+description: "Watch what your AI agents actually do while they're running. Detect threats as they happen, not after the fact. Beta."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Monitor AI agent behavior in real-time. Detect threats as they happen, not after the fact.
+Static scans tell you what the code says. Runtime monitoring tells you what the agent actually does.
+
+`firmis monitor` watches your AI agents as they run — intercepting tool calls, scoring their blast radius, and blocking dangerous behavior before it completes. Not in a log you review tomorrow. Right now. As it happens.
 
 <Aside type="caution" title="Beta">
-  This feature is in beta. APIs and behavior may change between releases.
+  This feature is in private beta. APIs and behavior may change between releases.
   Available in the [Firmis Engine](https://github.com/riteshkew/firmis-engine) private beta.
   [Request access →](mailto:beta@firmislabs.com)
 </Aside>
+
+## The problem with post-hoc detection
+
+Every other approach to AI security is retrospective. You scan the config, you check the logs, you review after the incident. But a prompt injection that exfiltrates your `.env` file doesn't leave you time to check logs. It's done in milliseconds.
+
+Runtime monitoring is the only layer that can catch and stop a threat while the agent is still running.
+
+## What it does
+
+The monitor uses two independent channels to observe agent behavior simultaneously:
+
+**Channel 1 — Claude Code Hooks**
+
+Hooks into Claude Code's `PreToolUse` and `PostToolUse` events. Every tool call is inspected before it executes. If a tool call looks dangerous — writing to shell, accessing credential files, making unauthorized network requests — the monitor can block it before it runs.
+
+**Channel 2 — MCP Proxy**
+
+Sits transparently between your MCP client and server, inspecting every message in both directions. Detects prompt injection in tool responses, data exfiltration attempts in tool parameters, and cross-channel attack patterns that neither channel would see alone.
+
+### What it detects
+
+- **Blast radius scoring** — every tool call gets a 0–100 score based on what it could affect. NORMAL → ELEVATED → HIGH → LOCKDOWN. The score determines the automatic response.
+- **Behavioral baseline** — after observing normal usage, the monitor flags deviations: unusual tool call sequences, unexpected file access patterns, out-of-hours activity.
+- **Dangerous shell commands** — benign/risky/dangerous classification for every shell command, with encoded payload detection and pipe-to-shell pattern recognition.
+- **Cross-channel correlation** — events across both channels are correlated in a 60-second sliding window. An injection in a tool response followed immediately by a network call is a red flag neither channel catches alone.
+
+### Automatic response escalation
+
+```text
+NORMAL      →  Log the event
+ELEVATED    →  Log + warn in terminal
+HIGH        →  Log + warn + require confirmation
+LOCKDOWN    →  Block the tool call entirely
+```
+
+## When to use this
+
+- **High-stakes environments**: Agents that have access to production systems, financial data, or credential stores need runtime protection — static scanning alone is not enough
+- **After a supply chain incident**: If a dependency you use is flagged for malicious behavior, runtime monitoring can detect and block that behavior even if you haven't updated yet
+- **Regulated workloads**: Some compliance frameworks require evidence of runtime controls, not just static analysis
+- **Before you trust a new tool**: Install a new MCP server but not sure you trust it fully yet? Run the monitor for a week to observe its actual behavior before giving it full access
 
 ## Usage
 
@@ -19,31 +62,33 @@ import { Aside } from '@astrojs/starlight/components';
 firmis monitor [options]
 ```
 
-## What it does
-
-The runtime monitor uses two channels to observe agent behavior:
-
-- **Claude Code Hooks** — intercepts PreToolUse/PostToolUse events
-- **MCP Proxy** — sits between client and server, inspecting all messages
-
-Features:
-- Blast radius scoring (0–100) with automatic response escalation
-- Behavioral baseline learning
-- Dangerous shell command detection
-- Cross-channel event correlation
-
 ## Options
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--install-hooks` | boolean | `false` | Install Claude Code hooks |
-| `--start-daemon` | boolean | `false` | Start the monitoring daemon |
+| `--install-hooks` | boolean | `false` | Install Firmis hooks into Claude Code's hook configuration. Run once. |
+| `--start-daemon` | boolean | `false` | Start the monitoring daemon (Unix socket at `~/.firmis/monitor.sock`) |
 | `--stop-daemon` | boolean | `false` | Stop the monitoring daemon |
-| `--status` | boolean | `false` | Show monitor status |
-| `--install` | boolean | `false` | Install all monitoring components |
-| `--uninstall` | boolean | `false` | Remove all monitoring components |
+| `--status` | boolean | `false` | Show current monitor status: daemon running, hooks installed, recent events |
+| `--install` | boolean | `false` | Install everything at once: hooks + daemon. Recommended for first-time setup. |
+| `--uninstall` | boolean | `false` | Remove all monitoring components cleanly |
+
+## Setup
+
+```bash title="Terminal"
+# First-time setup: install hooks and start daemon
+npx firmis monitor --install
+
+# Check that everything is running
+npx firmis monitor --status
+
+# When you want to stop
+npx firmis monitor --uninstall
+```
+
+The daemon runs as a lightweight background process with under 100ms hook latency — imperceptible during normal agent use.
 
 ## Related
 
-- [scan](/cli/scan) — static analysis (complementary to runtime monitoring)
-- [Claude Skills](/platforms/claude-skills) — Claude-specific threat detection
+- [scan](/cli/scan) — static analysis, complementary to runtime monitoring. Use both.
+- [Claude Skills](/platforms/claude-skills) — Claude-specific threat detection and hook integration details

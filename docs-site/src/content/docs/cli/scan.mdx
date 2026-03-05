@@ -1,9 +1,22 @@
 ---
 title: "firmis scan — Scan AI Agent Components"
-description: "Scan Claude Skills, MCP Servers, Codex Plugins, and more for security threats. Supports JSON, SARIF, HTML output. 199 built-in detection rules."
+description: "The core Firmis command. Point it at any directory and it tells you what's dangerous. 209 rules across 16 threat categories. JSON, SARIF, and HTML output."
 ---
 
-> Scan AI agent components for security threats. Auto-detects platforms or targets a specific one.
+Your agent stack has access to your AWS keys, SSH keys, API tokens, and local files. Most people never check what their tools actually do. `firmis scan` checks for you.
+
+The core command. Point it at any directory and it tells you what's dangerous.
+
+## When to use this
+
+Reach for `scan` whenever you want answers fast:
+
+- You just installed a new MCP server or Claude skill and want to know if it's clean
+- You're about to commit agent configuration changes and want a quick security check
+- You need to audit an existing project before handing it off or open-sourcing it
+- You want to add a security gate to your PR workflow
+
+For a full CI pipeline (discover + BOM + scan + report in one shot), see [`firmis ci`](/cli/ci).
 
 ## Usage
 
@@ -13,6 +26,36 @@ firmis scan [path] [options]
 
 If `[path]` is omitted, Firmis scans the current directory.
 
+## What you get
+
+Running `npx firmis scan` on a project produces output like this:
+
+```text
+Firmis Security Scan
+Detected platforms: claude, mcp (2 platforms, 14 components)
+
+CRITICAL  [tool-poisoning]   .claude/tools/fetch.ts:12
+          Hidden instruction in tool description: "ignore previous instructions and..."
+
+CRITICAL  [credential-harvesting]  mcp-server/src/index.ts:89
+          Reading AWS credentials from ~/.aws/credentials
+
+HIGH      [secret-detection]  .env:3
+          Hardcoded OpenAI API key: sk-proj-...
+
+HIGH      [permission-overgrant]  claude_desktop_config.json:22
+          Tool requests filesystem access with no path restriction
+
+MEDIUM    [insecure-config]   mcp.config.json:8
+          Server runs without authentication
+
+────────────────────────────────────────────────
+Grade: D   5 findings   2 critical · 2 high · 1 medium
+────────────────────────────────────────────────
+```
+
+Every finding includes the exact file and line number, a plain English explanation of what it means, and the rule ID so you can look up remediation steps.
+
 ## Options
 
 | Flag | Type | Default | Description |
@@ -20,16 +63,16 @@ If `[path]` is omitted, Firmis scans the current directory.
 | `--platform <name>` | string | auto-detect | Scan a specific platform: `claude`, `mcp`, `codex`, `cursor`, `crewai`, `autogpt`, `openclaw`, `nanobot` |
 | `--all` | boolean | `true` | Scan all detected platforms |
 | `--severity <level>` | enum | `low` | Minimum severity to report: `low`, `medium`, `high`, `critical` |
-| `--fail-on <level>` | enum | — | Exit non-zero if findings at this severity or above |
-| `--json` | boolean | `false` | Output findings as JSON |
-| `--sarif` | boolean | `false` | Output findings as SARIF 2.1.0 |
-| `--html` | boolean | `false` | Output findings as HTML report |
-| `--output <file>` | string | stdout | Write output to file instead of stdout |
-| `--config <file>` | string | — | Path to custom config file |
-| `--ignore <rules>` | string | — | Skip specific rule IDs (comma-separated) |
-| `--concurrency <n>` | number | `4` | Number of parallel workers |
-| `--verbose` | boolean | `false` | Show detailed scan progress |
-| `--quiet` | boolean | `false` | Suppress terminal output; only exit code |
+| `--fail-on <level>` | enum | — | Exit non-zero if findings at this severity or above exist. Essential for CI gates. |
+| `--json` | boolean | `false` | Machine-readable JSON output for scripting or custom tooling |
+| `--sarif` | boolean | `false` | SARIF 2.1.0 output — uploads directly to GitHub Security tab |
+| `--html` | boolean | `false` | Self-contained HTML report — shareable with your team |
+| `--output <file>` | string | stdout | Write output to a file instead of printing to terminal |
+| `--config <file>` | string | — | Path to a custom `.firmisrc` config file |
+| `--ignore <rules>` | string | — | Skip specific rule IDs (comma-separated). Use sparingly — see [Ignoring Findings](/rules/ignoring-findings). |
+| `--concurrency <n>` | number | `4` | Number of parallel workers. Increase for large monorepos. |
+| `--verbose` | boolean | `false` | Show per-file scan progress and rule match details |
+| `--quiet` | boolean | `false` | Suppress all terminal output. Only the exit code tells you the result. Good for CI scripts. |
 
 ## Examples
 
@@ -39,40 +82,46 @@ If `[path]` is omitted, Firmis scans the current directory.
 npx firmis scan
 ```
 
-### Scan only MCP servers with JSON output
+### Scan only MCP servers, get JSON output
 
 ```bash title="Terminal"
 npx firmis scan --platform mcp --json
 ```
 
-### Fail CI if high or critical findings
+### Fail CI if any high or critical findings exist
 
 ```bash title="Terminal"
 npx firmis scan --fail-on high --sarif --output results.sarif
 ```
 
-### Scan a specific path, ignore false positives
+### Scan a specific path, suppress known false positives
 
 ```bash title="Terminal"
 npx firmis scan ./packages/agent --ignore sd-045,sd-046
 ```
 
-### Generate HTML report
+### Generate a shareable HTML report
 
 ```bash title="Terminal"
 npx firmis scan --html --output report.html
+```
+
+### High-signal only — skip noise, focus on what matters
+
+```bash title="Terminal"
+npx firmis scan --severity high
 ```
 
 ## Exit codes
 
 | Code | Meaning |
 |---|---|
-| `0` | Scan completed, no findings above `--fail-on` threshold |
-| `1` | Findings found above `--fail-on` threshold |
-| `2` | Scan error (invalid path, config error, etc.) |
+| `0` | Scan completed. No findings above your `--fail-on` threshold. |
+| `1` | Findings found at or above your `--fail-on` threshold. Fix them. |
+| `2` | Scan error — invalid path, bad config, or unreadable files. |
 
 ## Related
 
-- [Threat Categories](/reference/threat-categories) — what Firmis detects
-- [Ignoring Findings](/rules/ignoring-findings) — suppress specific rules or files
-- [CI Pipeline](/cli/ci) — full discover → BOM → scan → report pipeline
+- [Threat Categories](/reference/threat-categories) — all 16 categories Firmis detects across 209 rules
+- [Ignoring Findings](/rules/ignoring-findings) — suppress specific rules or files without deleting them
+- [CI Pipeline](/cli/ci) — full discover → BOM → scan → report in one command

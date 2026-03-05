@@ -1,17 +1,93 @@
 ---
 title: "firmis compliance — Compliance Reporting"
-description: "Generate compliance evidence reports for SOC2, AI Act, GDPR, and NIST frameworks. Beta feature."
+description: "One scan. Five frameworks. SOC 2, EU AI Act, GDPR, NIST AI RMF, OWASP LLM Top 10. Firmis generates the evidence auditors need — automatically. Beta."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Scan and generate compliance evidence reports mapped to regulatory frameworks.
+Auditors want evidence. Generating it manually is slow, error-prone, and miserable. `firmis compliance` generates it automatically from your security scan results.
+
+One scan. Five frameworks. The report maps every Firmis finding to the exact control, article, or requirement it satisfies — formatted for submission.
 
 <Aside type="caution" title="Beta">
-  This feature is in beta. APIs and behavior may change between releases.
+  This feature is in private beta. APIs and behavior may change between releases.
   Available in the [Firmis Engine](https://github.com/riteshkew/firmis-engine) private beta.
   [Request access →](mailto:beta@firmislabs.com)
 </Aside>
+
+## The compliance problem with AI systems
+
+Traditional compliance tooling was built for traditional software. It doesn't know what an MCP server is. It can't tell an EU AI Act Article 13 transparency requirement from a GDPR data minimization obligation. It has no concept of prompt injection as a risk to document.
+
+AI agents are a new category of software with a new regulatory surface. SOC 2 auditors are already asking about them. The EU AI Act has explicit requirements for high-risk AI systems. OWASP LLM Top 10 is being referenced in security assessments. Firmis maps your actual agent stack to these actual frameworks.
+
+## What it does
+
+Runs a full security scan across your agent stack using all 209 rules, then maps every finding to the compliance frameworks you're working against:
+
+- **SOC 2** — maps findings to security control categories (CC6, CC7, CC8, CC9). Shows which controls have gaps and which have evidence of enforcement.
+- **EU AI Act** — maps to Articles 9, 10, 13, 14, 15 (risk management, data governance, transparency, human oversight, accuracy). Flags requirements that AI agent usage triggers.
+- **GDPR** — maps to data protection obligations: data minimization, purpose limitation, security of processing (Article 32). Credential harvesting and data exfiltration findings map directly to Article 32 gaps.
+- **NIST AI RMF** — maps findings to the Govern, Map, Measure, Manage functions. Generates evidence artifacts for risk management documentation.
+- **OWASP LLM Top 10** — maps every finding to the LLM vulnerability category it represents: LLM01 (Prompt Injection), LLM02 (Insecure Output Handling), LLM06 (Sensitive Information Disclosure), and more.
+
+## Example report section
+
+```text
+SOC 2 — Security Control Evidence
+Generated: 2026-03-05
+
+CC6.1 — Logical and Physical Access Controls
+  Status: GAP IDENTIFIED
+  Finding: 2 tools with overpermissive filesystem access (permission-overgrant)
+  Files:   mcp-server/src/tools/reader.ts:22, .claude/tools/fetch.ts:8
+  Recommendation: Restrict tool scope to minimum required paths
+
+CC6.6 — Logical Access Security Measures
+  Status: PASS
+  Evidence: All tool handlers validated with input sanitization
+  Rules checked: 14 (access-control category)
+
+CC7.2 — System Monitoring
+  Status: PASS (runtime monitoring enabled)
+  Evidence: firmis monitor daemon active, 30-day event log available
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--framework <name>` | string | `all` | Target a specific framework: `soc2`, `ai-act`, `gdpr`, `nist`, `owasp` |
+| `--format <type>` | enum | `html` | Output format: `html` for human review and submission, `json` for programmatic processing |
+| `--output <file>` | string | — | Save the report to file. Required for submitting to auditors. |
+| `--verbose` | boolean | `false` | Show detailed control-level mapping with rule IDs and evidence references |
+| `--evidence` | boolean | `true` | Include evidence artifacts — timestamps, rule IDs, file locations — alongside each control mapping |
+
+## Examples
+
+### Generate a full compliance report across all five frameworks
+
+```bash title="Terminal"
+npx firmis compliance --output compliance-report.html
+```
+
+### SOC 2 only, for your next audit
+
+```bash title="Terminal"
+npx firmis compliance --framework soc2 --format html --output soc2-evidence.html
+```
+
+### JSON output for programmatic processing or ticketing systems
+
+```bash title="Terminal"
+npx firmis compliance --format json --output compliance.json
+```
+
+### EU AI Act mapping
+
+```bash title="Terminal"
+npx firmis compliance --framework ai-act --verbose --output eu-ai-act-report.html
+```
 
 ## Usage
 
@@ -19,28 +95,8 @@ import { Aside } from '@astrojs/starlight/components';
 firmis compliance [path] [options]
 ```
 
-## What it does
-
-Maps scan findings to compliance frameworks:
-
-- **SOC 2** — security control evidence
-- **EU AI Act** — AI-specific compliance requirements
-- **GDPR** — data protection assessment
-- **NIST AI RMF** — risk management framework mapping
-- **OWASP LLM Top 10** — LLM-specific vulnerability mapping
-
-## Options
-
-| Flag | Type | Default | Description |
-|---|---|---|---|
-| `--framework <name>` | string | `all` | Specific framework: `soc2`, `ai-act`, `gdpr`, `nist`, `owasp` |
-| `--format <type>` | enum | `html` | Output format: `html`, `json` |
-| `--output <file>` | string | — | Save report to file |
-| `--verbose` | boolean | `false` | Show detailed mapping |
-| `--evidence` | boolean | `true` | Include evidence artifacts |
-
 ## Related
 
 - [scan](/cli/scan) — generate the findings that compliance maps to
-- [Threat Categories](/reference/threat-categories) — categories mapped to frameworks
-- [Compliance Reporting guide](/guides/compliance-reporting) — step-by-step walkthrough
+- [Threat Categories](/reference/threat-categories) — all 16 categories, each mapped to compliance frameworks
+- [Compliance Reporting guide](/guides/compliance-reporting) — step-by-step walkthrough for preparing an audit submission

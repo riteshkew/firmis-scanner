@@ -1,11 +1,23 @@
 ---
 title: Security Model
-description: What Firmis detects and what it does not — confidence scoring, false positive expectations, detection boundaries, and the limits of static analysis for AI agent security.
+description: What Firmis detects and what it doesn't. We built it offline-first, read-only, and honest about its limits — because a tool that oversells its coverage is more dangerous than a tool that has none.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Firmis is a static analysis scanner. It reads code and configuration files to find threats embedded before deployment. It cannot observe live agent behavior, intercept network traffic, or detect threats that only manifest at runtime. This page documents exactly what Firmis covers and where coverage ends.
+We dogfood Firmis on itself. Every commit is scanned. And every version of this document is written by people who know exactly where the coverage ends. Honesty about limits is a feature, not a disclaimer.
+
+Firmis is a static analysis scanner. It reads code and configuration files to find threats embedded before deployment. It cannot observe live agent behavior, intercept network traffic, or detect threats that only manifest at runtime. Here is exactly what it covers and where coverage ends.
+
+## Why we built it this way
+
+Running entirely offline was a deliberate choice. We made it because:
+
+1. **Your code is sensitive.** Agent codebases often contain secrets, internal architecture, and proprietary logic. We never wanted to be in a position where we received that data by default.
+2. **Offline means always available.** No network dependency means the scan works in air-gapped environments, on developer laptops without internet access, and in CI without egress rules.
+3. **Local analysis is fast.** Round-tripping file content to a cloud service adds latency. Static analysis on 209 bundled rules takes under 5 seconds for most projects.
+
+Cloud features exist and are opt-in. Everything in this document describes default offline behavior.
 
 ## What Firmis detects
 
@@ -145,6 +157,8 @@ See [Ignoring Findings](/rules/ignoring-findings) for the full `.firmisignore` s
 
 ## Data handling guarantees
 
+What we don't do is as important as what we do.
+
 | Property | Guarantee |
 |---|---|
 | **Code never uploaded** | All analysis happens locally. No file contents, paths, or findings leave your machine. |
@@ -159,9 +173,9 @@ See [Ignoring Findings](/rules/ignoring-findings) for the full `.firmisignore` s
 
 ---
 
-## Related
+## What to do next
 
-- [Detection Engine](/concepts/detection-engine) — matcher types, confidence scoring, and deduplication
-- [Threat Categories](/reference/threat-categories) — all 16 categories with OWASP/MITRE mappings
-- [Ignoring Findings](/rules/ignoring-findings) — suppressing false positives
-- [How It Works](/concepts/how-it-works) — the three-stage scan pipeline
+- [Detection Engine →](/concepts/detection-engine) — matcher types, confidence scoring, and deduplication
+- [Threat Categories →](/reference/threat-categories) — all 16 categories with OWASP and MITRE mappings
+- [Ignoring Findings →](/rules/ignoring-findings) — suppress false positives with `.firmisignore`
+- [How It Works →](/concepts/how-it-works) — the three-stage scan pipeline

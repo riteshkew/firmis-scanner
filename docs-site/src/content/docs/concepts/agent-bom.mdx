@@ -1,31 +1,35 @@
 ---
 title: Agent BOM
-description: What an Agent Bill of Materials is, why AI agents need one, and how Firmis generates CycloneDX 1.7 BOMs.
+description: You wouldn't deploy a container without knowing what's inside it. Why deploy an AI agent without knowing what tools, models, and dependencies it carries?
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> An Agent BOM is a machine-readable inventory of every component, dependency, and model in your AI agent stack. Firmis generates Agent BOMs in CycloneDX 1.7 format — the same format used for software supply chain compliance.
+You wouldn't deploy a container without knowing what's inside it. Why deploy an AI agent without knowing what tools, models, and dependencies it carries?
+
+Most agent stacks have no inventory. Tools are installed from community sources, model references are scattered across config files, and dependencies accumulate over time. When a tool gets flagged as malicious, there's no fast way to know which deployments are affected.
+
+SOC 2 auditors and AI Act regulators are starting to ask: what's in your agent stack? The Agent BOM is your answer.
 
 ## What is an Agent BOM?
 
 A Bill of Materials (BOM) is an inventory document. In software, a Software Bill of Materials (SBOM) lists every package a piece of software depends on. An **Agent BOM** extends this concept to AI agent stacks: it lists not just software packages, but also the tools, skills, plugins, servers, and models that make up the agent system.
 
-Firmis generates Agent BOMs following the [CycloneDX 1.7 specification](https://cyclonedx.org/specification/overview/), a widely adopted open standard for SBOM interchange.
+Firmis generates Agent BOMs following the [CycloneDX 1.7 specification](https://cyclonedx.org/specification/overview/), a widely adopted open standard for SBOM interchange. Because it's standard CycloneDX, it integrates directly with existing compliance tooling.
 
 ---
 
 ## Why AI agents need BOMs
 
-Traditional software supply chain tooling accounts for code dependencies. AI agent stacks introduce a second supply chain: the tools and models the agent uses at runtime.
+Traditional software supply chain tooling accounts for code dependencies. AI agent stacks introduce a second supply chain: the tools and models the agent uses at runtime. This second supply chain is invisible to `npm audit`, `dependabot`, and every other conventional dependency scanner.
 
 | Problem | How an Agent BOM helps |
 |---|---|
-| **Audit trail** | Compliance reviews require knowing exactly which tools were installed and when |
-| **Supply chain visibility** | A BOM makes it possible to correlate a vulnerability report against your actual installed components |
-| **Drift detection** | Comparing BOMs across deployments reveals which components were added, removed, or updated |
-| **CI/CD gating** | Automated pipelines can reject deployments if a new component lacks a known-good BOM entry |
-| **Incident response** | When a tool is flagged as malicious, a BOM tells you exactly which agent deployments are affected |
+| **Audit trail** | SOC 2 Type II and AI Act Article 13 compliance reviews require knowing exactly which tools were installed and when. A BOM gives you a dated record at every deployment. |
+| **Supply chain visibility** | When a new malicious tool advisory drops, a BOM tells you in seconds whether you're affected — without grepping through deployment configs. |
+| **Drift detection** | Comparing BOMs across deployments reveals which components were added, removed, or updated between releases — the kind of change that introduces supply chain risk. |
+| **CI/CD gating** | Automated pipelines can reject deployments if a new component lacks a known-good BOM entry or introduces an untrusted source. |
+| **Incident response** | When a tool is flagged as malicious, a BOM tells you exactly which agent deployments are affected and which version was running at the time. |
 
 ---
 
@@ -48,11 +52,11 @@ Each AI agent tool, skill, or plugin discovered during the scan is listed as a C
 
 ### Dependencies
 
-npm and pip packages referenced in `package.json`, `requirements.txt`, and `pyproject.toml` are enumerated and listed as dependency components. These are the packages the agent's tools depend on at runtime.
+npm and pip packages referenced in `package.json`, `requirements.txt`, and `pyproject.toml` are enumerated and listed as dependency components. These are the packages the agent's tools depend on at runtime — the ones most likely to carry supply chain risk.
 
 ### Models
 
-When a model reference is detected in a configuration file (e.g., `"model": "claude-3-5-sonnet-20241022"` in a skill config), it is recorded as a component of type `machine-learning-model`.
+When a model reference is detected in a configuration file (e.g., `"model": "claude-3-5-sonnet-20241022"` in a skill config), it is recorded as a component of type `machine-learning-model`. This is the part of the agent stack that has historically been completely invisible to compliance tooling.
 
 ### Metadata
 
@@ -134,27 +138,39 @@ This generates a BOM as an artifact alongside the SARIF scan results. You can ar
 ```
 
 <Aside type="tip">
-  Archiving BOMs as CI artifacts gives you a dated record of your agent's composition at every deployment. This is directly useful for SOC 2 Type II audit evidence and AI Act Article 13 transparency requirements.
+  Archiving BOMs as CI artifacts gives you a dated record of your agent's composition at every deployment. This is directly useful for SOC 2 Type II audit evidence and AI Act Article 13 transparency requirements. Auditors can compare BOMs across deployments to verify that no unauthorized components were added.
 </Aside>
 
 ---
 
 ## Consuming the BOM
 
-Because the output is standard CycloneDX 1.7 JSON, it can be consumed by any tool that supports the format:
+Because the output is standard CycloneDX 1.7 JSON, it integrates with any tool that supports the format. You're not locked into Firmis's reporting — the BOM is yours to use.
 
 | Tool | Use case |
 |---|---|
 | [OWASP Dependency-Track](https://dependencytrack.org/) | Continuous vulnerability tracking against the component inventory |
 | [Grype](https://github.com/anchore/grype) | Vulnerability matching against the BOM |
 | GitHub Dependency Graph | Import as an SBOM to populate the dependency graph |
-| Custom automation | Parse the JSON to extract component names, versions, and hashes |
+| Custom automation | Parse the JSON to extract component names, versions, and hashes for your own compliance workflows |
 
 ---
 
-## Related
+## What Firmis does NOT include in the BOM
 
-- [firmis bom](/cli/bom) — CLI reference for BOM generation
-- [firmis ci](/cli/ci) — discover → BOM → scan → report pipeline
+The BOM reflects what Firmis can discover statically. It does not include:
+
+- Tools installed or loaded dynamically at runtime
+- Components referenced only via environment variables (e.g., `process.env.TOOL_URL`)
+- Third-party model API calls where the model name is constructed at runtime
+
+For complete runtime visibility, combine the Agent BOM with runtime monitoring.
+
+---
+
+## What to read next
+
+- [firmis bom](/cli/bom) — CLI reference for all BOM generation options
+- [firmis ci](/cli/ci) — the full discover → BOM → scan → report pipeline in one command
 - [CycloneDX BOM format](/reference/cyclonedx-bom) — output format field reference
-- [How It Works](/concepts/how-it-works) — the three-stage detection pipeline
+- [How It Works](/concepts/how-it-works) — the three-stage detection pipeline that feeds BOM generation

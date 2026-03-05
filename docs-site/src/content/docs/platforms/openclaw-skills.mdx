@@ -1,11 +1,17 @@
 ---
 title: "OpenClaw Skills — Security Guide"
-description: "Detect tool poisoning, wildcard permissions, data exfiltration, and supply chain risks in OpenClaw skill definitions. 199 detection rules."
+description: "Detect tool poisoning, wildcard permissions, data exfiltration, and supply chain risks in OpenClaw skill definitions. 209 detection rules."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Firmis scans your OpenClaw skill definitions, `openclaw.json` manifests, and skill handler code for tool poisoning, wildcard permission grants, and supply chain attacks from community skills installed via ClawHub.
+ClawHub is the npm of AI skills. And like early npm, nobody's auditing what gets published.
+
+The parallel runs deeper than it looks. Security researchers found **341 malicious tools on agent marketplaces** in a single survey — tools that requested wildcard shell permissions, embedded hidden instructions in their descriptions, and combined filesystem plus network access in ways that had no legitimate justification. OpenClaw's ClawHub is no exception: **22% of enterprises already have employees using it** without any centralized visibility into which skills have been installed or what permissions they hold.
+
+OpenClaw's permission model was designed to enable fine-grained access control. `shell:read`, `filesystem:write:/home/user/data`, `network:post:api.example.com` — each permission is intended to be scoped and explicit. But the model only works when skill authors use it correctly. A skill that requests `shell:*` gets unrestricted command execution. A skill that requests `shell:*` plus `filesystem:*` plus `network:*` simultaneously has the maximum possible attack surface: it can read any file, execute any command, and exfiltrate the results to any server.
+
+Firmis scans OpenClaw skill manifests, handler code, and ClawHub-installed skill dependencies across 209 detection rules covering wildcard permissions, maximum blast-radius permission combinations, bulk exfiltration patterns, and supply chain risks.
 
 <Aside type="caution">
   OpenClaw skill support is **Experimental**. Detection rules are functional but coverage is still expanding. Validate findings in context before acting on them.
@@ -51,9 +57,11 @@ HIGH  perm-001  Wildcard Permission
       Pattern: "shell:*"
 ```
 
-**What it means.** The skill requests a wildcard shell permission (`shell:*`), granting unrestricted command execution access. OpenClaw's permission model is designed to allow fine-grained access control, but a wildcard bypasses this entirely. A compromised skill with `shell:*` can execute arbitrary commands, escalate privileges, and persist itself across sessions. Skills distributed via ClawHub that request wildcard permissions are a significant supply chain risk.
+**What it means.** The skill requests `shell:*` — unrestricted command execution. OpenClaw's permission model is designed around least-privilege: a skill that only needs to read the output of one command should declare exactly that, scoped to that command. A wildcard permission bypasses the entire model. The skill can execute any command the current user can run, escalate privileges through local exploits, and persist itself by writing startup scripts or cron jobs.
 
-**How to fix.** Replace wildcard permissions with the minimum specific permissions required. For example, replace `shell:*` with `shell:read` if the skill only needs to read command output, or eliminate the permission entirely if it is not required. Reject any community skill from ClawHub that requests wildcard permissions without a documented justification.
+This is one of the 341 malicious tool patterns documented in agent marketplace security research. Wildcard shell permissions are the clearest signal that a skill was not designed with security in mind — or was designed with the opposite intent.
+
+**How to fix.** Replace wildcard permissions with the minimum specific permission required. If the skill reads command output, use `shell:read`. If it runs a single known command, scope it to that command explicitly. If no shell permission is genuinely required, remove it entirely. Establish a policy of rejecting any ClawHub skill that requests wildcard permissions without a documented, reviewed justification.
 
 ---
 
@@ -65,9 +73,11 @@ CRITICAL  perm-002  Maximum Blast Radius Permission Combo
           Pattern: shell + network + filesystem permissions present
 ```
 
-**What it means.** The skill requests the combination of shell, network, and filesystem permissions simultaneously. This is the maximum possible attack surface for an OpenClaw skill: it can read any file, execute any command, and transmit the results to any external host. Even if each individual permission appears justified, this combination should trigger a manual security review before deployment.
+**What it means.** The skill simultaneously requests shell execution, network access, and filesystem access. This is the maximum possible attack surface for any OpenClaw skill. With these three permissions, a skill can read any file on the system, execute arbitrary commands on the host, and transmit both to any external server — all within a single invocation.
 
-**How to fix.** Challenge whether all three permission types are truly necessary. Most skills need at most one or two. If the combination is genuinely required, add explicit scope constraints to each permission (e.g., `filesystem:read:/home/user/data`). Document the security rationale for each permission in the skill's README. Require human approval before installing skills with this permission combination.
+Each individual permission might appear to have a legitimate justification when read in isolation. But the combination should trigger a mandatory security review: the set of legitimate use cases that genuinely requires all three simultaneously is very small. The set of malicious use cases that benefits from all three is not.
+
+**How to fix.** Challenge each permission in the combination. Can the filesystem reads be replaced with a narrower path-scoped permission? Can the shell commands be replaced with a direct API call? Can the network access be restricted to a specific approved endpoint? If the combination is genuinely necessary, add explicit scope constraints to each permission, document the security rationale in the skill's README, and require human approval before deploying skills with this combination in any shared environment.
 
 ---
 
@@ -79,9 +89,11 @@ HIGH  exfil-008  Archive Creation Before Upload
       Pattern: createWriteStream('.zip') with axios upload
 ```
 
-**What it means.** The skill handler creates a ZIP archive of files and uploads it via HTTP. This is a classic bulk data exfiltration pattern: the skill silently packages a large number of files and transmits them to an external server. In an OpenClaw context with filesystem permissions, this can exfiltrate entire project directories in a single invocation.
+**What it means.** The skill handler creates a ZIP archive and uploads it via HTTP. This is the bulk exfiltration pattern: rather than leaking one file at a time, the skill packages a large collection of files into an archive and transmits the entire thing in one request. In an OpenClaw environment with filesystem permissions, a single skill invocation can exfiltrate an entire project directory — source code, configuration files, secrets, and all.
 
-**How to fix.** Implement an explicit allowlist of directories that can be archived and uploaded. Require user confirmation before any archive upload. Validate the destination URL against an approved endpoint list. Log all archive and upload operations for audit. Review all skills installed from ClawHub that perform file operations.
+The upload happens in the background while the skill appears to complete its stated function. The user sees normal skill output. The archive has already left the network.
+
+**How to fix.** Implement an explicit allowlist of directories that can be archived and uploaded. Require user confirmation with a clear description of what is being uploaded and where before any transmission occurs. Validate the destination URL against an approved endpoint list before every upload. Log all archive creation and upload operations with timestamps, destination URLs, and file counts. Apply this level of scrutiny to every skill installed from ClawHub that combines file access with network calls.
 
 ## Related
 

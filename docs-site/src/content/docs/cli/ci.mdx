@@ -1,9 +1,18 @@
 ---
 title: "firmis ci — CI Pipeline Command"
-description: "Run the full Firmis CI pipeline: discover → BOM → scan → report. One command for CI/CD integration."
+description: "One command runs the full security pipeline: discover, BOM, scan, report. Built for GitHub Actions, GitLab CI, and any CI system that reads exit codes."
 ---
 
-> CI pipeline: discover → BOM → scan → report in one command. Designed for GitHub Actions, GitLab CI, and other CI systems.
+Every PR that touches agent configuration is a potential security regression. `firmis ci` blocks threats before they reach production — one command, four stages, zero setup beyond a YAML file.
+
+## When to use this
+
+- **PR gates**: Block merges when high or critical findings are introduced
+- **Nightly audits**: Run a full pipeline on schedule to catch newly discovered threats against existing code
+- **Release checks**: Gate deployments — require a clean scan before any release that includes agent changes
+- **Audit artifacts**: Generate a BOM and SARIF report as CI artifacts for compliance evidence
+
+For quick local checks, [`firmis scan`](/cli/scan) is faster. Use `ci` when you want the full pipeline with BOM generation and structured output baked in.
 
 ## Usage
 
@@ -11,17 +20,30 @@ description: "Run the full Firmis CI pipeline: discover → BOM → scan → rep
 firmis ci [path] [options]
 ```
 
+## Pipeline stages
+
+The `ci` command runs four stages sequentially. Each stage feeds the next:
+
+```text
+1. Discover  →  Auto-detect platforms and components in the project
+2. BOM       →  Generate Agent Bill of Materials (CycloneDX 1.7)
+3. Scan      →  Run all 209 rules against every discovered component
+4. Report    →  Output findings in your chosen format
+```
+
+If any stage fails, the pipeline stops and exits with code `2`. If findings exceed your `--fail-on` threshold, it exits with code `1`.
+
 ## Options
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--platform <name>` | string | auto-detect | Scan specific platform only |
-| `--fail-on <level>` | enum | — | Exit non-zero for findings at this severity or above: `low`, `medium`, `high`, `critical` |
-| `--format <type>` | enum | `sarif` | Report format: `json`, `sarif`, `html` |
-| `--output <file>` | string | — | Save report to file |
-| `--bom-output <file>` | string | — | Save Agent BOM to file |
-| `--quiet` | boolean | `false` | Suppress terminal output |
-| `--verbose` | boolean | `false` | Enable verbose logging |
+| `--platform <name>` | string | auto-detect | Scope the pipeline to a specific platform — useful in monorepos where only one platform changed |
+| `--fail-on <level>` | enum | — | Fail the build when findings at this severity or above exist. Use `high` for most teams. |
+| `--format <type>` | enum | `sarif` | Report format: `json` for custom tooling, `sarif` for GitHub Security tab, `html` for human review |
+| `--output <file>` | string | — | Save the scan report to a file. Required for uploading to GitHub Security tab. |
+| `--bom-output <file>` | string | — | Save the Agent BOM to a separate file. Required for compliance artifact storage. |
+| `--quiet` | boolean | `false` | Suppress terminal output. The exit code is your signal. |
+| `--verbose` | boolean | `false` | Print detailed progress for every stage — helpful when debugging why the pipeline is failing |
 
 ## Examples
 
@@ -31,30 +53,21 @@ firmis ci [path] [options]
 npx firmis ci --fail-on high --format sarif --output results.sarif
 ```
 
-### CI with BOM generation
+### Full pipeline: scan + BOM artifact
 
 ```bash title="Terminal"
 npx firmis ci --fail-on critical --bom-output agent-bom.json --output scan.sarif
 ```
 
-### Quick CI check (quiet mode)
+### Quiet mode — exit code only
 
 ```bash title="Terminal"
 npx firmis ci --fail-on high --quiet
 ```
 
-## Pipeline stages
-
-The `ci` command runs four stages sequentially:
-
-```text
-1. Discover  →  Auto-detect platforms and components
-2. BOM       →  Generate Agent Bill of Materials
-3. Scan      →  Run all rules against discovered components
-4. Report    →  Output findings in chosen format
-```
-
 ## GitHub Actions example
+
+Drop this into your repo. It runs on every push and pull request, uploads findings to the GitHub Security tab, and fails the check if any high or critical issues are found.
 
 ```yaml title=".github/workflows/firmis.yml"
 name: Firmis Security Scan
@@ -63,30 +76,52 @@ on: [push, pull_request]
 jobs:
   security:
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write   # required to upload SARIF
+      contents: read
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Run Firmis scan
+
+      - name: Run Firmis CI pipeline
         run: npx firmis ci --fail-on high --format sarif --output results.sarif
-      - name: Upload SARIF
-        if: always()
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always()   # upload even if the scan found issues
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
+```
+
+## GitLab CI example
+
+```yaml title=".gitlab-ci.yml"
+firmis-scan:
+  image: node:20
+  script:
+    - npx firmis ci --fail-on high --format sarif --output results.sarif
+  artifacts:
+    when: always
+    paths:
+      - results.sarif
+    reports:
+      sast: results.sarif
 ```
 
 ## Exit codes
 
 | Code | Meaning |
 |---|---|
-| `0` | Pipeline completed, no findings above `--fail-on` threshold |
-| `1` | Findings found above `--fail-on` threshold |
-| `2` | Pipeline error |
+| `0` | Pipeline completed cleanly. No findings above your `--fail-on` threshold. |
+| `1` | Findings found at or above your `--fail-on` threshold. Fix them before merging. |
+| `2` | Pipeline error — bad path, unreadable config, or unexpected failure in a stage. |
 
 ## Related
 
-- [GitHub Actions integration](/integrations/github-actions) — detailed CI setup guide
-- [SARIF output](/reference/sarif-output) — understanding the output format
+- [GitHub Actions integration](/integrations/github-actions) — detailed CI setup guide with branch protection rules
+- [SARIF output](/reference/sarif-output) — understanding the SARIF format and how GitHub surfaces findings
 - [scan](/cli/scan) — standalone scan without the full pipeline

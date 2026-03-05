@@ -1,11 +1,11 @@
 ---
 title: GitHub Actions
-description: Integrate Firmis into GitHub Actions CI/CD pipelines with SARIF upload, PR comments, and branch protection.
+description: Every PR that ships without a security scan is a gamble. Add Firmis to GitHub Actions in under 5 minutes — findings in the Security tab, PR annotations, and a hard gate on every push.
 ---
 
 import { Aside, Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components'
 
-> Add Firmis to your GitHub Actions pipeline in under 5 minutes. Get findings in the Security tab, PR annotations, and enforce security gates on every push.
+Every PR that ships without a security scan is a gamble. This one takes five minutes to set up and runs on every push from that point on — no maintenance required.
 
 ## Quickstart
 
@@ -175,7 +175,7 @@ jobs:
 
 ## SARIF upload to GitHub Security tab
 
-When you upload a SARIF file with `github/codeql-action/upload-sarif@v3`, GitHub displays findings as:
+GitHub, VS Code, and every major SAST dashboard speaks SARIF. When you upload a SARIF file with `github/codeql-action/upload-sarif@v3`, GitHub displays findings as:
 
 - Inline annotations on pull request diffs
 - Code scanning alerts in the **Security** tab under **Code scanning**
@@ -307,10 +307,9 @@ For large repositories, you can scope the scan to files changed in a PR to reduc
   For most projects, scanning the full repository takes only a few seconds. Scoping to changed files is only worth it for repositories with thousands of agent component files.
 </Aside>
 
-## Related
+## What to do next
 
-- [GitLab CI integration](/integrations/gitlab-ci)
-- [Pre-commit hooks](/integrations/pre-commit-hooks)
-- [TypeScript API](/integrations/typescript-api)
-- [SARIF output reference](/reference/sarif-output)
-- [`firmis ci` command](/cli/ci)
+- [GitLab CI integration →](/integrations/gitlab-ci) — same security gate for GitLab pipelines
+- [Pre-commit hooks →](/integrations/pre-commit-hooks) — catch threats before they ever reach CI
+- [SARIF output reference →](/reference/sarif-output) — full field mapping and example document
+- [`firmis ci` command →](/cli/ci) — the command powering this workflow

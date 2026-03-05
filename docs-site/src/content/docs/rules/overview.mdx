@@ -1,11 +1,11 @@
 ---
 title: Rules Overview
-description: How Firmis detection rules work — YAML anatomy, pattern matcher types, severity levels, and rule loading.
+description: 209 rules. 16 categories. All open-source YAML you can read, extend, or override. Here's how they work.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Firmis rules are YAML files that define what to look for and how confident to be before reporting a finding. Built-in rules ship with the npm package. Custom rules load from your project or config file.
+209 rules. 16 categories. All open-source YAML you can read, extend, or override. Built-in rules ship with the npm package and run on every scan automatically. Custom rules load from your project and run alongside them.
 
 ## What rules are
 
@@ -203,9 +203,9 @@ Custom rules are merged with built-in rules. Custom rule IDs that collide with b
 
 ---
 
-## Related
+## What to do next
 
-- [Built-in Rules](/rules/built-in-rules) — complete listing of all 209 rules with IDs and descriptions
-- [Custom Rules](/rules/custom-rules) — full YAML schema and working examples
-- [Ignoring Findings](/rules/ignoring-findings) — suppress false positives with `.firmisignore`
-- [Detection Engine](/concepts/detection-engine) — confidence scoring and deduplication internals
+- [Built-in Rules →](/rules/built-in-rules) — complete listing of all 209 rules with IDs and descriptions
+- [Custom Rules →](/rules/custom-rules) — full YAML schema and working examples for writing your own
+- [Ignoring Findings →](/rules/ignoring-findings) — suppress false positives without disabling rules
+- [Detection Engine →](/concepts/detection-engine) — confidence scoring and deduplication internals

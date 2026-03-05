@@ -1,9 +1,20 @@
 ---
 title: "firmis list — List Detected Platforms"
-description: "List all AI agent platforms detected in the current project directory."
+description: "Instantly see which AI agent platforms Firmis has found in your project. The fastest way to confirm what's in scope before scanning."
 ---
 
-> List detected AI agent platforms in your project.
+You've cloned a repo, inherited a project, or just installed a new tool. Before you scan anything, `firmis list` answers one question: what platforms are even here?
+
+One line. Instant answer.
+
+## When to use this
+
+- **Quick orientation**: Before running `scan` or `discover`, confirm which platforms Firmis will detect
+- **Checking coverage**: You added a new MCP server — run `list` to verify Firmis picks it up
+- **Scripting and automation**: Use `--json` to programmatically check which platforms are present before conditionally running platform-specific scans
+- **Debugging a scan**: If `scan` seems to be skipping something, run `list` first — if the platform isn't listed, Firmis didn't detect it
+
+For the full picture — component names, file paths, dependencies, and model references — use [`firmis discover`](/cli/discover) instead.
 
 ## Usage
 
@@ -11,11 +22,51 @@ description: "List all AI agent platforms detected in the current project direct
 firmis list [options]
 ```
 
+## Example output
+
+### Terminal output
+
+```text
+Firmis — Detected Platforms
+Scanning: /Users/me/my-agent-project
+
+  claude     2 components
+  mcp        4 components
+  cursor     1 component
+
+3 platforms detected
+```
+
+### JSON output (`--json`)
+
+```json
+[
+  { "platform": "claude",  "components": 2 },
+  { "platform": "mcp",     "components": 4 },
+  { "platform": "cursor",  "components": 1 }
+]
+```
+
+## What each detected platform means for your security posture
+
+| Platform | What it can access | Key threats |
+|---|---|---|
+| `claude` | CLAUDE.md, tool definitions, permission scopes | Tool poisoning, overgrant permissions, hidden instructions |
+| `mcp` | Tool handlers, transport config, server manifests | Prompt injection, data exfiltration, path traversal |
+| `cursor` | .cursorrules, workspace settings | Rule hijacking, exfiltration via completions |
+| `codex` | Plugin manifests, tool definitions | Supply chain, malicious plugin logic |
+| `crewai` | Agent configs, task chains | Agent-to-agent injection, tool misuse |
+| `autogpt` | Plugin manifests, command handlers | Unauthorized command execution |
+| `openclaw` | Skill definitions, skill handlers | Credential harvesting, network abuse |
+| `nanobot` | Plugin configs, tool handlers | File system abuse, insecure config |
+
+The more platforms in your project, the wider your attack surface. A project with `claude` + `mcp` + `cursor` has three distinct threat surfaces, each with their own detection rules.
+
 ## Options
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--json` | boolean | `false` | Output in JSON format |
+| `--json` | boolean | `false` | Output as JSON array — useful for scripting or piping into other tools |
 
 ## Examples
 
@@ -31,7 +82,15 @@ npx firmis list
 npx firmis list --json
 ```
 
+### Conditionally scan only if MCP is present
+
+```bash title="Terminal"
+npx firmis list --json | jq -e '.[] | select(.platform == "mcp")' && \
+  npx firmis scan --platform mcp --fail-on high
+```
+
 ## Related
 
-- [Platforms](/concepts/platforms) — what platforms Firmis supports
-- [discover](/cli/discover) — detailed component-level discovery
+- [Platforms](/concepts/platforms) — what each platform is and how Firmis detects it
+- [discover](/cli/discover) — go deeper: component names, file paths, dependencies, and model references
+- [scan](/cli/scan) — security scan everything that `list` finds

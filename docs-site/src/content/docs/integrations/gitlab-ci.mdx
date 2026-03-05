@@ -1,11 +1,11 @@
 ---
 title: GitLab CI
-description: Integrate Firmis into GitLab CI/CD pipelines with SAST report upload and merge request blocking.
+description: Every merge request that ships without a security scan is a gamble. Add Firmis to GitLab CI in under 5 minutes — findings in the Security Dashboard and a hard gate on every push.
 ---
 
 import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components'
 
-> Add Firmis to your GitLab pipeline to surface security findings in merge requests and block merges on high-severity threats.
+Every merge request that ships without a security scan is a gamble. This one takes five minutes to set up and surfaces findings inline in every MR from that point on.
 
 ## Quickstart
 
@@ -231,10 +231,10 @@ firmis-nightly:
 
 Create the schedule at **CI/CD** → **Schedules** in your GitLab project, targeting your default branch.
 
-## Related
+## What to do next
 
-- [GitHub Actions integration](/integrations/github-actions)
-- [Pre-commit hooks](/integrations/pre-commit-hooks)
-- [SARIF output reference](/reference/sarif-output)
-- [`firmis ci` command](/cli/ci)
-- [`firmis bom` command](/cli/bom)
+- [GitHub Actions integration →](/integrations/github-actions) — same security gate for GitHub pipelines
+- [Pre-commit hooks →](/integrations/pre-commit-hooks) — catch threats before they ever reach CI
+- [SARIF output reference →](/reference/sarif-output) — full field mapping and example document
+- [`firmis ci` command →](/cli/ci) — the command powering this pipeline
+- [`firmis bom` command →](/cli/bom) — generate your Agent Bill of Materials

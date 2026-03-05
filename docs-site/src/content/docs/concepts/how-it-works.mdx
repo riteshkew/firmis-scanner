@@ -1,11 +1,13 @@
 ---
 title: How It Works
-description: A walkthrough of Firmis's three-stage detection pipeline — Discovery, Rule Engine, and Reporter.
+description: Firmis never touches the internet. Your code stays on your machine. Here's what happens when you run firmis scan.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Firmis runs a three-stage static analysis pipeline entirely on your machine. Your code is never uploaded. No network access is required to scan.
+Firmis never touches the internet. Your code stays on your machine. Here's what happens when you run `firmis scan`.
+
+One command. 8 platforms. Plain English results.
 
 ## The pipeline
 
@@ -27,7 +29,7 @@ npx firmis scan .
 ┌──────────────────┐
 │ 2. Rule Engine   │
 │                  │
-│ 199 YAML rules   │
+│ 209 YAML rules   │
 │ 7 matcher types  │
 │ Confidence score │
 │ Deduplication    │
@@ -48,15 +50,19 @@ npx firmis scan .
 
 ## Stage 1: Discovery
 
+AI agents execute code from community sources, marketplace installs, and config files. Most developers never audit what these tools actually do. Discovery is where Firmis figures out what's actually running in your agent stack.
+
 The discovery stage finds AI agent components in your project without requiring any configuration.
 
-**Platform detection.** Firmis scans well-known file paths and glob patterns for each of the 8 supported platforms. For example, an MCP server is detected when `~/.config/mcp/mcp.json` or `.vscode/mcp.json` exists. A CrewAI project is detected when a `crew.yaml` file is present. Each platform defines its own detection signals.
+**Platform detection.** Firmis scans well-known file paths and glob patterns for each of the 8 supported platforms. An MCP server is detected when `~/.config/mcp/mcp.json` or `.vscode/mcp.json` exists. A CrewAI project is detected when a `crew.yaml` file is present. Each platform defines its own detection signals. If you have MCP servers installed but have never audited them, Firmis finds them automatically.
 
 **Component enumeration.** Once a platform is detected, Firmis enumerates its components — skills, servers, plugins, agents, or extensions — by traversing subdirectories and reading manifest files. Components are the unit of scanning: one component = one set of files analyzed together.
 
 **Dependency resolution.** For each component, Firmis collects the list of files to scan. This includes source files (`.ts`, `.js`, `.py`, `.go`, `.rs`), configuration files (`package.json`, `pyproject.toml`, `Cargo.toml`), and manifest files. The `node_modules/` and `dist/` directories are excluded automatically.
 
 **Limits.** A maximum of 500 files per component is enforced to prevent excessive scan times in large repositories.
+
+**What you see at this stage:** Firmis prints each detected platform and component count before scanning starts. If you have 12 MCP servers installed, you'll see all 12 listed — including the ones you forgot about.
 
 <Aside type="note">
   Discovery respects `.firmisignore` and `.gitignore` files. Paths excluded via either file are skipped during component enumeration.
@@ -66,7 +72,9 @@ The discovery stage finds AI agent components in your project without requiring 
 
 ## Stage 2: Rule Engine
 
-Every collected file is passed through the rule engine. The engine loads 199 YAML rules across 16 threat categories.
+This is where the security analysis happens. Every collected file is passed through the rule engine, which applies 209 YAML rules across 16 threat categories.
+
+Traditional security scanners look for known CVEs and malware hashes. Agent threats are different — they hide in tool descriptions, YAML configs, and natural language instructions. Firmis's rule engine is designed specifically for this.
 
 **Rule evaluation.** Each rule defines one or more patterns. Firmis applies each pattern to the file content and records a match weight (0–100) for each hit. The confidence score for a finding is computed as:
 
@@ -76,9 +84,11 @@ confidence = Math.max(ratioConfidence, maxSinglePatternWeight)
 
 Where `ratioConfidence` reflects how many of the rule's patterns matched relative to the total, and `maxSinglePatternWeight` is the weight of the single strongest match. A rule's `confidenceThreshold` field sets the minimum confidence required for a finding to be emitted.
 
-**Document multiplier.** Files with `.md` and `.txt` extensions receive a 0.15x confidence multiplier before threshold comparison. This suppresses low-weight matches in documentation files that are unlikely to represent real threats. The `secret-detection` category is exempt from this multiplier because secrets in `.env.example` files are still actionable.
+**What this means in practice:** A single exact match on an AWS key pattern (weight 100) fires immediately. An ambiguous pattern like `fetch()` alone (weight 35) does not — it needs to co-occur with other signals before Firmis reports it. This is how false positive rates stay low.
 
-**Deduplication.** When a path-based scan runs, the same file may be indexed by multiple platforms (for example, a shared `src/` directory picked up by both `claude` and `mcp`). Firmis deduplicates findings with the same `(ruleId, file, line)` triple, keeping the first occurrence and discarding the rest.
+**Document multiplier.** Files with `.md` and `.txt` extensions receive a 0.15x confidence multiplier before threshold comparison. This suppresses low-weight matches in documentation files that are unlikely to represent real threats. The `secret-detection` category is exempt from this multiplier because secrets in `.env.example` files are still actionable — and still dangerous if committed to source control.
+
+**Deduplication.** When a path-based scan runs, the same file may be indexed by multiple platforms (for example, a shared `src/` directory picked up by both `claude` and `mcp`). Firmis deduplicates findings with the same `(ruleId, file, line)` triple, keeping the first occurrence and discarding the rest. Without deduplication, a single malicious file in a shared directory could appear as 5 separate findings.
 
 ---
 
@@ -95,6 +105,16 @@ After all platforms are scanned, findings are passed to the reporter.
 
 The terminal reporter groups findings by severity (critical → high → medium → low) and prints a summary line with total counts and scan duration.
 
+**Example terminal output for a real finding:**
+
+```text
+CRITICAL  tp-001  mcp/weather-server/index.js:47
+  Hidden Instructions in Tool Descriptions
+  Zero-width Unicode character (\u200B) found in tool description.
+  This character is invisible to humans but processed by the agent.
+  Remediation: Remove all invisible Unicode characters from tool descriptions.
+```
+
 ---
 
 ## What Firmis does NOT do
@@ -104,7 +124,7 @@ Understanding the scope of static analysis helps you plan a complete security po
 | Firmis does NOT... | Why it matters |
 |---|---|
 | Modify your code | Firmis is read-only. Running a scan changes nothing in your repository. |
-| Require network access | All 199 rules are bundled locally. Scanning works fully offline. |
+| Require network access | All 209 rules are bundled locally. Scanning works fully offline. |
 | Upload telemetry by default | No code, paths, findings, or metadata leave your machine unless you explicitly opt in to telemetry in config. |
 | Detect runtime behavioral attacks | Firmis is a static scanner. It cannot observe live prompt injection via user input, real-time exfiltration, or session hijacking. |
 | Execute code | No code in scanned files is run. Pattern matching operates on raw file content and AST nodes. |
@@ -115,9 +135,9 @@ Understanding the scope of static analysis helps you plan a complete security po
 
 ---
 
-## Related
+## What to read next
 
-- [Detection Engine](/concepts/detection-engine) — deep dive into matcher types and confidence scoring
-- [Threat Model](/concepts/threat-model) — all 16 threat categories explained
-- [Platforms](/concepts/platforms) — how each platform is auto-detected
-- [firmis scan](/cli/scan) — CLI reference
+- [Detection Engine](/concepts/detection-engine) — how the rule engine evaluates patterns, scores confidence, and avoids false positives
+- [Threat Model](/concepts/threat-model) — all 16 threat categories with real attack examples
+- [Platforms](/concepts/platforms) — how each of the 8 platforms is auto-detected and what files get scanned
+- [firmis scan](/cli/scan) — CLI reference and all available flags

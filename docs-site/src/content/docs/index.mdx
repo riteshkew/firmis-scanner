@@ -1,12 +1,12 @@
 ---
 title: Firmis — AI Agent Security Scanner
-description: "Detect malicious behavior in Claude Skills, MCP Servers, Codex Plugins, Cursor Rules, and more. 199 built-in rules. Zero install. Runs offline."
+description: "1 in 14 AI tools is secretly stealing data. One command. 8 platforms. 209 rules. Fully offline. No account required."
 template: splash
 hero:
-  title: Security scanner for AI agents
-  tagline: Detect threats in Claude Skills, MCP Servers, Codex Plugins, and 5 more platforms. 199 rules. Zero install. Fully offline.
+  title: Your AI agents have access to everything.
+  tagline: AWS keys. SSH keys. API tokens. Browser passwords. Every tool you install can read them — and most people never check. Firmis scans your entire agent stack in one command.
   actions:
-    - text: Get started
+    - text: Run your first scan →
       link: /quickstart/
       icon: right-arrow
       variant: primary
@@ -19,42 +19,56 @@ hero:
 import { Card, CardGrid } from '@astrojs/starlight/components';
 import FaqSchema from '../../components/FaqSchema.astro';
 
-## What can you do with Firmis?
+## The threat is real
+
+Research published in 2025–2026 shows what's already happening to agent users:
+
+| Stat | Source |
+|---|---|
+| **72.8%** MCP tool poisoning attack success rate | MCPTox Research |
+| **82%** of MCP servers have path traversal vulnerabilities | Endor Labs |
+| **7.1%** of agent marketplace skills are actively stealing credentials | Firmis Research |
+| **1.2M** malicious packages discovered in the wild | Sonatype 2026 |
+| **CVSS 10/10** zero-click RCE in Claude Desktop Extensions | LayerX Security |
+
+You are not the target. Your credentials are. And they're sitting one misconfigured MCP server away from leaving your machine.
+
+## What Firmis checks
 
 <CardGrid>
-  <Card title="Find threats in your AI agents" icon="warning">
-    Scan for prompt injection, data exfiltration, credential harvesting, and 13 more threat categories.
+  <Card title="Find what's hiding in your agent stack" icon="warning">
+    209 detection rules. 16 threat categories. Prompt injection, credential harvesting, tool poisoning, supply chain attacks — scanned in seconds, reported in plain English.
 
-    [Scan your project →](/cli/scan)
+    [Run your first scan →](/cli/scan)
   </Card>
-  <Card title="Audit your MCP servers" icon="magnifier">
-    Detect tool poisoning, hidden instructions, and unauthorized network access in MCP server configurations.
+  <Card title="Audit every MCP server you've installed" icon="magnifier">
+    72.8% of poisoning attacks succeed against popular LLMs. Firmis checks your MCP configs for hidden instructions, malicious tool definitions, and unauthorized network calls before they run.
 
-    [MCP guide →](/platforms/mcp-servers)
+    [MCP security guide →](/platforms/mcp-servers)
   </Card>
-  <Card title="Generate a security BOM" icon="document">
-    CycloneDX 1.7 Agent Bill of Materials — every component, dependency, and model in your AI stack.
+  <Card title="Know exactly what's in your AI stack" icon="document">
+    CycloneDX 1.7 Agent Bill of Materials — every component, dependency, model, and tool definition catalogued. Know what you have before you ship it.
 
-    [Generate BOM →](/cli/bom)
+    [Generate your BOM →](/cli/bom)
   </Card>
-  <Card title="Secure your CI pipeline" icon="rocket">
-    One command: discover → BOM → scan → report. SARIF output for GitHub Security tab.
+  <Card title="Block threats in CI before they reach prod" icon="rocket">
+    One command: discover → BOM → scan → report. SARIF output for GitHub Security tab. Exit non-zero on high or critical findings. Done.
 
-    [CI integration →](/cli/ci)
+    [Set up CI →](/cli/ci)
   </Card>
 </CardGrid>
 
-## Supported platforms
+## 8 platforms. One command.
 
-| Platform | Components Detected | Maturity |
+| Platform | What gets scanned | Status |
 |---|---|---|
-| [Claude Skills](/platforms/claude-skills) | CLAUDE.md, tool definitions, permissions | GA |
-| [MCP Servers](/platforms/mcp-servers) | Server configs, tool handlers, transport | GA |
-| [Cursor Rules](/platforms/cursor-rules) | .cursorrules, settings, extensions | GA |
+| [Claude Skills](/platforms/claude-skills) | CLAUDE.md, tool definitions, permission scopes | GA |
+| [MCP Servers](/platforms/mcp-servers) | Server configs, tool handlers, transport layer | GA |
+| [Cursor Rules](/platforms/cursor-rules) | .cursorrules, workspace settings, extensions | GA |
 | [Codex Plugins](/platforms/codex-plugins) | Plugin manifests, tool definitions | Beta |
-| [CrewAI Agents](/platforms/crewai-agents) | Agent configs, tool definitions, tasks | Beta |
-| [AutoGPT Plugins](/platforms/autogpt-plugins) | Plugin manifests, commands | Experimental |
-| [OpenClaw Skills](/platforms/openclaw-skills) | Skill definitions, handlers | Experimental |
+| [CrewAI Agents](/platforms/crewai-agents) | Agent configs, tool definitions, task chains | Beta |
+| [AutoGPT Plugins](/platforms/autogpt-plugins) | Plugin manifests, command handlers | Experimental |
+| [OpenClaw Skills](/platforms/openclaw-skills) | Skill definitions, skill handlers | Experimental |
 | [Nanobot Plugins](/platforms/nanobot-plugins) | Plugin configs, tool handlers | Experimental |
 
 ## How it works
@@ -66,83 +80,91 @@ npx firmis scan .
 ┌─────────────┐    ┌──────────────┐    ┌─────────────┐
 │  Discovery   │───▶│  Rule Engine  │───▶│   Reporter   │
 │              │    │              │    │              │
-│ Auto-detect  │    │ 199 YAML     │    │ Terminal     │
+│ Auto-detect  │    │ 209 YAML     │    │ Terminal     │
 │ 8 platforms  │    │ rules across │    │ JSON / SARIF │
 │ components   │    │ 16 threat    │    │ HTML report  │
 │ dependencies │    │ categories   │    │              │
 └─────────────┘    └──────────────┘    └─────────────┘
 ```
 
-[Learn how the detection engine works →](/concepts/how-it-works)
+No account. No telemetry. Nothing leaves your machine.
 
-## Threat categories
+[How the detection engine works →](/concepts/how-it-works)
 
-Firmis detects 16 categories of threats in AI agent code:
+## 16 threat categories
 
-| Category | Examples | Severity Range |
+Every finding comes with a severity rating, a plain English explanation of what it means, and what to do about it.
+
+| Category | What it catches | Severity |
 |---|---|---|
-| Tool Poisoning | Hidden instructions in tool descriptions | Critical |
-| Data Exfiltration | Sending local data to external URLs | Critical–High |
-| Credential Harvesting | Accessing AWS/GCP/Azure credentials | Critical–High |
-| Prompt Injection | Instruction override in tool output | Critical–High |
-| Secret Detection | Hardcoded API keys, tokens, passwords | Critical–Medium |
-| Supply Chain | Known-vulnerable dependencies | High–Medium |
+| Tool Poisoning | Hidden instructions in tool descriptions that hijack your agent | Critical |
+| Data Exfiltration | Skills sending your local files to external servers | Critical–High |
+| Credential Harvesting | Tools reading AWS, GCP, Azure, or SSH credentials | Critical–High |
+| Prompt Injection | Instructions that override your agent's behavior | Critical–High |
+| Secret Detection | Hardcoded API keys, tokens, and passwords | Critical–Medium |
+| Supply Chain | Dependencies with known vulnerabilities (OSV database) | High–Medium |
 | Malware Signatures | Known malicious code patterns | Critical |
-| Known Malicious | Packages flagged in threat databases | Critical |
-| Network Abuse | Unauthorized DNS/HTTP requests | High–Medium |
-| File System Abuse | Unauthorized file read/write | High–Medium |
-| Permission Overgrant | Excessive tool permissions | High–Medium |
-| Agent Memory Poisoning | Corrupting agent context/memory | High |
-| Malware Distribution | Spreading malicious payloads | Critical–High |
-| Privilege Escalation | Gaining unauthorized access | High |
-| Insecure Configuration | Weak security settings | Medium–Low |
-| Access Control | Missing authentication/authorization | High–Medium |
+| Known Malicious | Packages flagged across threat intelligence databases | Critical |
+| Network Abuse | Unauthorized DNS or HTTP calls | High–Medium |
+| File System Abuse | Unauthorized reads or writes to your filesystem | High–Medium |
+| Permission Overgrant | Tool scopes wider than they need to be | High–Medium |
+| Agent Memory Poisoning | Instructions corrupting your agent's context window | High |
+| Malware Distribution | Tools spreading payloads to other systems | Critical–High |
+| Privilege Escalation | Gaining access your agent was never granted | High |
+| Insecure Configuration | Weak or missing security settings | Medium–Low |
+| Access Control | Missing authentication or authorization checks | High–Medium |
 
-[View all 199 detection rules →](/rules/built-in-rules)
+[View all 209 detection rules →](/rules/built-in-rules)
 
 ## Frequently asked questions
 
-**How do I scan MCP servers for security issues?**
-Run `npx firmis scan --platform mcp` in your project directory. Firmis detects tool poisoning, data exfiltration, credential harvesting, and more. No configuration needed.
+**Wait — my AI tools can actually steal my stuff?**
 
-**What security risks exist in Claude Skills?**
-Claude Skills can contain prompt injection attacks, hidden instructions that override agent behavior, hardcoded API keys, and unauthorized file system access. Firmis detects these with 45+ dedicated rules.
+Yes. Every agent you install — Cursor, Claude, MCP servers, OpenClaw skills — gets access to your files, API keys, and credentials. Most people never check what these tools actually do behind the scenes. Our research found that 7.1% of agent marketplace skills are actively stealing credentials or sending data to external servers. One command will tell you if yours are clean.
 
-**Does Firmis upload my code?**
-No. Firmis runs entirely offline. Your code never leaves your machine. No telemetry is collected by default.
+**What exactly does Firmis check for?**
 
-**How do I add Firmis to my CI/CD pipeline?**
-Run `npx firmis ci --fail-on high --format sarif` in your pipeline. This runs the full discover, BOM, scan, report pipeline and exits non-zero if high or critical findings are detected.
+209 rules across 16 threat categories: prompt injection, credential harvesting, data exfiltration, tool poisoning, supply chain attacks, hardcoded secrets, malware signatures, and more. Every finding is explained in plain English — not cryptic error codes. "This skill is reading your AWS credentials and sending them to an unknown server" is the kind of message you get.
 
-**What is an Agent Bill of Materials (Agent BOM)?**
-An Agent BOM is a CycloneDX 1.7 inventory of all AI agent components, dependencies, and models in your project. Generate one with `npx firmis bom`.
+**Is my code uploaded anywhere?**
 
-**How do I detect prompt injection in AI agents?**
-Firmis includes 13 prompt injection detection rules that scan tool descriptions, system prompts, and handler code for instruction override patterns, hidden directives, and context manipulation techniques.
+No. Firmis is fully offline. It reads your config files and source code locally — nothing leaves your machine. No telemetry, no analytics, no account required. Ever.
+
+**I'm not a security expert. Can I still use this?**
+
+That's exactly who we built it for. You don't need to understand regex patterns or YARA rules. You run `npx firmis scan .` and you get a report that says what's wrong and what to do about it. Plain English. Every time.
+
+**How is this different from Snyk or Semgrep?**
+
+Snyk and Semgrep are built for traditional application code. They don't know what an MCP server is, what tool poisoning looks like, or how to read a CLAUDE.md file for hidden instructions. Firmis is purpose-built for the AI agent threat surface: 8 platforms, 209 rules written specifically for how agents get compromised.
+
+**Is it really free?**
+
+Completely free. `npx firmis scan .` — no account, no credit card, no usage limits. You get a security grade (A through F) and a full list of findings in plain English.
 
 <FaqSchema faqs={[
   {
-    question: "How do I scan MCP servers for security issues?",
-    answer: "Run npx firmis scan --platform mcp in your project directory. Firmis detects tool poisoning, data exfiltration, credential harvesting, and more. No configuration needed."
+    question: "Wait — my AI tools can actually steal my stuff?",
+    answer: "Yes. Every agent you install — Cursor, Claude, MCP servers, OpenClaw skills — gets access to your files, API keys, and credentials. Most people never check what these tools actually do behind the scenes. Our research found that 7.1% of agent marketplace skills are actively stealing credentials or sending data to external servers. One command will tell you if yours are clean."
   },
   {
-    question: "What security risks exist in Claude Skills?",
-    answer: "Claude Skills can contain prompt injection attacks, hidden instructions that override agent behavior, hardcoded API keys, and unauthorized file system access. Firmis detects these with 45+ dedicated rules."
+    question: "What exactly does Firmis check for?",
+    answer: "209 rules across 16 threat categories: prompt injection, credential harvesting, data exfiltration, tool poisoning, supply chain attacks, hardcoded secrets, malware signatures, and more. Every finding is explained in plain English — not cryptic error codes."
   },
   {
-    question: "Does Firmis upload my code?",
-    answer: "No. Firmis runs entirely offline. Your code never leaves your machine. No telemetry is collected by default."
+    question: "Is my code uploaded anywhere?",
+    answer: "No. Firmis is fully offline. It reads your config files and source code locally — nothing leaves your machine. No telemetry, no analytics, no account required. Ever."
   },
   {
-    question: "How do I add Firmis to my CI/CD pipeline?",
-    answer: "Run npx firmis ci --fail-on high --format sarif in your pipeline. This runs the full discover, BOM, scan, report pipeline and exits non-zero if high or critical findings are detected."
+    question: "I'm not a security expert. Can I still use this?",
+    answer: "That's exactly who we built it for. You don't need to understand regex patterns or YARA rules. Run npx firmis scan . and you get a report that says what's wrong and what to do about it. Plain English. Every time."
   },
   {
-    question: "What is an Agent Bill of Materials (Agent BOM)?",
-    answer: "An Agent BOM is a CycloneDX 1.7 inventory of all AI agent components, dependencies, and models in your project. Generate one with npx firmis bom. It lists every platform, tool, and package for supply chain visibility."
+    question: "How is this different from Snyk or Semgrep?",
+    answer: "Snyk and Semgrep are built for traditional application code. They don't know what an MCP server is, what tool poisoning looks like, or how to read a CLAUDE.md file for hidden instructions. Firmis is purpose-built for the AI agent threat surface: 8 platforms, 209 rules written specifically for how agents get compromised."
   },
   {
-    question: "How do I detect prompt injection in AI agents?",
-    answer: "Firmis includes 13 prompt injection detection rules that scan tool descriptions, system prompts, and handler code for instruction override patterns, hidden directives, and context manipulation techniques."
+    question: "Is it really free?",
+    answer: "Completely free. npx firmis scan . — no account, no credit card, no usage limits. You get a security grade (A through F) and a full list of findings in plain English."
   }
 ]} />

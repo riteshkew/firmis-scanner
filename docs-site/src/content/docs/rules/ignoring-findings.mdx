@@ -1,11 +1,13 @@
 ---
 title: Ignoring Findings
-description: Suppress false positives and silence known-safe patterns using .firmisignore or the --ignore flag.
+description: Not every finding is a real threat. Here's how to tell Firmis what's safe — without disabling rules or bypassing scans.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Create a `.firmisignore` file in your project root to suppress false positives. Three rule types let you ignore by rule ID, by file path, or by a combination of both.
+Not every finding is a real threat. Test fixtures with realistic-looking tokens. Example API keys in documentation. Crypto operations in a legitimate wallet module. Firmis finds all of these — and `.firmisignore` is where you tell it which ones are intentional.
+
+Create a `.firmisignore` file in your project root to suppress false positives. Three rule types let you ignore by rule ID, by file path, or by a combination of both.
 
 ## File locations
 
@@ -107,7 +109,7 @@ cred-002:**/examples/**
 
 # Allow network calls in the API integration module
 exfil-001:**/api-integrations/**
-sus-003:**/api-integrations/**
+sus-003:**/webhooks/**
 ```
 
 ---
@@ -214,9 +216,9 @@ npx firmis scan --ignore cred-001,sus-006,exfil-003
 
 ---
 
-## Related
+## What to do next
 
-- [Rules Overview](/rules/overview) — how rules load and how severity levels work
-- [Custom Rules](/rules/custom-rules) — writing YAML rules to extend detection
-- [firmis scan](/cli/scan) — full CLI reference including `--ignore` and `--severity`
-- [Detection Engine](/concepts/detection-engine) — how confidence scoring and deduplication work internally
+- [Rules Overview →](/rules/overview) — how rules load and how severity levels work
+- [Custom Rules →](/rules/custom-rules) — writing YAML rules to extend detection beyond the 209 built-in ones
+- [firmis scan →](/cli/scan) — full CLI reference including `--ignore` and `--severity`
+- [Detection Engine →](/concepts/detection-engine) — how confidence scoring and deduplication work internally

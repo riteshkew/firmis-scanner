@@ -1,11 +1,11 @@
 ---
 title: Custom Rules
-description: Write and load your own YAML detection rules to extend Firmis with project-specific threat patterns.
+description: Write and load your own YAML detection rules to extend Firmis with project-specific threat patterns. Same schema as the 209 built-in rules. Example first, schema second.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Custom rules use the same YAML schema as built-in rules. Write one, point Firmis at it, and your pattern runs alongside the 209 built-in rules on every scan.
+Custom rules use the same YAML schema as built-in rules. Write one, point Firmis at it, and your pattern runs alongside the 209 built-in rules on every scan. No plugins, no compile step, no special tooling — just YAML.
 
 ## Complete example
 
@@ -246,9 +246,9 @@ npx firmis scan /tmp/test-fixture.ts --rules rules/custom/network-policy.yaml --
 
 ---
 
-## Related
+## What to do next
 
-- [Rules Overview](/rules/overview) — rule anatomy, severity levels, and how loading works
-- [firmis validate](/cli/validate) — full CLI reference for the validate command
-- [Ignoring Findings](/rules/ignoring-findings) — suppress false positives from built-in or custom rules
-- [Built-in Rules](/rules/built-in-rules) — browse the 209 built-in rules for inspiration
+- [Rules Overview →](/rules/overview) — rule anatomy, severity levels, and how loading works
+- [firmis validate →](/cli/validate) — full CLI reference for the validate command
+- [Ignoring Findings →](/rules/ignoring-findings) — suppress false positives from built-in or custom rules
+- [Built-in Rules →](/rules/built-in-rules) — browse all 209 built-in rules for inspiration and reference

@@ -1,11 +1,11 @@
 ---
 title: TypeScript API
-description: Use the Firmis TypeScript API to scan, discover, and generate BOMs programmatically from your own scripts and applications.
+description: Embed Firmis scanning directly into your TypeScript or JavaScript tooling. Full access to the scan engine, discovery, and reporters — no CLI required.
 ---
 
 import { Aside, Card, CardGrid } from '@astrojs/starlight/components'
 
-> Embed Firmis scanning directly into your TypeScript or JavaScript tooling. The public API gives you full access to the scan engine, discovery, and reporters.
+The CLI is the fastest way to get started. The TypeScript API is for when you need Firmis inside your own tooling — custom CI scripts, security dashboards, editor integrations, or automated remediation pipelines.
 
 ## Installation
 
@@ -149,6 +149,8 @@ console.log(`Finished — ${result.summary.threatsFound} threats in ${result.dur
 
 ## SARIF output
 
+GitHub, VS Code, and every major SAST dashboard speaks SARIF. Generate it directly from the API:
+
 ```typescript title="scan-to-sarif.ts"
 import { ScanEngine, getReporter } from 'firmis-scanner'
 import type { FirmisConfig } from 'firmis-scanner'
@@ -176,7 +178,7 @@ console.log('SARIF written to firmis.sarif')
 
 ## Custom rules
 
-Load additional YAML rule files alongside the built-in rules.
+Load additional YAML rule files alongside the 209 built-in rules.
 
 ```typescript title="scan-with-custom-rules.ts"
 import { ScanEngine } from 'firmis-scanner'
@@ -390,10 +392,10 @@ Firmis is written in TypeScript and ships its own types. No `@types/firmis-scann
   Firmis uses ES module syntax (`import`/`export`). Your project must have `"type": "module"` in `package.json` or use `.mts` file extensions when importing from CommonJS projects.
 </Aside>
 
-## Related
+## What to do next
 
-- [GitHub Actions integration](/integrations/github-actions)
-- [GitLab CI integration](/integrations/gitlab-ci)
-- [Configuration reference](/reference/config-schema)
-- [SARIF output reference](/reference/sarif-output)
-- [Threat categories reference](/reference/threat-categories)
+- [GitHub Actions integration →](/integrations/github-actions) — run this API in CI with a security gate
+- [GitLab CI integration →](/integrations/gitlab-ci) — same for GitLab pipelines
+- [Configuration reference →](/reference/config-schema) — every `FirmisConfig` field documented
+- [SARIF output reference →](/reference/sarif-output) — what the SARIF reporter produces
+- [Threat categories reference →](/reference/threat-categories) — all 209 rules across 16 categories

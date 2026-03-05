@@ -1,11 +1,20 @@
-/* Firmis docs custom styles */
+/* Firmis docs — synced with firmislabs.com brand */
+
+/* Import Inter + IBM Plex Mono to match main site */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+/* ── Light mode ─────────────────────────────────────── */
 :root {
-  --sl-color-accent-low: #1a1a2e;
-  --sl-color-accent: #4a6cf7;
-  --sl-color-accent-high: #e8ecff;
+  --sl-color-accent-low: #ede9fe;      /* violet-100 — subtle tint backgrounds */
+  --sl-color-accent: #7c3aed;          /* violet-600 — primary accent */
+  --sl-color-accent-high: #4c1d95;     /* violet-900 — high-contrast text on light */
+  --sl-font: 'Inter', system-ui, sans-serif;
+  --sl-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
+
+/* ── Dark mode ──────────────────────────────────────── */
 :root[data-theme='dark'] {
-  --sl-color-accent-low: #e8ecff;
-  --sl-color-accent: #4a6cf7;
-  --sl-color-accent-high: #1a1a2e;
+  --sl-color-accent-low: #2e1065;      /* violet-950 — subtle tint backgrounds */
+  --sl-color-accent: #8b5cf6;          /* violet-500 — brighter for dark bg */
+  --sl-color-accent-high: #ede9fe;     /* violet-100 — high-contrast text on dark */
 }

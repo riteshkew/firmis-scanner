@@ -1,48 +1,186 @@
 ---
 title: "firmis policy — Policy Engine"
-description: "Define and enforce custom security policies for your AI agent projects. Beta feature."
+description: "Define your security standards in code. Fail the build when they're violated. Beta."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Define custom security policies and enforce them against scan results.
+Every team has security standards. Most of them live in a Notion doc nobody reads. `firmis policy` puts them in code — and enforces them in CI.
+
+Write a policy file that says what your project must and must not have. Run `firmis policy check` to fail the build when those standards are violated. The policy travels with the code. It's always enforced. Nobody has to remember it.
 
 <Aside type="caution" title="Beta">
-  This feature is in beta. APIs and behavior may change between releases.
+  This feature is in private beta. APIs and behavior may change between releases.
   Available in the [Firmis Engine](https://github.com/riteshkew/firmis-engine) private beta.
   [Request access →](mailto:beta@firmislabs.com)
 </Aside>
 
-## Usage
+## The problem with ad-hoc security rules
 
-```bash title="Terminal"
-firmis policy validate <policy-file>
-firmis policy check [path] --policy <policy-file>
+"We don't allow hardcoded secrets" is a reasonable rule. But without automation, it gets checked inconsistently — by whoever happens to review the PR, at whatever level of attention they happen to have. `firmis scan` catches secrets, but it doesn't tell you whether the finding crosses your team's specific threshold for blocking a merge.
+
+Policy does. You write what you require. Firmis enforces it. The check is deterministic, documented, and consistent on every run.
+
+## Policy file format
+
+Policies are YAML files that define rules your project must satisfy:
+
+```yaml title="firmis-policy.yaml"
+name: "Production Agent Policy"
+version: "1.0"
+description: "Security baseline for all agent deployments"
+
+rules:
+  # Fail immediately on any critical finding
+  - id: no-critical-findings
+    description: "No critical severity findings allowed"
+    condition:
+      severity: critical
+      count: 0
+
+  # Block hardcoded secrets from entering the repo
+  - id: no-hardcoded-secrets
+    description: "No hardcoded API keys or credentials"
+    condition:
+      category: secret-detection
+      count: 0
+
+  # Allow high findings but only a small number
+  - id: bounded-high-findings
+    description: "No more than 3 unresolved high severity findings"
+    condition:
+      severity: high
+      max_count: 3
+
+  # Require MCP servers to be scanned
+  - id: mcp-must-be-scanned
+    description: "MCP platform must be detected and scanned"
+    condition:
+      platform_required: mcp
+
+  # Block specific threat categories entirely
+  - id: no-tool-poisoning
+    description: "Zero tolerance for tool poisoning findings"
+    condition:
+      category: tool-poisoning
+      count: 0
+
+  - id: no-credential-harvesting
+    description: "Zero tolerance for credential harvesting findings"
+    condition:
+      category: credential-harvesting
+      count: 0
 ```
 
 ## Subcommands
 
 ### `policy validate`
 
-Validate a policy YAML file for syntax and schema correctness.
+Validate a policy YAML file for syntax, schema correctness, and valid condition values before using it in CI.
+
+```bash title="Terminal"
+firmis policy validate <policy-file>
+```
 
 | Flag | Type | Description |
 |---|---|---|
-| `--verbose` | boolean | Show detailed validation output |
+| `--verbose` | boolean | Show detailed validation output with field-level feedback |
 
 ### `policy check`
 
-Run a scan and evaluate results against a policy.
+Run a scan and evaluate the results against a policy. Exits non-zero if any policy rule is violated.
+
+```bash title="Terminal"
+firmis policy check [path] --policy <policy-file>
+```
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--policy <file>` | string | — | Policy file to enforce |
-| `--platform <name>` | string | auto-detect | Scan specific platform |
-| `--format <type>` | enum | `json` | Output format |
-| `--output <file>` | string | — | Save results to file |
-| `--fail-on-violation` | boolean | `true` | Exit non-zero on policy violations |
+| `--policy <file>` | string | — | Policy file to enforce. Required. |
+| `--platform <name>` | string | auto-detect | Scope scan to a specific platform |
+| `--format <type>` | enum | `json` | Output format: `json` for CI, `html` for human review |
+| `--output <file>` | string | — | Save policy check results to file |
+| `--fail-on-violation` | boolean | `true` | Exit non-zero on any policy violation. Set to `false` to report-only mode. |
+
+## When to use this
+
+- **Team standards as code**: Replace security review checklists with policy files. Everyone on the team knows what's enforced because it's in the repo.
+- **Tiered environments**: Different policy files for different contexts — a strict `production-policy.yaml` for prod deployments, a lighter `dev-policy.yaml` for development branches.
+- **Compliance baselines**: Map your SOC 2 or EU AI Act requirements into a policy file so every scan proves compliance, not just finds issues.
+- **Onboarding new contributors**: New contributors can't accidentally introduce secrets or tool-poisoning patterns without the CI gate catching it on their first PR.
+
+## Examples
+
+### Validate a policy file before using it
+
+```bash title="Terminal"
+npx firmis policy validate firmis-policy.yaml
+```
+
+### Run a policy check against the current directory
+
+```bash title="Terminal"
+npx firmis policy check --policy firmis-policy.yaml
+```
+
+### Policy check with JSON output for CI
+
+```bash title="Terminal"
+npx firmis policy check --policy firmis-policy.yaml --format json --output policy-results.json
+```
+
+### Strict production gate
+
+```bash title="Terminal"
+npx firmis policy check . --policy policies/production.yaml --fail-on-violation
+```
+
+## Example check output
+
+```text
+Firmis Policy Check
+Policy: firmis-policy.yaml (Production Agent Policy)
+Scanning: /Users/me/my-agent-project
+
+  PASS    no-critical-findings       0 critical findings (max: 0)
+  FAIL    no-hardcoded-secrets       3 secret-detection findings (max: 0)
+  PASS    bounded-high-findings      2 high findings (max: 3)
+  PASS    mcp-must-be-scanned        mcp platform detected
+  PASS    no-tool-poisoning          0 tool-poisoning findings
+  PASS    no-credential-harvesting   0 credential-harvesting findings
+
+────────────────────────────────────────────────
+1 policy violation   5 checks passed
+Exit code: 1
+────────────────────────────────────────────────
+```
+
+## GitHub Actions integration
+
+```yaml title=".github/workflows/firmis-policy.yml"
+name: Firmis Policy Check
+on: [push, pull_request]
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run policy check
+        run: npx firmis policy check --policy firmis-policy.yaml --format json --output policy-results.json
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmis-policy-results
+          path: policy-results.json
+```
 
 ## Related
 
-- [scan](/cli/scan) — underlying scan that policies evaluate
-- [Custom Rules](/rules/custom-rules) — rules that policies reference
+- [scan](/cli/scan) — underlying scan that policy check runs against
+- [Custom Rules](/rules/custom-rules) — write detection rules that your policies can reference
+- [CI Pipeline](/cli/ci) — full discover → BOM → scan → report pipeline

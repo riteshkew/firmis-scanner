@@ -9,6 +9,7 @@ export default defineConfig({
       title: 'Firmis',
       description: 'AI agent security scanner — detect threats in Claude Skills, MCP Servers, Codex Plugins, and more.',
       social: [
+        { icon: 'external', label: 'firmislabs.com', href: 'https://firmislabs.com' },
         { icon: 'github', label: 'GitHub', href: 'https://github.com/riteshkew/firmis-scanner' },
       ],
       editLink: {
@@ -35,7 +36,7 @@ export default defineConfig({
               'Prompt injection detection',
               'Supply chain vulnerability analysis',
               'Agent BOM (CycloneDX 1.7)',
-              '199 YAML detection rules',
+              '209 YAML detection rules',
               'SARIF and JSON output',
               'CI/CD pipeline integration',
             ],

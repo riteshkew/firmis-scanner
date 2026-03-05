@@ -1,11 +1,11 @@
 ---
 title: "Securing MCP Servers"
-description: "A step-by-step guide to finding and fixing security issues in Model Context Protocol servers — tool poisoning, data exfiltration, and secret exposure."
+description: "Tool poisoning. Data exfiltration. Hardcoded credentials. MCP servers surface all three. This guide walks from first scan to CI enforcement in under ten minutes."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Scan your MCP server code for tool poisoning, data exfiltration, and hardcoded credentials in under two minutes. This guide walks from first scan to CI enforcement.
+MCP servers connect AI agents to tools and data. They also connect attackers to your users. Tool descriptions that hide invisible instructions, handlers that silently upload files, secrets committed to config — these are the three most common ways MCP servers get compromised. This guide fixes all three.
 
 ## Step 1 — Run your first scan
 
@@ -28,7 +28,7 @@ Expected output for a typical MCP server:
 
  Scanning: ./packages/mcp-server
  Platform: mcp (2 servers, 14 tools)
- Rules: 103 enabled
+ Rules: 209 enabled
 
  CRITICAL  tp-001  Hidden Instructions in Tool Descriptions
            src/tools/search.ts:14
@@ -186,7 +186,7 @@ if (!apiKey) {
 
 ## Step 4 — Add to CI
 
-Block merges when HIGH or CRITICAL findings are introduced. The `ci` command runs discovery, BOM generation, scan, and report in one step:
+Every PR that ships without a security scan is a gamble. The `ci` command runs discovery, BOM generation, scan, and report in one step — blocking merges when HIGH or CRITICAL findings are introduced:
 
 ```bash title=".github/workflows/security.yml"
 - name: Firmis security scan
@@ -221,7 +221,7 @@ The `--fail-on high` flag exits with code 1 when any HIGH or CRITICAL finding is
 
 ## Step 5 — Suppress false positives with .firmisignore
 
-Some findings are expected — test fixtures with real-looking keys, example code with placeholder secrets. Suppress them without disabling the rule entirely.
+Not every finding is a real threat. Some are expected — test fixtures with real-looking keys, example code with placeholder secrets. Suppress them without disabling the rule entirely.
 
 Create `.firmisignore` in your project root:
 
@@ -270,10 +270,10 @@ Add this as a post-install script for automated checks:
 
 The `--quiet` flag suppresses output when no findings are present.
 
-## Related
+## What to do next
 
-- [MCP Servers platform guide →](/platforms/mcp-servers)
-- [CI command reference →](/cli/ci)
-- [Ignoring Findings →](/rules/ignoring-findings)
-- [Agent Supply Chain Security guide →](/guides/agent-supply-chain-security)
-- [Threat Categories reference →](/reference/threat-categories)
+- [MCP Servers platform guide →](/platforms/mcp-servers) — understand how Firmis discovers MCP components
+- [Agent Supply Chain Security →](/guides/agent-supply-chain-security) — the threat that arrives through your dependencies
+- [Ignoring Findings →](/rules/ignoring-findings) — suppress false positives without disabling rules
+- [CI command reference →](/cli/ci) — full pipeline: discover, BOM, scan, report
+- [Threat Categories →](/reference/threat-categories) — all 16 categories with OWASP and MITRE mappings

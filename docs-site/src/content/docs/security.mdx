@@ -1,9 +1,9 @@
 ---
 title: "Security Policy"
-description: "How to report security vulnerabilities in Firmis Scanner."
+description: "How to report security vulnerabilities in Firmis Scanner. We dogfood Firmis on itself — every commit is scanned."
 ---
 
-> Report security vulnerabilities responsibly. We take every report seriously.
+We dogfood Firmis on itself. Every commit is scanned. Self-scan results are reviewed with every release. If we find it, we fix it before it ships.
 
 ## Supported versions
 
@@ -27,13 +27,14 @@ We aim to acknowledge reports within 48 hours and provide a fix within 7 days fo
 
 ## Security practices
 
-- All detection rules are open-source and auditable
-- Firmis runs entirely offline — no network access required
-- No telemetry collected by default
+- All 209 detection rules are open-source YAML — auditable by anyone
+- Firmis runs entirely offline by default — no network access required
+- No telemetry collected by default — nothing leaves your machine unless you opt in
 - Dependencies are regularly audited with `npm audit`
 - We dogfood Firmis on itself — self-scan results are reviewed with each release
+- Read-only scanning — Firmis never modifies any file it scans
 
-## Related
+## What to do next
 
-- [Security Model](/reference/security-model) — what Firmis detects and doesn't detect
-- [Privacy](/docs/privacy) — data collection policy
+- [Security Model →](/reference/security-model) — what Firmis detects, what it doesn't, and why
+- [Privacy →](/privacy) — full data collection policy

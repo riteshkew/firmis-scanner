@@ -1,11 +1,13 @@
 ---
 title: Detection Engine
-description: How Firmis's YARA-inspired pattern matching engine evaluates rules, scores confidence, and suppresses false positives.
+description: Traditional security scanners look for known CVEs and malware hashes. Agent threats hide in natural language, YAML configs, and tool metadata. Firmis uses a YARA-inspired pattern engine designed specifically for this.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Firmis uses a YARA-inspired (not actual YARA) rule engine. Rules are YAML files with named patterns, per-pattern weights, and a confidence threshold. A finding is only emitted when the computed confidence exceeds the rule's threshold.
+Traditional security scanners look for known CVEs and malware hashes. Agent threats are different — they hide in natural language, YAML configs, and tool metadata. A malicious tool description is valid JSON. A prompt injection is a plain text string. A credential path reference is just a string literal. None of these trigger conventional scanners.
+
+Firmis uses a YARA-inspired pattern engine designed specifically for this. 209 rules. 7 matcher types. Confidence scoring that suppresses noise without missing real threats.
 
 ## Rule structure
 
@@ -45,15 +47,17 @@ rules:
 | `patterns` | array | One or more pattern objects, each with `type`, `pattern`, and `weight` |
 | `enabled` | boolean | Set to `false` to disable a rule globally |
 
+**Why this structure matters:** Rules are not boolean — they are weighted. A rule with a threshold of 70 will not fire on a single weak signal. Multiple signals need to co-occur, or a single high-weight signal must be present. This is what keeps false positive rates low on real codebases.
+
 ---
 
 ## The 7 matcher types
 
-Each pattern in a rule specifies a `type` that determines how the pattern is evaluated against a file.
+Each pattern in a rule specifies a `type` that determines how the pattern is evaluated against a file. Different threat categories need different matching strategies — a credential path is best matched as a file path, a package name as a string literal, and a suspicious URL pattern as a network pattern.
 
 ### 1. `regex`
 
-Applies a JavaScript regular expression to the raw file content. The most common matcher type.
+Applies a JavaScript regular expression to the raw file content. The most common matcher type. Used for secrets, prompt injection phrases, and malware signatures where the exact shape of the dangerous content is known.
 
 ```yaml title="Example — regex"
 - type: regex
@@ -68,7 +72,7 @@ Applies a JavaScript regular expression to the raw file content. The most common
 
 ### 2. `yara`
 
-Applies a YARA-syntax string match (not the YARA binary). Supports hex strings, wide strings, and simple string conditions.
+Applies a YARA-syntax string match (not the YARA binary). Supports hex strings, wide strings, and simple string conditions. Used for malware signature matching where the YARA ecosystem's pattern vocabulary is well-established.
 
 ```yaml title="Example — yara"
 - type: yara
@@ -79,7 +83,7 @@ Applies a YARA-syntax string match (not the YARA binary). Supports hex strings, 
 
 ### 3. `file-access`
 
-Matches when the file content contains a reference to a specific file path — typically a sensitive credential file or system path. Path expansion (e.g., `~` → home directory) is applied before matching.
+Matches when the file content contains a reference to a specific file path — typically a sensitive credential file or system path. Path expansion (e.g., `~` → home directory) is applied before matching. This is the primary matcher type for credential harvesting and file system abuse rules.
 
 ```yaml title="Example — file-access"
 - type: file-access
@@ -90,7 +94,7 @@ Matches when the file content contains a reference to a specific file path — t
 
 ### 4. `import`
 
-Matches when a specific module or package import appears in the file. Handles Python `import`/`from` and JavaScript/TypeScript `require`/`import` statements.
+Matches when a specific module or package import appears in the file. Handles Python `import`/`from` and JavaScript/TypeScript `require`/`import` statements. Used for supply chain rules where the presence of a compromised package import is itself the finding.
 
 ```yaml title="Example — import"
 - type: import
@@ -101,7 +105,7 @@ Matches when a specific module or package import appears in the file. Handles Py
 
 ### 5. `network`
 
-Matches URL patterns or hostname patterns in the file content. Used to detect requests to suspicious TLDs, tunneling services, or known malicious domains.
+Matches URL patterns or hostname patterns in the file content. Used to detect requests to suspicious TLDs, tunneling services, or known malicious domains. The agent threat landscape involves many domains that have no legitimate use in agent code.
 
 ```yaml title="Example — network"
 - type: network
@@ -112,7 +116,7 @@ Matches URL patterns or hostname patterns in the file content. Used to detect re
 
 ### 6. `string-literal`
 
-Matches an exact string literal, including surrounding quotes. Used for known-bad package names and exact-match indicators.
+Matches an exact string literal, including surrounding quotes. Used for known-bad package names and exact-match indicators where regex overhead is unnecessary and a partial match would produce false positives.
 
 ```yaml title="Example — string-literal"
 - type: string-literal
@@ -123,7 +127,7 @@ Matches an exact string literal, including surrounding quotes. Used for known-ba
 
 ### 7. `text`
 
-Plain substring search against file content. No regex syntax. Used for simple keyword matches where regex overhead is unnecessary.
+Plain substring search against file content. No regex syntax. Used for simple keyword matches — for example, an exact config flag that disables authentication. Faster than regex for exact string matching.
 
 ```yaml title="Example — text"
 - type: text
@@ -136,7 +140,7 @@ Plain substring search against file content. No regex syntax. Used for simple ke
 
 ## Confidence scoring
 
-Each pattern match produces a weight (0–100). After all patterns in a rule are evaluated against a file, Firmis computes a single confidence score:
+This is the core of the engine. Each pattern match produces a weight (0–100). After all patterns in a rule are evaluated against a file, Firmis computes a single confidence score:
 
 ```text
 confidence = Math.max(ratioConfidence, maxSinglePatternWeight)
@@ -152,6 +156,10 @@ ratioConfidence = (matchedPatterns / totalPatterns) * averageMatchedWeight
 
 Taking the `Math.max` of the two ensures that a single very strong indicator (e.g., an exact AWS key pattern at weight 100) always produces a high confidence score even if other patterns in the same rule did not match.
 
+### Why this matters
+
+Most security scanners are binary: either a pattern matches or it doesn't. That produces high false positive rates on real codebases because individual signals are often ambiguous. The confidence model lets Firmis express: "this pattern alone is suspicious but not conclusive — but this other pattern combined with it crosses the threshold."
+
 ### Confidence threshold
 
 Each rule defines a `confidenceThreshold`. A finding is only emitted when:
@@ -162,10 +170,14 @@ confidence >= confidenceThreshold
 
 Rules with multiple low-weight patterns and a high threshold require several patterns to co-occur before a finding is emitted. This reduces false positives for ambiguous indicators.
 
-**Example:** A data exfiltration rule might have patterns for `fetch()` calls (weight 35), `process.env` access (weight 40), and known suspicious domains (weight 85). With a threshold of 70:
-- `fetch()` alone → confidence 35 → suppressed
-- `fetch()` + `process.env` → confidence ~37 → suppressed
-- suspicious domain match → confidence 85 → finding emitted
+**Example — data exfiltration rule with threshold 70:**
+
+| Signals present | Confidence | Result |
+|---|---|---|
+| `fetch()` call alone (weight 35) | 35 | Suppressed — normal code uses fetch |
+| `fetch()` + `process.env` access (weight 40) | ~37 | Suppressed — still plausibly legitimate |
+| Suspicious domain match (weight 85) | 85 | Finding emitted — this is the strong signal |
+| `fetch()` + `process.env` + suspicious domain | 85 | Finding emitted |
 
 ---
 
@@ -179,7 +191,9 @@ adjustedConfidence = confidence * 0.15
 
 This reduces noise from rule matches in documentation files, README files, and changelog entries that mention threat patterns in a non-executable context. A pattern that would produce confidence 80 in a `.ts` file produces confidence 12 in a `.md` file — well below most thresholds.
 
-**Exception:** The `secret-detection` category is exempt from this multiplier. A hardcoded secret in `.env.example` or a `README.md` is still a real finding because it may be committed to source control and discovered by attackers.
+**Why this matters:** Documentation often explains attack techniques. A README that documents how prompt injection works should not fire a prompt injection rule. The 0.15x multiplier handles this without requiring every documentation reference to be suppressed manually.
+
+**Exception:** The `secret-detection` category is exempt from this multiplier. A hardcoded secret in `.env.example` or a `README.md` is still a real finding because it may be committed to source control and discovered by attackers — even if it was intended as an example.
 
 ---
 
@@ -187,7 +201,7 @@ This reduces noise from rule matches in documentation files, README files, and c
 
 When running a path-based scan (`npx firmis scan .`), the same file can be indexed by multiple platforms. For example, a shared `src/tools/` directory may be picked up by both the `claude` and `mcp` analyzers.
 
-Firmis deduplicates findings with the same `(ruleId, file, line)` triple. The first occurrence is kept; subsequent duplicates are dropped. This ensures that running against a multi-platform project does not inflate finding counts.
+Firmis deduplicates findings with the same `(ruleId, file, line)` triple. The first occurrence is kept; subsequent duplicates are dropped. Without this, a project with 5 detected platforms could report each finding 5 times — inflating counts and making real threats harder to spot.
 
 ---
 
@@ -208,9 +222,9 @@ rule:sec-045
 
 ---
 
-## Related
+## What to read next
 
-- [How It Works](/concepts/how-it-works) — the three-stage pipeline
-- [Threat Model](/concepts/threat-model) — all 16 threat categories
-- [Built-in Rules](/rules/built-in-rules) — full rule listing with IDs and descriptions
-- [Ignoring Findings](/rules/ignoring-findings) — suppressing false positives
+- [How It Works](/concepts/how-it-works) — the three-stage pipeline and what happens at each step
+- [Threat Model](/concepts/threat-model) — all 16 threat categories with real attack examples
+- [Built-in Rules](/rules/built-in-rules) — full rule listing with IDs, weights, and descriptions
+- [Ignoring Findings](/rules/ignoring-findings) — how to suppress false positives without weakening your scan coverage

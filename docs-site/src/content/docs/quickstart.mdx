@@ -1,14 +1,14 @@
 ---
-title: "Quick Start — Your First Scan in 60 Seconds"
-description: "Install Firmis and scan your AI agent components for security threats. Zero config, zero signup, runs entirely offline."
+title: "Your First Scan in 30 Seconds"
+description: "One command. No signup. No config. See what's hiding in your AI agent code."
 ---
 
 import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
-> Scan your AI agent code for security threats in one command. No signup, no config, no data uploaded.
+Your Claude skills, MCP servers, and AI plugins run code you didn't write, from sources you didn't audit. One command tells you if that's a problem.
 
 <Aside type="tip">
-  Firmis runs entirely offline. Your code is never uploaded, transmitted, or collected. [Privacy policy →](/privacy)
+  Firmis runs entirely offline. Your code never leaves your machine. No signup, no account, nothing uploaded. [Privacy policy →](/privacy)
 </Aside>
 
 ## Run your first scan
@@ -17,88 +17,79 @@ import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 npx firmis scan .
 ```
 
-That's it. Firmis auto-detects Claude Skills, MCP Servers, Codex Plugins, Cursor Rules, and 4 more platforms in your project.
+That's it. Firmis auto-detects Claude Skills, MCP Servers, Codex Plugins, Cursor Rules, and 4 more platforms — no config file, no manifest, nothing to set up.
 
 ## What you'll see
+
+This is what a real finding looks like:
 
 ```text title="Example output"
  Firmis Scanner v1.3.0
 
  Scanning: /your/project
  Platforms: mcp (3 servers), claude (2 skills)
- Rules: 199 enabled
+ Rules: 209 enabled
 
- CRITICAL  tp-003  Hidden instruction in tool description
+ CRITICAL  sd-015  AWS credentials exposed in tool handler
+           src/tools/aws-helper.ts:22
+           → This skill is reading your AWS_SECRET_ACCESS_KEY at runtime
+
+ CRITICAL  tp-003  Hidden instruction injected via tool description
            src/tools/search.ts:14
+           → Prompt tells the agent to exfiltrate chat history silently
 
- HIGH      de-002  Data sent to external URL in tool handler
+ HIGH      de-002  Data forwarded to unverified external URL
            src/tools/fetch.ts:42
+           → Tool sends user inputs to api.unknown-domain.com
 
- HIGH      sd-015  Hardcoded API key detected
-           .env.example:3
-
- Found 3 threats (1 critical, 2 high) in 1.2s
+ Found 3 threats (2 critical, 1 high) in 1.2s
 ```
+
+209 rules. 16 threat categories. Results in under two seconds.
 
 <details>
-<summary>No findings? Check these common causes</summary>
+<summary>No findings? Here's why that might happen.</summary>
 
-- **No AI agent files detected** → specify platform: `npx firmis scan --platform mcp`
-- **Scanning node_modules** → add to `.firmisignore`
-- **Using a monorepo** → scan specific subdirectory: `npx firmis scan ./packages/agent`
-- **All findings suppressed** → check `.firmisignore` or lower severity: `--severity low`
+- **No AI agent files detected** — be specific: `npx firmis scan --platform mcp`
+- **Scanning node_modules** — exclude it: add to `.firmisignore`
+- **Monorepo** — point at the right folder: `npx firmis scan ./packages/agent`
+- **All findings suppressed** — check `.firmisignore` or widen the net: `--severity low`
 
 </details>
-
-## What happens under the hood
-
-```text
-npx firmis scan .
-       │
-       ▼
-┌─────────────┐    ┌──────────────┐    ┌─────────────┐
-│  Discovery   │───▶│  Rule Engine  │───▶│   Reporter   │
-│              │    │              │    │              │
-│ Auto-detect  │    │ 199 YAML     │    │ Terminal     │
-│ 8 platforms  │    │ rules across │    │ JSON / SARIF │
-│ components   │    │ 16 threat    │    │ HTML report  │
-│ dependencies │    │ categories   │    │              │
-└─────────────┘    └──────────────┘    └─────────────┘
-```
 
 ## Next steps
 
 <CardGrid>
-  <Card title="Scan a specific platform" icon="magnifier">
-    Focus on one platform at a time.
+  <Card title="Check your MCP servers" icon="magnifier">
+    MCP servers run with broad filesystem access. Start here.
 
     ```bash
     npx firmis scan --platform mcp
     ```
 
-    [CLI Reference →](/cli/scan)
+    [MCP platform guide →](/reference/platforms/mcp)
   </Card>
-  <Card title="Add to your CI pipeline" icon="rocket">
-    One command for discover → BOM → scan → report.
+  <Card title="Gate it in CI" icon="rocket">
+    One command. Discover, scan, report, and fail the build on critical findings.
 
     ```bash
     npx firmis ci --fail-on high
     ```
 
-    [CI Integration →](/cli/ci)
+    [CI integration →](/cli/ci)
   </Card>
-  <Card title="Understand the findings" icon="information">
-    16 threat categories mapped to MITRE and OWASP.
+  <Card title="Understand what was found" icon="information">
+    Every finding maps to MITRE ATLAS and OWASP LLM Top 10. Know exactly what you're looking at.
 
-    [Threat Categories →](/reference/threat-categories)
+    [Threat categories →](/reference/threat-categories)
   </Card>
-  <Card title="Generate JSON output" icon="document">
-    Machine-readable output for automation.
+  <Card title="Export for your security team" icon="document">
+    SARIF output drops straight into GitHub Advanced Security, Semgrep, and most SIEMs.
 
     ```bash
-    npx firmis scan --json
+    npx firmis scan --format sarif
     ```
 
-    [Output Formats →](/reference/sarif-output)
+    [Output formats →](/reference/sarif-output)
   </Card>
 </CardGrid>

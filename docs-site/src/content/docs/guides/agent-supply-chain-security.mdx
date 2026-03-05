@@ -1,11 +1,11 @@
 ---
 title: "Agent Supply Chain Security"
-description: "How supply chain attacks target AI agents, what threat vectors exist, and how Firmis detects compromised dependencies, typosquatted packages, and malicious MCP servers."
+description: "AI agent supply chain attacks don't need to run code. A prompt injection hidden in a tool description, arriving through a dependency update, is enough. Here's how to stop them."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> AI agent supply chain attacks are fundamentally different from traditional npm supply chain attacks. The payload is not always code execution — it can be a prompt injection hidden in a tool description that arrives through a dependency update.
+Traditional npm supply chain attacks run code. AI agent supply chain attacks can do the same — but they can also work without running a single line. A compromised dependency that writes a malicious instruction to `CLAUDE.md` has persistent access to every future session. That's the new attack surface. This guide explains it and shows how Firmis detects it.
 
 ## How AI agent supply chain attacks differ
 
@@ -146,15 +146,15 @@ npx firmis scan ./downloaded-mcp-server/ --platform mcp --severity high
 
 ### Use BOM for dependency visibility
 
-Generate a Software Bill of Materials (BOM) to get a complete inventory of what your agent depends on:
+Generate a Software Bill of Materials (BOM) — a complete inventory of every component, skill, and dependency your agent depends on — before you can monitor what changes:
 
 ```bash title="Terminal"
 npx firmis bom --format cyclonedx --output agent-bom.json
 ```
 
-The BOM lists every agent component, skill, and dependency with version information — the prerequisite for supply chain monitoring.
-
 ### Run supply chain scans in CI
+
+Trigger on changes to the files that matter most:
 
 ```yaml title=".github/workflows/security.yml"
 name: Supply Chain Scan
@@ -205,7 +205,7 @@ Run a focused scan for supply chain and known-malicious categories:
 npx firmis scan . --severity high
 ```
 
-Look for rule IDs in the `supply-`, `km-` (known malicious), and `mal-` (malware signatures) prefixes:
+Look for rule IDs in the `supply-`, `km-` (known malicious), and `malware-` prefixes:
 
 ```text title="Example output"
  CRITICAL  km-003  Known Malicious Package
@@ -223,10 +223,10 @@ Look for rule IDs in the `supply-`, `km-` (known malicious), and `mal-` (malware
 
 Each of these is actionable: remove the package, verify it is a typosquat or intended, or audit the postinstall script before continuing.
 
-## Related
+## What to do next
 
-- [Agent BOM concept →](/concepts/agent-bom)
-- [Threat Categories — Supply Chain →](/reference/threat-categories)
-- [Threat Categories — Known Malicious →](/reference/threat-categories)
-- [CI command reference →](/cli/ci)
-- [Securing MCP Servers guide →](/guides/securing-mcp-servers)
+- [Agent BOM concept →](/concepts/agent-bom) — why inventorying your agent stack matters before you can secure it
+- [Threat Categories — Supply Chain →](/reference/threat-categories) — 8 supply chain rules explained
+- [Threat Categories — Known Malicious →](/reference/threat-categories) — 10 known-malicious rules with package examples
+- [Securing MCP Servers →](/guides/securing-mcp-servers) — the tool-level companion to this guide
+- [CI command reference →](/cli/ci) — full pipeline: discover, BOM, scan, report

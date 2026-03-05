@@ -1,11 +1,17 @@
 ---
 title: "Nanobot Plugins — Security Guide"
-description: "Detect tool poisoning, insecure configuration, and file system abuse in Nanobot plugin configurations. 199 detection rules."
+description: "Detect tool poisoning, insecure configuration, and file system abuse in Nanobot plugin configurations. 209 detection rules."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Firmis scans your Nanobot plugin manifests, `nanobot.yaml` configs, and plugin handler code for tool poisoning attacks, insecure TLS configuration, and file system abuse patterns.
+Nanobot plugins connect to external APIs. If they disable TLS verification, your data travels in plaintext.
+
+Nanobot's plugin model is built around connectivity: plugins are the bridge between the AI agent and external services, APIs, and data sources. That connectivity is what makes them useful and what makes them dangerous. A plugin that disables TLS certificate verification — one line of code, often added to "fix a dev environment issue" that never gets reverted — means every connection the plugin makes can be intercepted. API keys sent in request headers. User data in response bodies. Tool outputs that flow back to the agent. All of it is readable by anyone on the network path.
+
+The filesystem access side of Nanobot's plugin model adds a second attack surface. Plugins can request write access to arbitrary paths. A plugin that writes to `/etc/`, `~/.ssh/`, or system init directories has achieved host persistence — the ability to survive reboots, re-installs, and even explicit removal of the plugin itself. This is not a theoretical risk: Firmis detects this pattern in production plugin code.
+
+Firmis scans Nanobot plugin manifests, handler code, and configuration files across 209 detection rules covering TLS misconfiguration, filesystem abuse, credential exposure, tool poisoning, and supply chain attacks in plugin dependencies.
 
 <Aside type="caution">
   Nanobot plugin support is **Experimental**. Detection rules are functional but coverage is still expanding. Validate findings in context before acting on them.
@@ -51,9 +57,13 @@ CRITICAL  ic-002  SSL/TLS Verification Disabled
           Pattern: rejectUnauthorized: false
 ```
 
-**What it means.** The plugin's HTTP client has TLS certificate verification disabled. Any HTTPS connection this plugin makes — to external APIs, to the Nanobot backend, or to other services — can be intercepted by a man-in-the-middle attacker who can decrypt the traffic, inject responses, and steal any data transmitted (including API keys, user data, and tool outputs). This is a critical vulnerability for any plugin operating in a networked environment.
+**What it means.** The plugin's HTTP client has TLS certificate verification disabled. This single setting turns every HTTPS connection the plugin makes into an unencrypted channel from a security standpoint: a man-in-the-middle attacker who can intercept the traffic — on a shared network, a compromised router, or a malicious DNS resolver — can read every byte in both directions.
 
-**How to fix.** Remove `rejectUnauthorized: false`. If the plugin connects to a server with a self-signed certificate, provide the CA certificate explicitly via the `ca` option rather than disabling verification entirely. In Node.js: `tls.connect({ ca: fs.readFileSync('ca.pem') })`. Never disable certificate verification in production code.
+That includes API keys in request headers. User data in request bodies. Tool outputs and agent responses flowing back through the connection. And because this is a plugin connecting the agent to external services, the scope of what travels through this channel is everything the plugin does.
+
+This configuration is almost always introduced as a quick fix for a self-signed certificate issue in a development environment. The fix works, the developer moves on, and the setting ships to production.
+
+**How to fix.** Remove `rejectUnauthorized: false` immediately. If the plugin connects to a server using a self-signed certificate, provide the CA certificate explicitly via the `ca` option — `tls.connect({ ca: fs.readFileSync('ca.pem') })` — rather than disabling verification entirely. If the certificate is from a legitimate CA and verification is failing, diagnose the actual cause (expired cert, hostname mismatch, missing intermediate) and fix it properly. Never disable certificate verification in any code that could reach production.
 
 ---
 
@@ -65,9 +75,9 @@ HIGH  ic-003  Default or Hardcoded Credentials in Config Files
       Pattern: api_key: "nbt-..."
 ```
 
-**What it means.** An API key or credential is hardcoded directly in the plugin's YAML configuration. YAML config files are frequently committed to version control and shared between team members. Once in git history, the credential cannot be fully removed without rewriting history. Nanobot plugins often have access to sensitive data and system resources, making exposed credentials high-value targets.
+**What it means.** An API key is hardcoded in the plugin's YAML configuration. YAML config files are routinely committed to version control and shared between team members. Once a credential appears in git history, it cannot be fully removed without rewriting the entire history — and even a rewritten history may have been cloned by other contributors before the rewrite. Nanobot plugins often connect to data-sensitive external services, making exposed credentials high-value targets with a long exploitation window.
 
-**How to fix.** Replace the hardcoded value with an environment variable reference. Load secrets at runtime from environment variables (`process.env.NANOBOT_API_KEY`) or a secrets manager. Rotate the exposed credential immediately. Add a secret scanning step to your CI pipeline to prevent future leaks.
+**How to fix.** Remove the hardcoded value and rotate the credential immediately. Reference secrets at runtime via environment variables (`process.env.NANOBOT_API_KEY`) or a secrets manager. Use `.env` files for local development and exclude them from version control. Add secret scanning to your CI pipeline so this cannot recur silently.
 
 ---
 
@@ -79,9 +89,11 @@ CRITICAL  po-005  Agent Filesystem Write to Sensitive Directories
           Pattern: writeFileSync('/etc/...')
 ```
 
-**What it means.** The plugin writes to a sensitive system directory such as `/etc/`, `/root/`, or `~/.ssh/`. Nanobot plugins can request filesystem access, but writing to system directories allows a malicious or compromised plugin to modify system configuration, inject authorized SSH keys, or overwrite critical files — effectively achieving root-level persistence on the host.
+**What it means.** The plugin writes to a sensitive system directory — `/etc/`, `/root/`, or `~/.ssh/`. Writing to these locations is a host persistence technique. A plugin that appends to `/etc/cron.d/` survives reboots. A plugin that writes to `~/.ssh/authorized_keys` maintains remote access after it is uninstalled. A plugin that modifies `/etc/hosts` can redirect DNS queries for any domain on the system.
 
-**How to fix.** Plugins must not write to system directories. Confine all filesystem write operations to the application's own data directory (e.g., `~/.nanobot/data/` or a user-specified path). Implement an explicit path allowlist and validate all write paths against it before performing any write. Reject any plugin requesting write access to system-level paths.
+These are not write operations that any legitimate Nanobot plugin needs. The presence of this pattern is a strong signal of either a compromised plugin or a plugin written without any security consideration — both of which warrant the same response: do not run it.
+
+**How to fix.** Plugins must not write to system directories under any circumstances. Confine all filesystem write operations to the plugin's own data directory — `~/.nanobot/data/` or a user-specified application path. Implement a path allowlist and validate every write path against it before performing any write operation. Reject any plugin requesting filesystem access to paths outside the application's own directory tree.
 
 ## Related
 

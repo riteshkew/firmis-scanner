@@ -1,11 +1,11 @@
 ---
 title: CycloneDX BOM Reference
-description: CycloneDX 1.7 Agent BOM output format — field mappings, JSON structure, generation commands, Dependency-Track integration, and a complete example.
+description: Know what you're running before you secure it. Firmis generates Agent Bills of Materials in CycloneDX 1.7 — the supply chain compliance standard. Field reference, complete example, and downstream tool integration.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Firmis generates Agent Bills of Materials in CycloneDX 1.7 format — the same standard used for software supply chain compliance. This page is the output format field reference. For the concept and motivation, see [Agent BOM](/concepts/agent-bom).
+You can't secure what you haven't inventoried. Firmis generates Agent Bills of Materials in CycloneDX 1.7 format — the same standard used for software supply chain compliance under SOC 2, the EU AI Act, and Executive Order 14028. This page is the output format field reference. For the concept and motivation, see [Agent BOM](/concepts/agent-bom).
 
 ## What is CycloneDX?
 
@@ -267,14 +267,14 @@ gh api --method POST /repos/:owner/:repo/dependency-graph/snapshots \
 ```
 
 <Aside type="tip">
-  Archiving BOMs as CI artifacts gives you a dated record of your agent's composition at every deployment. This directly supports SOC 2 Type II audit evidence and AI Act Article 13 transparency requirements.
+  Archiving BOMs as CI artifacts gives you a dated record of your agent's composition at every deployment. This directly supports SOC 2 Type II audit evidence and EU AI Act Article 13 transparency requirements.
 </Aside>
 
 ---
 
-## Related
+## What to do next
 
-- [Agent BOM concept](/concepts/agent-bom) — what Agent BOMs are and why they matter
-- [firmis bom](/cli/bom) — CLI reference for BOM generation
-- [firmis ci](/cli/ci) — full discover → BOM → scan → report pipeline
-- [SARIF Output](/reference/sarif-output) — scan findings output format
+- [Agent BOM concept →](/concepts/agent-bom) — what Agent BOMs are and why they matter for supply chain security
+- [firmis bom →](/cli/bom) — CLI reference for BOM generation
+- [firmis ci →](/cli/ci) — full discover → BOM → scan → report pipeline
+- [SARIF Output →](/reference/sarif-output) — the scan findings output format

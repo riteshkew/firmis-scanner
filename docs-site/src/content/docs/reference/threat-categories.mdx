@@ -1,13 +1,15 @@
 ---
 title: Threat Categories Reference
-description: All 16 threat categories detected by Firmis — rule counts, severity ranges, OWASP LLM Top 10 mappings, MITRE ATT&CK mappings, and per-category detection details.
+description: 209 rules. 16 categories. All open-source YAML mapped to OWASP LLM Top 10 and MITRE ATT&CK. The authoritative reference for everything Firmis detects.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> The authoritative reference for Firmis's 16 threat categories. Use this page to understand what each category detects, how findings are identified, and how they map to OWASP LLM Top 10 and MITRE ATT&CK for ML.
+209 rules. 16 categories. Every rule is open-source YAML you can read, extend, or override. This page is the authoritative reference for what each category detects, how findings are identified, and how they map to OWASP LLM Top 10 and MITRE ATT&CK for ML.
 
 ## Master table
+
+Sorted by severity range — the most dangerous categories first.
 
 | # | Category | ID Prefix | Rules | Severity Range | OWASP LLM | MITRE ATT&CK |
 |---|---|---|---|---|---|---|
@@ -159,7 +161,7 @@ CRITICAL  pi-001  Prompt injection in agent-consumed document
 **Severity range:** Critical–Medium
 **Rules:** 60
 
-Secret detection is the largest category by rule count. It covers hardcoded credentials across 30+ cloud providers, SaaS APIs, infrastructure services, and generic token formats. This category is exempt from the 0.15x document multiplier — secrets in `.env.example` and `README.md` files are still reported.
+Secret detection is the largest category by rule count — 60 rules covering hardcoded credentials across 30+ cloud providers, SaaS APIs, infrastructure services, and generic token formats. This category is exempt from the 0.15x document multiplier, so secrets in `.env.example` and `README.md` files are still reported.
 
 **What it detects:**
 - Cloud provider API keys and access tokens (AWS, Azure, GCP, Anthropic, OpenAI, HuggingFace)
@@ -175,7 +177,7 @@ CRITICAL  sd-045  OpenAI API key detected
 ```
 
 <Aside type="note">
-  Secret detection rules are exempt from the document multiplier. A hardcoded secret in `.env.example` or a README code sample is still flagged because it may be committed to source control and discovered by attackers scanning public repositories.
+  Secret detection rules are exempt from the document multiplier. A hardcoded secret in `.env.example` or a README code sample is still flagged because it may be committed to a public repository and discovered by attackers scanning public repos.
 </Aside>
 
 **Related rules:** `sd-001` through `sd-060`
@@ -461,10 +463,10 @@ HIGH  ac-001  Unauthenticated tool handler
   Use `npx firmis scan --severity high` to filter to the most critical findings first. Map findings back to OWASP LLM Top 10 categories to prioritize remediation by compliance requirement.
 </Aside>
 
-## Related
+## What to do next
 
-- [Threat Model](/concepts/threat-model) — narrative descriptions of each category
-- [Detection Engine](/concepts/detection-engine) — how rules are scored and thresholds applied
-- [Built-in Rules](/rules/built-in-rules) — full listing of all 209 rules with IDs and descriptions
-- [Security Model](/reference/security-model) — what Firmis detects and what it does not
-- [firmis scan](/cli/scan) — CLI reference
+- [Security Model →](/reference/security-model) — what Firmis detects, what it doesn't, and why
+- [Built-in Rules →](/rules/built-in-rules) — full listing of all 209 rules with IDs and descriptions
+- [Custom Rules →](/rules/custom-rules) — write your own detection rules in the same YAML schema
+- [Detection Engine →](/concepts/detection-engine) — how rules are scored and thresholds applied
+- [firmis scan →](/cli/scan) — CLI reference

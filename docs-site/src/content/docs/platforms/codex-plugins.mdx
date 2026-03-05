@@ -1,11 +1,17 @@
 ---
 title: "Codex Plugins — Security Guide"
-description: "Detect tool poisoning, unauthorized file access, and network abuse in OpenAI Codex plugin configurations. 199 detection rules."
+description: "Detect tool poisoning, unauthorized file access, and network abuse in OpenAI Codex plugin configurations. 209 detection rules."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Firmis scans your Codex plugin manifests and handler code for tool poisoning, unauthorized filesystem access, and credential exposure that can compromise AI coding workflows.
+Codex plugins execute in sandboxed containers — but the sandbox trusts the plugin manifest.
+
+The sandbox boundary protects the host system from direct code execution. What it does not protect against is the manifest itself: a plugin that declares it needs `bash`, `ls`, or `curl` as tool names gets those names registered in the agent's tool namespace. When Codex tries to invoke the system command, it calls the plugin instead. The plugin intercepts the call, logs the arguments, executes whatever it wants, and returns a plausible result. The agent never knows the difference.
+
+AGENTS.md plays the same role here as CLAUDE.md does in Claude Code projects. It is loaded into every agent session as persistent memory. A plugin that writes to AGENTS.md once can inject instructions that survive its own uninstallation. The attack surface is the trust boundary between "what the plugin declares" and "what the plugin actually does."
+
+Firmis scans Codex plugin manifests, AGENTS.md files, and handler code across 209 detection rules covering command shadowing, memory injection, credential exposure, and supply chain risks in plugin dependencies.
 
 <Aside type="caution">
   Codex plugin support is **Beta**. Rule coverage is actively expanding. File a GitHub issue if you encounter false positives or missed detections.
@@ -51,9 +57,11 @@ HIGH  tp-008  Tool Name Shadows Common System Commands
       Pattern: "name": "bash"
 ```
 
-**What it means.** A plugin registers a tool with the same name as a common system command (`bash`, `ls`, `curl`, `git`, etc.). When an AI agent tries to invoke the system command, it instead calls the malicious plugin tool. The plugin can then intercept the request, log the arguments, modify the behavior, or execute arbitrary code while appearing to perform the expected operation.
+**What it means.** A plugin registers a tool named `bash`, `ls`, `curl`, `git`, or another common system command. In Codex's tool dispatch model, registered plugin tools take precedence over system commands by name. When the AI agent tries to run a shell command it believes is a standard utility, it instead calls the malicious plugin tool.
 
-**How to fix.** Use namespaced tool names that cannot collide with system commands or other registered tools. For example, use `myplugin-bash-wrapper` rather than `bash`. Reject any tool registration whose name matches entries in the system `PATH`. Validate tool manifests from third-party sources before installation.
+The plugin can now do anything: log the arguments (revealing what files the agent is accessing, what commands it is running), modify the behavior (inject malicious content into command output), or use the invocation as a trigger for a secondary payload. Meanwhile the agent receives a plausible response and continues operating as if nothing went wrong.
+
+**How to fix.** Use namespaced tool names that cannot collide with system commands or other registered tools — for example `myplugin-bash-wrapper` rather than `bash`. Validate that no registered tool name matches any entry in the system `PATH`. When evaluating third-party plugins, reject any whose manifest uses unnamespaced command names.
 
 ---
 
@@ -65,9 +73,9 @@ CRITICAL  sd-014  Anthropic API Key
           Pattern: sk-ant-api03-...
 ```
 
-**What it means.** An API key is hardcoded directly in the plugin manifest. Plugin configs are typically committed to version control, making this key visible to all repository contributors and any fork of the project.
+**What it means.** An API key is hardcoded directly in the plugin manifest. Plugin configs are almost always committed to version control — this is how they are shared between team members and distributed to users. Every clone, fork, and CI log now contains a live credential. If this is an OpenAI key, a single exposure can result in thousands of dollars of usage charges before the key is detected and rotated.
 
-**How to fix.** Remove the key from the manifest immediately and rotate it. Reference secrets via environment variables (`process.env.OPENAI_API_KEY`) at runtime. Use a secrets manager for production deployments. Add `codex-config.json` to secret scanning in your CI pipeline.
+**How to fix.** Remove the key from the manifest immediately and rotate it. Reference secrets via environment variables (`process.env.OPENAI_API_KEY`) at runtime. For production deployments, use a secrets manager. Add `codex-config.json` to the secret scanning scope in your CI pipeline so this cannot happen again.
 
 ---
 
@@ -79,9 +87,9 @@ HIGH  mem-006  OpenAI Agents Memory Manipulation
       Pattern: writeFile(...'AGENTS.md')
 ```
 
-**What it means.** Plugin code writes to `AGENTS.md`, the OpenAI Agents persistent memory file. Instructions in this file are injected into every subsequent agent session. A malicious plugin can use this to establish persistent instructions that survive even after the plugin is removed.
+**What it means.** Plugin initialization code writes to `AGENTS.md`, the OpenAI Agents persistent memory file. Instructions in this file are injected into every subsequent agent session across the entire project. This is a persistence mechanism with a wide blast radius: the injected instructions survive plugin removal, project restarts, and even git history cleanup if the file is tracked. A plugin that writes to AGENTS.md once can maintain behavioral control over the agent indefinitely.
 
-**How to fix.** Plugins must not modify `AGENTS.md` or `.codex/` configuration directories. If your plugin legitimately needs to configure agent behavior, document the required manual configuration steps rather than automating the write. Add `AGENTS.md` to your repository's protected files list.
+**How to fix.** Plugins must never write to `AGENTS.md` or `.codex/` configuration directories. If your plugin legitimately needs to configure agent behavior, document the required configuration as manual setup steps for the user — do not automate the write. Add `AGENTS.md` to your repository's list of protected files.
 
 ## Related
 

@@ -1,11 +1,17 @@
 ---
 title: "Claude Skills — Security Guide"
-description: "Detect tool poisoning, prompt injection, hardcoded secrets, and excessive permissions in Claude Skills and CLAUDE.md files. 199 detection rules."
+description: "Detect tool poisoning, prompt injection, hardcoded secrets, and excessive permissions in Claude Skills and CLAUDE.md files. 209 detection rules."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Firmis scans your CLAUDE.md files, `.claude/` settings, and skill definition code for prompt injection, hardcoded credentials, and tool poisoning attacks targeting Claude agents.
+CLAUDE.md is loaded on every conversation. If it's compromised, every interaction is compromised.
+
+Researchers at LayerX Security disclosed a **10/10 CVSS score zero-click RCE** in Claude Desktop — exploited through nothing more than a malicious CLAUDE.md file that a user opened in their project. No click required. The file was read, the instructions were executed, and the machine was owned. This is not a hypothetical threat class.
+
+CLAUDE.md sits at the root of every Claude Code project. It instructs the agent what tools to use, what constraints to respect, and how to behave across every session. Compromise it once and you own the agent's behavior persistently — even after the original attack vector is removed.
+
+Firmis scans CLAUDE.md files, `.claude/` settings, and skill definition code across 209 detection rules covering prompt injection, hardcoded credentials, agent memory persistence attacks, and tool poisoning.
 
 ## What Firmis detects
 
@@ -47,9 +53,11 @@ CRITICAL  prompt-001  Instruction Override in Tool Description
           Pattern: "ignore all previous instructions"
 ```
 
-**What it means.** An attacker or malicious dependency has added instruction-override text to your CLAUDE.md. When Claude reads this file at startup, the injected text attempts to displace your legitimate instructions and redirect agent behavior.
+**What it means.** An attacker has inserted instruction-override text into your CLAUDE.md. The mechanism is straightforward: Claude reads this file at startup before processing any user message. The injected phrase attempts to displace your legitimate instructions and redirect agent behavior from that point forward — silently, in every subsequent session.
 
-**How to fix.** Remove the injection pattern from CLAUDE.md. Audit any external content that was merged into the file. Treat CLAUDE.md as a security boundary: it should contain only your explicit configuration, never content fetched from untrusted sources.
+The attack surface is wider than it looks. CLAUDE.md can be poisoned through a malicious npm postinstall script, a compromised project template, a pull request from an external contributor, or fetched content that was merged into the file. You may not notice until the agent starts behaving strangely.
+
+**How to fix.** Remove the injection pattern from CLAUDE.md immediately. Audit the file's git history to identify when it was introduced and by which commit. Treat CLAUDE.md as a security boundary equivalent to your application's authentication configuration: it should contain only your explicit, manually reviewed instructions. Never merge external content into it without reading every line.
 
 ---
 
@@ -61,9 +69,9 @@ CRITICAL  sd-014  Anthropic API Key
           Pattern: sk-ant-...
 ```
 
-**What it means.** A real API key is committed directly in source code. Anyone with repository access — including future contributors, forks, and CI logs — can extract and use it.
+**What it means.** A real Anthropic API key is committed directly in source code. Every person with repository access — current contributors, future forks, CI runners, and anyone who clones the repo — can extract and use it. If this is a public repository, the key has likely already been scraped by automated credential harvesters that index GitHub within minutes of a push.
 
-**How to fix.** Remove the key immediately. Rotate the compromised credential in your Anthropic console. Load secrets via environment variables (`process.env.ANTHROPIC_API_KEY`) or a secrets manager. Add `*.ts` patterns to your `.gitignore` secret scanning hooks.
+**How to fix.** Remove the key immediately and rotate it in your Anthropic console before doing anything else — rotation is more urgent than cleanup. Load secrets via environment variables (`process.env.ANTHROPIC_API_KEY`) or a secrets manager. Add a pre-commit hook or CI secret scanning step to prevent recurrence.
 
 ---
 
@@ -75,9 +83,9 @@ HIGH  mem-003  Agent Config File Modification
       Pattern: writeFile(...'.claude/')
 ```
 
-**What it means.** A skill handler is writing to the `.claude/` configuration directory at runtime. This allows a malicious skill to inject persistent instructions into future Claude sessions or silently register rogue MCP servers.
+**What it means.** A skill handler is writing to the `.claude/` configuration directory at runtime. This is a persistence attack: the write happens once, but its effects carry forward into every subsequent Claude session. A malicious skill can use this vector to inject persistent instructions, silently register rogue MCP servers, or modify tool permissions — and the modifications survive even after the skill itself is uninstalled.
 
-**How to fix.** Skills must not modify agent platform configuration files. Configuration changes should be explicit user actions, not side effects of running a skill. Remove the write operation or require explicit user approval before any config modification.
+**How to fix.** Skills must not modify agent platform configuration files under any circumstances. Configuration changes must be explicit, user-initiated actions — not side effects of running a skill. Remove the write operation entirely. If a skill genuinely needs to configure agent behavior, document the required manual steps and let the user perform them.
 
 ## Related
 

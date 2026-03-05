@@ -1,11 +1,11 @@
 ---
 title: "Scanning Claude Skills"
-description: "A step-by-step guide to scanning Claude Skills and CLAUDE.md files for prompt injection, hardcoded secrets, and excessive permissions."
+description: "CLAUDE.md and .claude/ are read by the Claude agent on every startup — making them high-value targets for prompt injection and persistent compromise. This guide walks from first scan to CI enforcement."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Claude Skills live in CLAUDE.md and the `.claude/` directory. Both are read by the Claude agent on every startup — making them high-value targets for prompt injection and persistent compromise. This guide walks from first scan to CI enforcement.
+The files that configure Claude's behavior are also the files attackers want to reach. A single injected line in `CLAUDE.md` can redirect an agent's actions for every user, every session, silently. This guide shows you how to scan those files, fix what you find, and lock them down in CI.
 
 ## What Claude Skills are
 
@@ -39,7 +39,7 @@ Example output:
 
  Scanning: ./my-project
  Platform: claude (1 skill, CLAUDE.md, .claude/)
- Rules: 103 enabled
+ Rules: 209 enabled
 
  CRITICAL  prompt-001  Instruction Override in Tool Description
            CLAUDE.md:23
@@ -227,10 +227,10 @@ npx firmis scan .claude/ --fail-on critical
   If your team contributes to CLAUDE.md collaboratively, treat PRs that modify CLAUDE.md with the same scrutiny as PRs that modify security-critical code. The file shapes how the agent behaves for every user.
 </Aside>
 
-## Related
+## What to do next
 
-- [Claude Skills platform guide →](/platforms/claude-skills)
-- [CI command reference →](/cli/ci)
-- [Ignoring Findings →](/rules/ignoring-findings)
-- [Securing MCP Servers guide →](/guides/securing-mcp-servers)
-- [Prompt Injection threat category →](/reference/threat-categories)
+- [Claude Skills platform guide →](/platforms/claude-skills) — how Firmis discovers and analyzes Claude components
+- [Securing MCP Servers →](/guides/securing-mcp-servers) — the other high-value target in your agent stack
+- [Ignoring Findings →](/rules/ignoring-findings) — suppress false positives without disabling rules
+- [CI command reference →](/cli/ci) — full pipeline: discover, BOM, scan, report
+- [Prompt Injection threat category →](/reference/threat-categories) — all 13 prompt injection rules explained

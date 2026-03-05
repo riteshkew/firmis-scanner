@@ -1,11 +1,13 @@
 ---
 title: "Installation"
-description: "Install Firmis Scanner via npx (zero install), npm, or yarn. Requires Node.js 20+."
+description: "Zero-install via npx. No Python, Docker, or WASM. Just Node.js 20+."
 ---
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-> Firmis requires Node.js 20 or later. No other dependencies.
+Most security tools need a 20-minute setup. Python environments, Docker images, system libraries, config files. Firmis needs one command.
+
+No Python. No Docker. No WASM. No native binaries. If Node.js 20+ is on your machine, you're already ready.
 
 ## Zero install (recommended)
 
@@ -13,9 +15,11 @@ import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 npx firmis scan .
 ```
 
-No global install needed. Always uses the latest version.
+No global install. No version pinning. Always runs the latest release, pulled fresh from npm on demand.
 
 ## Global install
+
+If you want `firmis` available everywhere without the `npx` prefix:
 
 <Tabs>
   <TabItem label="npm">
@@ -43,7 +47,7 @@ firmis scan .
 
 ## Project dependency
 
-Add Firmis as a dev dependency for consistent versions across your team:
+Pin a version and share it with your team. Consistent results across every machine and every CI run.
 
 ```bash title="Terminal"
 npm install --save-dev firmis-scanner
@@ -58,13 +62,23 @@ npm install --save-dev firmis-scanner
 }
 ```
 
-## Verify installation
+## Verify it works
+
+Check the version first:
 
 ```bash title="Terminal"
 firmis --version
 ```
 
-Expected output: `firmis-scanner v1.3.0` (or later).
+Expected: `firmis-scanner v1.3.0` or later.
+
+Then run a real scan to confirm everything is working:
+
+```bash title="Terminal"
+npx firmis scan .
+```
+
+You should see a platform detection line and a rule count of 209. If the scanner exits with findings, those are real — not test artifacts.
 
 ## Requirements
 
@@ -74,8 +88,8 @@ Expected output: `firmis-scanner v1.3.0` (or later).
 | npm | >= 9.0.0 (ships with Node 20) |
 | OS | macOS, Linux, Windows |
 | Network | Not required (fully offline) |
-| Disk space | ~15 MB (including rules) |
+| Disk space | ~15 MB (including all 209 rules) |
 
-<Aside type="note">
-  Firmis has zero native dependencies. It runs on any platform that supports Node.js 20+. No Python, Docker, or WASM required.
+<Aside type="tip">
+  Zero native dependencies. No build step, no system libraries, no architecture-specific binaries. Firmis runs on any platform that supports Node.js 20+. That includes M1/M2 Macs, ARM Linux, and Windows — no extra setup on any of them.
 </Aside>

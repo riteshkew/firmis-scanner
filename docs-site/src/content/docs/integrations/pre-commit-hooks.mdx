@@ -1,15 +1,15 @@
 ---
 title: Pre-commit Hooks
-description: Run Firmis as a pre-commit hook to catch security threats before they reach your repository.
+description: Catch threats at commit time — before they ever reach CI or your teammates' machines. Pre-commit hooks are the fastest feedback loop in your security pipeline.
 ---
 
 import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components'
 
-> Catch threats at commit time, before they ever reach CI. Pre-commit hooks are the fastest feedback loop in your security pipeline.
+CI pipelines catch threats after a push. By then the code is in git history, visible to collaborators, and potentially already deployed. A pre-commit hook stops the commit entirely — keeping your repository clean from the start, before anything leaves your machine.
 
 ## Why pre-commit scanning matters
 
-CI pipelines catch issues after a push, which means threats travel through git history and may be visible to collaborators before anyone acts on them. A pre-commit hook stops the commit entirely if threats are found, keeping your repository clean from the start.
+CI catches issues after a push, which means threats travel through git history and may be visible to collaborators before anyone acts on them. A pre-commit hook stops the commit entirely if threats are found, keeping your repository clean from the start.
 
 Firmis is well-suited for pre-commit use because it is:
 
@@ -246,9 +246,9 @@ test/fixtures/
 
 See [Ignoring Findings](/rules/ignoring-findings) for full `.firmisignore` syntax.
 
-## Related
+## What to do next
 
-- [GitHub Actions integration](/integrations/github-actions)
-- [GitLab CI integration](/integrations/gitlab-ci)
-- [Ignoring Findings](/rules/ignoring-findings)
-- [`firmis scan` command](/cli/scan)
+- [GitHub Actions integration →](/integrations/github-actions) — enforce the same gate in CI after commit
+- [GitLab CI integration →](/integrations/gitlab-ci) — CI enforcement for GitLab pipelines
+- [Ignoring Findings →](/rules/ignoring-findings) — suppress false positives without disabling rules
+- [`firmis scan` command →](/cli/scan) — full CLI reference for the command powering this hook

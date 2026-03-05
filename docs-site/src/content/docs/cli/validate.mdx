@@ -1,9 +1,18 @@
 ---
 title: "firmis validate — Validate Rule Files"
-description: "Validate custom or built-in YAML detection rules for syntax errors, invalid regex, and schema compliance."
+description: "Catch broken rules before they silently miss threats. Validate custom or built-in YAML detection rules for syntax errors, invalid regex, and schema compliance."
 ---
 
-> Validate rule files for syntax errors, invalid regex patterns, and schema compliance.
+A rule with a broken regex doesn't fail loudly — it just stops matching. `firmis validate` catches typos, invalid patterns, and schema errors in your YAML rule files before they cause silent gaps in your coverage.
+
+Run this before committing custom rules. Run it in CI to make sure your rule library stays healthy.
+
+## When to use this
+
+- **Before committing**: You've written a new detection rule. Run `validate` to confirm the regex compiles, the schema is correct, and the severity field is valid before pushing.
+- **After editing rules**: Tweaked a pattern to reduce false positives? Validate it first — a subtle regex typo can break the rule entirely.
+- **CI rule hygiene**: Add `firmis validate --built-in --strict` to your CI pipeline alongside your scans to catch any rule regressions introduced by contributors.
+- **Debugging a missed detection**: If a rule isn't firing when you expect it to, validate the rule file — an invalid regex silently produces zero matches.
 
 ## Usage
 
@@ -11,36 +20,67 @@ description: "Validate custom or built-in YAML detection rules for syntax errors
 firmis validate [rules...] [options]
 ```
 
-Pass specific rule files or directories. If no arguments are given, validates all files in the default rules directory.
+Pass specific rule files or directories. If no arguments are given, Firmis validates all files in the default rules directory.
+
+## What gets checked
+
+Firmis validates:
+
+- **YAML syntax** — the file parses without errors
+- **Schema compliance** — required fields (`id`, `name`, `severity`, `patterns`) are present and correctly typed
+- **Regex compilation** — every pattern in the rule compiles without throwing a JavaScript `RegExp` error
+- **Severity values** — only `low`, `medium`, `high`, `critical` are valid
+- **Rule ID uniqueness** — duplicate IDs across files will cause silent overrides
+
+In `--strict` mode, regex warnings (overly broad patterns, unnecessary flags) are promoted to errors.
 
 ## Options
 
 | Flag | Type | Default | Description |
 |---|---|---|---|
-| `--strict` | boolean | `false` | Strict mode: regex warnings become errors |
-| `--built-in` | boolean | `false` | Also validate built-in rules |
+| `--strict` | boolean | `false` | Treat regex warnings as errors — recommended before shipping rules to production |
+| `--built-in` | boolean | `false` | Also validate Firmis's 209 built-in rules — useful to confirm nothing broke after a version upgrade |
 
 ## Examples
 
-### Validate a custom rule file
+### Validate a custom rule file before committing
 
 ```bash title="Terminal"
 npx firmis validate rules/custom/my-rules.yaml
 ```
 
-### Validate all rules (custom + built-in) in strict mode
+### Validate all rules in strict mode (recommended for CI)
 
 ```bash title="Terminal"
 npx firmis validate --built-in --strict
 ```
 
-### Validate a directory of rules
+### Validate a directory of custom rules
 
 ```bash title="Terminal"
 npx firmis validate rules/custom/
 ```
 
+### Validate before every scan in a script
+
+```bash title="Terminal"
+npx firmis validate rules/ && npx firmis scan --config .firmisrc
+```
+
+## Example output
+
+```text
+Validating: rules/custom/my-rules.yaml
+
+  ✓  my-rule-001  "Hardcoded Slack token"
+  ✓  my-rule-002  "Overly permissive filesystem access"
+  ✗  my-rule-003  Invalid regex: missing closing bracket in pattern /sk-[a-z0-9+/
+  ✓  my-rule-004  "Tool description injection pattern"
+
+1 error found. Fix before running scans.
+```
+
 ## Related
 
-- [Custom Rules](/rules/custom-rules) — how to write YAML detection rules
-- [Rules Overview](/rules/overview) — how the rule engine works
+- [Custom Rules](/rules/custom-rules) — how to write your own YAML detection rules
+- [Rules Overview](/rules/overview) — how the rule engine evaluates patterns and assigns confidence scores

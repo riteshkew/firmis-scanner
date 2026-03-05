@@ -1,11 +1,17 @@
 ---
 title: Configuration Reference
-description: Complete reference for all Firmis configuration options — CLI flags, config file schema, environment variables, and defaults.
+description: You don't need a config file. Most projects need exactly npx firmis scan. When you do need to tune behavior, this page documents every available option.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-> Firmis works with zero configuration — `npx firmis scan .` is enough for most projects. When you need to tune behavior for your project, this page documents every available option.
+You don't need a config file. Most projects need exactly:
+
+```bash title="Terminal"
+npx firmis scan .
+```
+
+When you need to tune behavior — filter severity, target a specific platform, exclude test fixtures, or add custom rules — this page documents every available option.
 
 ## Configuration methods
 
@@ -219,9 +225,9 @@ The CLI flag `--severity low` wins. You see all findings including low severity.
 
 ---
 
-## Related
+## What to do next
 
-- [firmis scan](/cli/scan) — full scan command reference
-- [firmis ci](/cli/ci) — CI pipeline command reference
-- [Ignoring Findings](/rules/ignoring-findings) — `.firmisignore` syntax
-- [Custom Rules](/rules/custom-rules) — writing your own detection rules
+- [firmis scan →](/cli/scan) — full scan command reference
+- [firmis ci →](/cli/ci) — CI pipeline command reference
+- [Ignoring Findings →](/rules/ignoring-findings) — `.firmisignore` syntax for suppressing false positives
+- [Custom Rules →](/rules/custom-rules) — writing your own detection rules alongside the 209 built-in ones
