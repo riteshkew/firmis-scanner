@@ -2,7 +2,57 @@
 
 URL: https://docs.firmislabs.com/changelog
 
-Content coming soon.
+> All notable changes to Firmis Scanner are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
+
+## [1.3.0] — 2026-03-01
+
+### Added
+- 34 new detection rules: access-control (3 rules), insecure-config (3 rules), expanded credential-harvesting, prompt-injection, supply-chain, and suspicious-behavior categories
+- Nanobot platform analyzer
+
+### Fixed
+- False positive reduction in secret detection for test fixtures
+- Discovery timeout on large monorepos (500-file limit per component)
+- Cross-platform finding deduplication
+
+### Security
+- Input validation on component names (path traversal prevention)
+- MAX_FILES_PER_COMPONENT=500 limit (DoS prevention)
+
+## [1.2.0] — 2026-02-18
+
+### Added
+- Credential harvesting and prompt injection rule hardening (Sprint B)
+- Supply chain detection improvements
+- Cross-platform dedup engine (`src/scanner/dedup.ts`)
+
+### Fixed
+- YAML escaping issues (`'\'` → `''` for literal quotes)
+- PlatformRegistry singleton state persistence across tests
+- Broad regex false positives in secret detection
+
+### Security
+- Component name validation against path traversal and XSS
+
+## [1.1.0] — 2026-02-16
+
+### Added
+- 8 platform analyzers: Claude, MCP, Codex, Cursor, CrewAI, AutoGPT, OpenClaw, Nanobot
+- 175+ YAML detection rules across 12 threat categories
+- YARA-like pattern matching engine
+- Secret detection (60 rules)
+- OSV vulnerability scanning
+- Discovery + Agent BOM (CycloneDX 1.7)
+- CI pipeline command (`firmis ci`)
+- SARIF 2.1.0 and HTML report output
+
+## [1.0.0] — 2026-02-12
+
+### Added
+- Initial release
+- Core scan engine with regex pattern matching
+- Terminal, JSON output formats
+- `scan`, `list`, `validate` commands
 
 ---
 
@@ -153,7 +203,109 @@ Expected output: `firmis-scanner v1.3.0` (or later).
 
 URL: https://docs.firmislabs.com/privacy
 
-Content coming soon.
+> Firmis Scanner is offline-first. By default, nothing leaves your machine.
+
+**Last Updated:** 2026-02-07
+
+## Key principles
+
+1. The scanner works fully offline by default
+2. All cloud features are opt-in
+3. No personally identifiable information is collected
+4. You control what data is shared
+
+## Data collection summary
+
+| Data Type | Collected | Opt-in | Sent to Cloud |
+|-----------|-----------|--------|---------------|
+| File paths | No | — | Never |
+| Code snippets | No | — | Never |
+| Environment variables | No | — | Never |
+| IP address | No | — | Never |
+| Threat pattern hashes | Yes | Telemetry | Anonymized |
+| Platform statistics | Yes | Telemetry | Aggregated |
+| Behavioral features | Yes | Cloud scan | Numeric only |
+
+## Offline mode (default)
+
+When you run `firmis scan` without the `--cloud` flag:
+
+**What happens locally:**
+- Scans your AI agent components
+- Matches against bundled YAML rules
+- Generates reports (JSON, SARIF, HTML, terminal)
+
+**What is NOT collected or sent:**
+- Absolutely nothing leaves your machine
+- No network requests are made
+- No telemetry is collected
+- No usage tracking occurs
+
+## Cloud mode (opt-in)
+
+When you run `firmis scan --cloud`, we send **threat pattern hashes** to enhance your results:
+
+```json
+{
+  "signatureHash": "sha256:abc123...",
+  "category": "credential-harvesting",
+  "severity": "high",
+  "patternType": "file-access",
+  "platform": "claude",
+  "localConfidence": 85
+}
+```
+
+**What we DO NOT send:** file paths, file names, code snippets, directory structure, environment variables, or user/machine identifiers.
+
+For behavioral analysis, we send **numeric feature vectors only** — counts and booleans, never actual code, function names, variable names, or string literals.
+
+## Telemetry (opt-in)
+
+Enable with `firmis scan --cloud --contribute`. Telemetry helps identify new threats through collective intelligence and reduce false positives. What we collect:
+
+- A random event ID (not tied to your identity)
+- Scanner version
+- Aggregate platform component counts
+- Threat signature hashes (never code)
+- A rotating weekly installation ID (SHA256 hash, not personally identifiable)
+
+**Data retention:** Raw telemetry is kept 7 days; aggregated statistics up to 2 years. No PII is retained.
+
+## Your choices
+
+```bash
+# Fully offline (default)
+firmis scan
+
+# Cloud enrichment, no telemetry
+firmis scan --cloud
+
+# Contribute to collective defense
+firmis scan --cloud --contribute
+```
+
+To request deletion of telemetry data, email **privacy@firmislabs.com** with your installation ID.
+
+## GDPR
+
+Firmis is GDPR compliant (EU) and CCPA compliant (California). No personal data is collected in the default offline mode. Cloud features process only anonymous, non-reversible hashes and numeric metrics.
+
+## Third-party services
+
+| Service | Purpose | Data processed |
+|---------|---------|----------------|
+| Cloudflare | API gateway | Request routing (no logging) |
+| Supabase | Database | Threat signatures, aggregates |
+| ClickHouse Cloud | Analytics | Telemetry aggregates only |
+
+No third party receives your code, file paths, or personally identifiable information.
+
+## Contact
+
+For privacy questions or concerns:
+- Email: **privacy@firmislabs.com**
+- GitHub: [github.com/riteshkew/firmis-scanner/issues](https://github.com/riteshkew/firmis-scanner/issues)
 
 ---
 
@@ -222,11 +374,44 @@ npx firmis scan .
 
 ---
 
-# Security
+# Security Policy
 
 URL: https://docs.firmislabs.com/security
 
-Content coming soon.
+> Report security vulnerabilities responsibly. We take every report seriously.
+
+## Supported versions
+
+| Version | Supported |
+|---|---|
+| 1.3.x | Yes |
+| 1.2.x | Yes |
+| &lt; 1.2 | No |
+
+## Reporting a vulnerability
+
+**Email:** security@firmislabs.com
+
+Please include:
+- Description of the vulnerability
+- Steps to reproduce
+- Impact assessment
+- Affected version(s)
+
+We aim to acknowledge reports within 48 hours and provide a fix within 7 days for critical issues.
+
+## Security practices
+
+- All detection rules are open-source and auditable
+- Firmis runs entirely offline — no network access required
+- No telemetry collected by default
+- Dependencies are regularly audited with `npm audit`
+- We dogfood Firmis on itself — self-scan results are reviewed with each release
+
+## Related
+
+- [Security Model](/reference/security-model) — what Firmis detects and doesn't detect
+- [Privacy](/docs/privacy) — data collection policy
 
 ---
 
@@ -5350,27 +5535,758 @@ Custom rules are merged with built-in rules. Custom rule IDs that collide with b
 
 ---
 
-# Configuration
+# Configuration Reference
 
 URL: https://docs.firmislabs.com/reference/config-schema
 
-Content coming soon.
+> Firmis works with zero configuration — `npx firmis scan .` is enough for most projects. When you need to tune behavior for your project, this page documents every available option.
+
+## Configuration methods
+
+Firmis reads configuration from three sources, in order of precedence (highest to lowest):
+
+1. **CLI flags** — highest precedence, override everything
+2. **Config file** (`firmis.config.ts` or `firmis.config.json`) — project-level defaults
+3. **Built-in defaults** — lowest precedence, applied when nothing is specified
 
 ---
 
-# CycloneDX BOM
+## CLI flags
+
+The most common way to configure Firmis. Passed directly to any command.
+
+### `firmis scan` flags
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--platform <name>` | string | auto-detect | Scan a specific platform: `claude`, `mcp`, `codex`, `cursor`, `crewai`, `autogpt`, `openclaw`, `nanobot` |
+| `--all` | boolean | `true` | Scan all detected platforms |
+| `--severity <level>` | enum | `low` | Minimum severity to report: `low`, `medium`, `high`, `critical` |
+| `--fail-on <level>` | enum | — | Exit non-zero if findings at this severity or above exist |
+| `--json` | boolean | `false` | Output findings as JSON |
+| `--sarif` | boolean | `false` | Output findings as SARIF 2.1.0 |
+| `--html` | boolean | `false` | Output findings as HTML report |
+| `--output <file>` | string | stdout | Write output to file instead of stdout |
+| `--config <file>` | string | — | Path to a custom config file |
+| `--ignore <rules>` | string | — | Skip specific rule IDs, comma-separated (e.g., `sd-045,sd-046`) |
+| `--concurrency <n>` | number | `4` | Number of parallel file workers |
+| `--verbose` | boolean | `false` | Show detailed scan progress per file |
+| `--quiet` | boolean | `false` | Suppress terminal output; only emit exit code |
+| `--fail-fast` | boolean | `false` | Stop scanning on first critical finding |
+
+### `firmis bom` flags
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--platform <name>` | string | auto-detect | Include only this platform in the BOM |
+| `--output <file>` | string | stdout | Save BOM JSON to file |
+| `--verbose` | boolean | `false` | Enable verbose logging |
+
+### `firmis ci` flags
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--fail-on <level>` | enum | `high` | Exit non-zero if findings at this severity or above |
+| `--format <fmt>` | enum | `sarif` | Output format: `sarif`, `json`, `html` |
+| `--output <file>` | string | `results.sarif` | Output file path |
+| `--platform <name>` | string | auto-detect | Limit to specific platform |
+| `--verbose` | boolean | `false` | Enable verbose logging |
+
+### `firmis discover` flags
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--json` | boolean | `false` | Output component list as JSON |
+| `--platform <name>` | string | auto-detect | Discover a specific platform only |
+| `--verbose` | boolean | `false` | Show discovery details |
+
+---
+
+## Config file
+
+For project-level defaults, create `firmis.config.ts` or `firmis.config.json` in your project root.
+
+### TypeScript config (recommended)
+
+```typescript title="firmis.config.ts"
+
+const config: Partial = {
+  // Minimum severity to report (low | medium | high | critical)
+  severity: 'medium',
+
+  // Output format (terminal | json | sarif | html)
+  output: 'terminal',
+
+  // Platforms to scan — omit to auto-detect all
+  platforms: ['claude', 'mcp'],
+
+  // Custom rule directories to load in addition to built-in rules
+  customRules: ['./rules/custom'],
+
+  // Paths to exclude from scanning
+  exclude: ['test/fixtures/', 'node_modules/', 'dist/'],
+
+  // Rule IDs to skip globally
+  ignoreRules: ['sd-045', 'sd-046'],
+
+  // Exit non-zero if findings at this severity or above
+  failOnSeverity: 'high',
+
+  // Parallel file workers
+  concurrency: 4,
+
+  // Stop on first critical finding
+  failFast: false,
+
+  // Suppress terminal output
+  quiet: false,
+
+  // Verbose scan progress
+  verbose: false,
+}
+
+export default config
+```
+
+### JSON config
+
+```json title="firmis.config.json"
+{
+  "severity": "medium",
+  "output": "terminal",
+  "platforms": ["claude", "mcp"],
+  "customRules": ["./rules/custom"],
+  "exclude": ["test/fixtures/", "node_modules/", "dist/"],
+  "ignoreRules": ["sd-045", "sd-046"],
+  "failOnSeverity": "high",
+  "concurrency": 4,
+  "failFast": false,
+  "quiet": false,
+  "verbose": false
+}
+```
+
+---
+
+## Full configuration schema
+
+All fields in the `FirmisConfig` interface. All fields are optional — omit any field to use the built-in default.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `severity` | `low` \| `medium` \| `high` \| `critical` | `low` | Minimum severity level to report |
+| `output` | `terminal` \| `json` \| `sarif` \| `html` | `terminal` | Output format for findings |
+| `outputFile` | string | stdout | File path for JSON, SARIF, or HTML output |
+| `platforms` | `PlatformType[]` | auto-detect | Platforms to scan; omit to auto-detect all 8 |
+| `targetPath` | string | cwd | Target directory to scan; overrides platform default paths |
+| `customRules` | string[] | `[]` | Additional rule directories to load alongside built-in rules |
+| `exclude` | string[] | `[]` | Glob patterns or paths to exclude from scanning |
+| `ignoreRules` | string[] | `[]` | Rule IDs to skip (same as `--ignore` flag) |
+| `failOnSeverity` | `SeverityLevel` | — | Exit with code 1 if findings at this severity or above |
+| `failFast` | boolean | `false` | Stop on first critical finding |
+| `concurrency` | number | `4` | Number of parallel file analysis workers |
+| `verbose` | boolean | `false` | Enable detailed per-file scan progress output |
+| `quiet` | boolean | `false` | Suppress all terminal output; only emit exit code |
+| `onProgress` | function | — | Callback fired at scan milestones (TypeScript API only) |
+
+### Platform type values
+
+```typescript title="Valid platform names"
+type PlatformType =
+  | 'claude'     // Claude Skills (CLAUDE.md, .claude/)
+  | 'mcp'        // MCP Servers (mcp.json, .vscode/mcp.json)
+  | 'codex'      // Codex Plugins (codex.json, .codex/)
+  | 'cursor'     // Cursor Rules (.cursorrules, .cursor/)
+  | 'crewai'     // CrewAI Agents (crew.yaml, agents/)
+  | 'autogpt'    // AutoGPT Plugins (auto_gpt_plugin_template)
+  | 'openclaw'   // OpenClaw Skills (openclaw.yaml)
+  | 'nanobot'    // Nanobot Plugins (nanobot.json)
+```
+
+### Severity level values
+
+```typescript title="Valid severity levels"
+type SeverityLevel = 'low' | 'medium' | 'high' | 'critical'
+```
+
+---
+
+## Defaults
+
+```typescript title="Built-in defaults (FirmisConfig)"
+const DEFAULT_CONFIG = {
+  severity: 'low',        // Report all findings including low severity
+  output: 'terminal',     // Color-coded terminal output
+  verbose: false,         // No per-file progress
+  concurrency: 4,         // 4 parallel workers
+  failFast: false,        // Scan all files before stopping
+}
+```
+
+---
+
+## Environment variables
+
+Firmis does not currently read configuration from environment variables. Use CLI flags or a config file for CI/CD environments.
+
+```yaml title=".github/workflows/firmis.yml"
+- name: Scan with custom severity
+  run: npx firmis scan --severity high --fail-on high --sarif --output results.sarif
+```
+
+---
+
+## Precedence example
+
+If `firmis.config.ts` sets `severity: 'medium'` and you run:
+
+```bash title="Terminal"
+npx firmis scan --severity low
+```
+
+The CLI flag `--severity low` wins. You see all findings including low severity.
+
+---
+
+## Related
+
+- [firmis scan](/cli/scan) — full scan command reference
+- [firmis ci](/cli/ci) — CI pipeline command reference
+- [Ignoring Findings](/rules/ignoring-findings) — `.firmisignore` syntax
+- [Custom Rules](/rules/custom-rules) — writing your own detection rules
+
+---
+
+# CycloneDX BOM Reference
 
 URL: https://docs.firmislabs.com/reference/cyclonedx-bom
 
-Content coming soon.
+> Firmis generates Agent Bills of Materials in CycloneDX 1.7 format — the same standard used for software supply chain compliance. This page is the output format field reference. For the concept and motivation, see [Agent BOM](/concepts/agent-bom).
+
+## What is CycloneDX?
+
+[CycloneDX](https://cyclonedx.org/) is an OWASP-sponsored open standard for Software Bill of Materials (SBOM) interchange. Version 1.7 added first-class support for machine learning components (`machine-learning-model` type), which Firmis uses to record AI model references found in agent configurations.
+
+CycloneDX BOMs are widely accepted by:
+
+| Tool | Use case |
+|---|---|
+| [OWASP Dependency-Track](https://dependencytrack.org/) | Continuous vulnerability tracking against component inventory |
+| [Grype](https://github.com/anchore/grype) | Vulnerability matching against BOM components |
+| GitHub Dependency Graph | Import as SBOM to populate the dependency graph |
+| [FOSSA](https://fossa.com/) | License compliance analysis |
+| [Anchore Enterprise](https://anchore.com/) | Policy-based security gates on component inventory |
 
 ---
 
-# SARIF Output
+## Generating the BOM
+
+```bash title="Terminal"
+# Generate BOM for current directory (stdout)
+npx firmis bom
+
+# Save BOM to file
+npx firmis bom --output agent-bom.json
+
+# BOM for a specific platform only
+npx firmis bom --platform mcp --output mcp-bom.json
+
+# As part of the full CI pipeline
+npx firmis ci --fail-on high
+# Produces agent-bom.json alongside results.sarif
+```
+
+---
+
+## Top-level structure
+
+A Firmis Agent BOM is a valid CycloneDX 1.7 JSON document with four top-level fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `bomFormat` | string | Always `"CycloneDX"` |
+| `specVersion` | string | Always `"1.7"` |
+| `version` | number | BOM document version, starts at `1` |
+| `metadata` | object | Scan metadata (timestamp, tool info, project root) |
+| `components` | array | AI agent components, dependencies, and models |
+| `dependencies` | array | Dependency relationships between components |
+
+---
+
+## `metadata` section
+
+Records when the BOM was generated, which tool generated it, and what project was inventoried.
+
+| Field | Type | Description |
+|---|---|---|
+| `metadata.timestamp` | string (ISO 8601) | UTC timestamp of BOM generation |
+| `metadata.tools` | array | Tool entries: `[{ "name": "firmis", "version": "1.3.0" }]` |
+| `metadata.component` | object | The root project component being inventoried |
+| `metadata.component.type` | string | `"application"` for the root project |
+| `metadata.component.name` | string | Directory name of the scanned project |
+| `metadata.component.version` | string | Version from `package.json` if present |
+
+---
+
+## `components` section
+
+Each AI agent component discovered during the scan is listed as a CycloneDX component. Firmis produces three types of component entries:
+
+### Agent components (tools, skills, plugins)
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | string | `"library"` for tools and plugins, `"service"` for MCP servers |
+| `name` | string | Component name from manifest or directory name |
+| `version` | string | Version from `package.json`, `skill.json`, or `pyproject.toml` |
+| `description` | string | Short description from the manifest, if available |
+| `purl` | string | Package URL (e.g., `pkg:npm/my-tool@0.2.1`) if published to a registry |
+| `hashes` | array | SHA-256 hash of the component directory for integrity verification |
+| `properties` | array | Firmis-specific properties: `platform`, `componentType`, `filesScanned` |
+
+### Dependency components (npm / pip packages)
+
+Dependencies resolved from `package.json`, `requirements.txt`, and `pyproject.toml` are listed as separate components with type `"library"`.
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | string | `"library"` |
+| `name` | string | Package name (e.g., `axios`) |
+| `version` | string | Resolved version (e.g., `1.6.0`) |
+| `purl` | string | `pkg:npm/axios@1.6.0` or `pkg:pypi/requests@2.31.0` |
+
+### Model components
+
+When a model reference is detected in a configuration file (e.g., `"model": "claude-3-5-sonnet-20241022"`), it is recorded as a `machine-learning-model` component.
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | string | `"machine-learning-model"` |
+| `name` | string | Model identifier as it appears in the config |
+| `description` | string | `"AI model referenced in agent configuration"` |
+
+---
+
+## `dependencies` section
+
+Maps component references to their resolved dependencies.
+
+```json title="dependencies structure"
+{
+  "dependencies": [
+    {
+      "ref": "my-search-tool",
+      "dependsOn": ["axios@1.6.0", "dotenv@16.0.0"]
+    }
+  ]
+}
+```
+
+`ref` is the component's name. `dependsOn` lists the names of components that this component declares as dependencies.
+
+---
+
+## Complete example
+
+```json title="agent-bom.json"
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-03-05T10:00:00.000Z",
+    "tools": [
+      {
+        "name": "firmis",
+        "version": "1.3.0",
+        "vendor": "Firmis Labs"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "name": "my-agent-project",
+      "version": "1.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "service",
+      "name": "web-search-mcp",
+      "version": "0.3.1",
+      "description": "Web search MCP server for Claude",
+      "purl": "pkg:npm/web-search-mcp@0.3.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": [
+        { "name": "firmis:platform", "value": "mcp" },
+        { "name": "firmis:componentType", "value": "server" },
+        { "name": "firmis:filesScanned", "value": "12" }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "my-search-skill",
+      "version": "1.0.0",
+      "description": "Claude skill for web search",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b94d27b9934d3e08a52e52d7da7dabfac484efe04bcd9e5bcd832d9cd4f19f6a"
+        }
+      ],
+      "properties": [
+        { "name": "firmis:platform", "value": "claude" },
+        { "name": "firmis:componentType", "value": "skill" },
+        { "name": "firmis:filesScanned", "value": "5" }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "name": "claude-3-5-sonnet-20241022",
+      "description": "AI model referenced in agent configuration"
+    },
+    {
+      "type": "library",
+      "name": "axios",
+      "version": "1.6.0",
+      "purl": "pkg:npm/axios@1.6.0"
+    },
+    {
+      "type": "library",
+      "name": "dotenv",
+      "version": "16.4.5",
+      "purl": "pkg:npm/dotenv@16.4.5"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "web-search-mcp",
+      "dependsOn": ["axios@1.6.0", "dotenv@16.4.5"]
+    },
+    {
+      "ref": "my-search-skill",
+      "dependsOn": []
+    }
+  ]
+}
+```
+
+---
+
+## Firmis-specific properties
+
+Firmis adds custom properties to each component using the `firmis:` namespace. These are valid CycloneDX custom properties and are ignored by tools that do not recognize them.
+
+| Property | Description |
+|---|---|
+| `firmis:platform` | The platform this component belongs to (e.g., `mcp`, `claude`) |
+| `firmis:componentType` | Firmis component type: `skill`, `server`, `plugin`, `extension`, `agent` |
+| `firmis:filesScanned` | Number of files scanned in this component |
+
+---
+
+## Using the BOM with downstream tools
+
+### OWASP Dependency-Track
+
+Upload the BOM via the Dependency-Track API or web UI. Dependency-Track continuously checks your component list against the NVD, GitHub Advisory Database, and OSV — alerting you when a new vulnerability affects a component in your inventory.
+
+```bash title="Terminal — upload via curl"
+curl -X "PUT" "https://your-dtrack-instance/api/v1/bom" \
+  -H "X-Api-Key: your-api-key" \
+  -H "Content-Type: multipart/form-data" \
+  -F "projectName=my-agent-project" \
+  -F "projectVersion=1.0.0" \
+  -F "autoCreate=true" \
+  -F "bom=@agent-bom.json"
+```
+
+### Grype
+
+Grype accepts CycloneDX BOMs directly for vulnerability scanning:
+
+```bash title="Terminal"
+grype sbom:./agent-bom.json
+```
+
+### GitHub Dependency Graph
+
+Upload using the GitHub Dependency Submission API to populate the Dependency Graph with your agent's component inventory:
+
+```bash title="Terminal"
+gh api --method POST /repos/:owner/:repo/dependency-graph/snapshots \
+  --input agent-bom.json
+```
+
+---
+
+## Related
+
+- [Agent BOM concept](/concepts/agent-bom) — what Agent BOMs are and why they matter
+- [firmis bom](/cli/bom) — CLI reference for BOM generation
+- [firmis ci](/cli/ci) — full discover → BOM → scan → report pipeline
+- [SARIF Output](/reference/sarif-output) — scan findings output format
+
+---
+
+# SARIF Output Reference
 
 URL: https://docs.firmislabs.com/reference/sarif-output
 
-Content coming soon.
+> Firmis outputs standard SARIF 2.1.0, the Static Analysis Results Interchange Format. SARIF is the format required by the GitHub Security tab, accepted by VS Code's SARIF Viewer, and supported by most CI security dashboards.
+
+## What is SARIF?
+
+SARIF (Static Analysis Results Interchange Format) is an OASIS open standard ([OASIS SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/)) for representing static analysis results as structured JSON. It defines a common schema so that any tool can produce results that any viewer can consume.
+
+Key benefits of SARIF output:
+
+| Benefit | Description |
+|---|---|
+| **GitHub Security tab** | Upload via `github/codeql-action/upload-sarif` — findings appear as code scanning alerts |
+| **PR annotations** | GitHub annotates pull request diffs with finding locations and messages |
+| **VS Code viewer** | The SARIF Viewer extension (Microsoft) renders findings in the Problems panel |
+| **CI dashboards** | Tools like Semgrep App, SonarQube, and Snyk Code accept SARIF imports |
+| **Historical tracking** | Compare SARIF files across runs to track remediation progress |
+
+---
+
+## Generating SARIF output
+
+```bash title="Terminal"
+# Print SARIF to stdout
+npx firmis scan --sarif
+
+# Save SARIF to a file
+npx firmis scan --sarif --output results.sarif
+
+# Scan only MCP servers, output SARIF
+npx firmis scan --platform mcp --sarif --output mcp-results.sarif
+
+# Full CI pipeline with SARIF output
+npx firmis ci --fail-on high --format sarif --output results.sarif
+```
+
+---
+
+## Field mapping
+
+How Firmis finding fields map to SARIF 2.1.0 fields:
+
+| Firmis Field | SARIF Field | Notes |
+|---|---|---|
+| `threat.ruleId` | `result.ruleId` | e.g., `tp-001`, `sd-045` |
+| `threat.message` | `result.message.text` | Human-readable finding description |
+| `threat.severity` | `result.level` | See severity mapping table below |
+| `threat.location.file` | `result.locations[].physicalLocation.artifactLocation.uri` | Relative path from scan root |
+| `threat.location.line` | `result.locations[].physicalLocation.region.startLine` | 1-indexed line number |
+| `threat.location.column` | `result.locations[].physicalLocation.region.startColumn` | 1-indexed column number |
+| `threat.evidence[].snippet` | `result.locations[].physicalLocation.region.snippet.text` | Code snippet at finding location |
+| `threat.remediation` | `result.fixes[]` or `result.message` | Remediation guidance when available |
+| `rule.name` | `run.tool.driver.rules[].name` | Human-readable rule name |
+| `rule.description` | `run.tool.driver.rules[].fullDescription.text` | Full rule description |
+| `rule.severity` | `run.tool.driver.rules[].defaultConfiguration.level` | Rule's default severity level |
+
+### Severity mapping
+
+SARIF uses a different severity vocabulary than Firmis:
+
+| Firmis Severity | SARIF Level |
+|---|---|
+| `critical` | `error` |
+| `high` | `error` |
+| `medium` | `warning` |
+| `low` | `note` |
+
+---
+
+## Example SARIF document
+
+```json title="results.sarif"
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Firmis",
+          "version": "1.3.0",
+          "informationUri": "https://firmislabs.com",
+          "rules": [
+            {
+              "id": "tp-001",
+              "name": "HiddenInstructionsInToolDescriptions",
+              "shortDescription": {
+                "text": "Hidden Instructions in Tool Descriptions"
+              },
+              "fullDescription": {
+                "text": "Detects invisible Unicode characters and HTML comments used to hide malicious instructions inside tool or function descriptions."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://docs.firmislabs.com/reference/threat-categories#tool-poisoning"
+            },
+            {
+              "id": "sd-045",
+              "name": "OpenAIApiKeyDetected",
+              "shortDescription": {
+                "text": "OpenAI API Key Detected"
+              },
+              "fullDescription": {
+                "text": "A hardcoded OpenAI API key was found in the source file."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://docs.firmislabs.com/reference/threat-categories#secret-detection"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "tp-001",
+          "level": "error",
+          "message": {
+            "text": "Hidden instructions in tool description: zero-width space (U+200B) detected."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/tools/search.ts",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 18,
+                  "snippet": {
+                    "text": "description: \"Search the web\u200B and return results\""
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "sd-045",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded OpenAI API key detected. Rotate this key immediately and store it in an environment variable."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/llm.ts",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 15
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Uploading to GitHub Security tab
+
+GitHub's code scanning feature accepts SARIF files uploaded via the `upload-sarif` action.
+
+```yaml title=".github/workflows/firmis.yml"
+name: Firmis Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Firmis scan
+        run: npx firmis scan --sarif --output results.sarif
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+```
+
+After uploading, findings appear at **Security → Code scanning alerts** in your GitHub repository. Pull request diffs are annotated with inline finding markers at the relevant line numbers.
+
+---
+
+## Viewing SARIF locally
+
+### VS Code SARIF Viewer
+
+Install the [SARIF Viewer extension](https://marketplace.visualstudio.com/items?itemName=MS-SarifVSCode.sarif-viewer) from Microsoft. Open any `.sarif` file in VS Code to browse findings in the Problems panel with source location highlighting.
+
+### SARIF Web Viewer
+
+Microsoft maintains a browser-based viewer at [microsoft.github.io/sarif-web-component](https://microsoft.github.io/sarif-web-component/). Upload your `.sarif` file to inspect results without installing anything.
+
+---
+
+## SARIF in the CI pipeline
+
+The `firmis ci` command generates SARIF as part of the full discover → BOM → scan → report pipeline:
+
+```bash title="Terminal"
+npx firmis ci --fail-on high --format sarif --output results.sarif
+```
+
+This produces `results.sarif` alongside `agent-bom.json`. Both can be archived as CI artifacts:
+
+```yaml title=".github/workflows/firmis-ci.yml (excerpt)"
+- name: Run Firmis CI pipeline
+  run: npx firmis ci --fail-on high --format sarif --output results.sarif
+
+- name: Upload SARIF
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
+
+- name: Archive Agent BOM
+  uses: actions/upload-artifact@v4
+  with:
+    name: agent-bom
+    path: agent-bom.json
+```
+
+---
+
+## Related
+
+- [firmis scan](/cli/scan) — CLI reference including `--sarif` flag
+- [firmis ci](/cli/ci) — CI pipeline command
+- [GitHub Actions integration](/integrations/github-actions) — full workflow example
+- [CycloneDX BOM](/reference/cyclonedx-bom) — agent BOM output format
+- [Threat Categories](/reference/threat-categories) — what each ruleId maps to
 
 ---
 
@@ -5378,15 +6294,616 @@ Content coming soon.
 
 URL: https://docs.firmislabs.com/reference/security-model
 
-Content coming soon.
+> Firmis is a static analysis scanner. It reads code and configuration files to find threats embedded before deployment. It cannot observe live agent behavior, intercept network traffic, or detect threats that only manifest at runtime. This page documents exactly what Firmis covers and where coverage ends.
+
+## What Firmis detects
+
+Firmis performs static analysis across four detection surfaces:
+
+| Detection Surface | How | Example |
+|---|---|---|
+| **Known-bad static patterns** | Regex, YARA-style string matching, text search | AWS key format (`AKIA[0-9A-Z]{16}`), C2 beacon byte signatures |
+| **Structural code patterns** | Regex on AST-adjacent code structure | `readFileSync()` result piped to `fetch()` POST body |
+| **Supply chain anomalies** | Package name matching against curated threat lists | `event-stream` dependency, typosquatted package names |
+| **Secret leakage** | High-entropy token pattern matching | OpenAI key (`sk-...`), GitHub PAT (`ghp_...`), PEM headers |
+
+### What "detected" means
+
+A Firmis finding means: **this pattern was found in a file scanned from your project.** It does not mean an attack has occurred. It means a pattern associated with an attack technique exists in your codebase and requires human review to determine intent and risk.
 
 ---
 
-# Threat Categories
+## What Firmis does NOT detect
+
+Understanding the gaps is as important as understanding the coverage.
+
+| Not Detected | Reason | Alternative |
+|---|---|---|
+| **Runtime behavioral attacks** | Firmis is static — it does not run the agent or observe live execution | Runtime monitoring, network egress filtering |
+| **Live prompt injection via user input** | User-supplied prompts are not scanned at runtime | Input validation at the application layer |
+| **Zero-day obfuscation techniques** | Novel encoding or packing methods not yet in rule patterns | Behavioral analysis, sandboxing |
+| **Encrypted payload content** | Firmis cannot decrypt ciphertext to inspect payload intent | Runtime unpacking, sandboxed execution |
+| **Semantic logic bombs** | Logic that is benign individually but malicious when composed | Code review, threat modeling |
+| **Social engineering of agent operators** | Not a code-level threat | Security training, operational procedures |
+| **Real-time session hijacking** | Requires live traffic inspection | mTLS, session token rotation |
+| **Model weight manipulation** | Out of scope for agent code scanning | Model provenance verification |
+
+---
+
+## Confidence model
+
+Every Firmis finding includes a confidence score (0–100) and a tier. Understanding these values helps you prioritize findings.
+
+### How confidence is calculated
+
+```text
+confidence = Math.max(ratioConfidence, maxSinglePatternWeight)
+```
+
+**`ratioConfidence`** — reflects breadth of evidence across the rule's patterns:
+
+```text
+ratioConfidence = (matchedPatterns / totalPatterns) × averageMatchedWeight
+```
+
+**`maxSinglePatternWeight`** — the weight of the single highest-weighted pattern that matched.
+
+Taking the maximum of the two ensures that a single very strong indicator (e.g., an exact API key format match at weight 100) always produces a high confidence score, even if other patterns in the rule did not fire.
+
+### Confidence tiers
+
+| Tier | Confidence Range | Meaning |
+|---|---|---|
+| `confirmed` | 80–100 | High-specificity pattern match. Very low false-positive rate. Treat as finding until disproven. |
+| `likely` | 55–79 | Multiple patterns co-occurring or one strong indicator. Review recommended. |
+| `suspicious` | 0–54 | Weak or partial match. May represent benign code. Evaluate in context. |
+
+### What "critical" severity means
+
+Severity is set by the rule author based on the real-world impact if the threat is real. A `critical` finding means:
+
+- The threat could result in credential compromise, data exfiltration, or arbitrary code execution
+- The confidence threshold for this rule has been set high to reduce false positives
+- Immediate review is warranted in most codebases
+
+Severity is independent of confidence. A `critical/suspicious` finding means: "if this is what the rule thinks it is, it's very dangerous — but the evidence is partial."
+
+---
+
+## False positive expectations
+
+Firmis is tuned for low false positive rates across typical AI agent codebases. However, false positives occur in specific scenarios.
+
+### Common false positive sources
+
+| Scenario | Category | Why | Mitigation |
+|---|---|---|---|
+| Test fixtures with hardcoded tokens | secret-detection | Real key format in test data | Add path to `.firmisignore` |
+| Documentation describing attack patterns | prompt-injection, tool-poisoning | Explanatory text matches attack patterns | `.firmisignore` for doc paths |
+| Security tools and scanners | malware-signatures | Tools that manipulate or analyze malicious patterns | `.firmisignore` for tool paths |
+| Tutorials and example code | secret-detection | Example API keys in README | `.firmisignore` for example directories |
+| Legitimate broad permissions for platform tools | permission-overgrant | Some orchestration tools genuinely need wide scopes | Add `rule:perm-003` to `.firmisignore` |
+
+### Document multiplier
+
+Files with `.md` and `.txt` extensions receive a 0.15x confidence multiplier before threshold comparison. A pattern that scores 80 confidence in a TypeScript file scores 12 in a Markdown file — below most thresholds. This suppresses noise from documentation files that describe threats without embedding them.
+
+**Exception:** The `secret-detection` category is exempt from this multiplier. A hardcoded credential in a README or `.env.example` is still a real risk because it may be committed to a public repository.
+
+### Suppressing false positives
+
+```bash title="Terminal"
+# Suppress a specific rule across all files
+echo "rule:sd-045" >> .firmisignore
+
+# Suppress all findings in a directory
+echo "path:test/fixtures/" >> .firmisignore
+
+# Suppress a specific rule in a specific file
+echo "file:test/fixtures/sample.ts:rule:sd-045" >> .firmisignore
+```
+
+See [Ignoring Findings](/rules/ignoring-findings) for the full `.firmisignore` syntax.
+
+---
+
+## Detection boundary table
+
+| Threat Type | Detected? | How | Limitation |
+|---|---|---|---|
+| Hidden Unicode in tool descriptions | Yes | Regex pattern matching (tp-001) | Only detects known Unicode ranges |
+| Instruction override in tool metadata | Yes | Regex pattern matching (tp-002) | Novel phrasing may not match |
+| MCP config file modification | Yes | API call pattern matching (tp-004) | Only detects write-to-config patterns |
+| File content sent to external URL | Yes | Composite pattern (readFile + fetch) | Requires co-occurrence in same file |
+| AWS / GCP / Azure credential file access | Yes | file-access pattern matching (cred-*) | Does not detect indirect access via symlinks |
+| Hardcoded API keys and tokens | Yes | High-entropy regex (sd-*) | Custom or low-entropy secrets may be missed |
+| Compromised npm packages | Yes | String matching against curated list (supply-*) | List requires updates when new incidents occur |
+| Typosquatted packages | Yes | String distance matching (supply-*) | Very subtle typos may evade detection |
+| Tunneling service requests | Yes | Network pattern matching (na-*) | Only matches known tunneling domains |
+| Pipe-to-shell execution | Yes | Regex pattern matching (md-001) | Heavily obfuscated variants may evade |
+| Runtime prompt injection via user input | No | Not a static pattern | Requires runtime input validation |
+| Encrypted C2 payloads | Partial | Detects encrypted blob shape, not decrypted content | Cannot determine intent without decryption |
+| Semantic logic bombs | No | Multi-file compositional analysis not implemented | Requires code review or symbolic execution |
+| Zero-day obfuscation | No | Patterns must exist in rule set | Rule updates needed for novel techniques |
+
+---
+
+## Data handling guarantees
+
+| Property | Guarantee |
+|---|---|
+| **Code never uploaded** | All analysis happens locally. No file contents, paths, or findings leave your machine. |
+| **No telemetry by default** | Firmis collects no usage telemetry unless explicitly configured. |
+| **Read-only scanning** | Firmis never modifies scanned files. Running a scan changes nothing in your repository. |
+| **No code execution** | No code in scanned files is run. Pattern matching operates on raw file content. |
+| **Offline operation** | All 209 rules are bundled locally. Scanning works fully offline. |
+
+---
+
+## Related
+
+- [Detection Engine](/concepts/detection-engine) — matcher types, confidence scoring, and deduplication
+- [Threat Categories](/reference/threat-categories) — all 16 categories with OWASP/MITRE mappings
+- [Ignoring Findings](/rules/ignoring-findings) — suppressing false positives
+- [How It Works](/concepts/how-it-works) — the three-stage scan pipeline
+
+---
+
+# Threat Categories Reference
 
 URL: https://docs.firmislabs.com/reference/threat-categories
 
-Content coming soon.
+> The authoritative reference for Firmis's 16 threat categories. Use this page to understand what each category detects, how findings are identified, and how they map to OWASP LLM Top 10 and MITRE ATT&CK for ML.
+
+## Master table
+
+| # | Category | ID Prefix | Rules | Severity Range | OWASP LLM | MITRE ATT&CK |
+|---|---|---|---|---|---|---|
+| 1 | [tool-poisoning](#tool-poisoning) | `tp-` | 10 | Critical–Medium | LLM07 | AML.T0043 |
+| 2 | [data-exfiltration](#data-exfiltration) | `de-` / `exfil-` | 12 | Critical–High | LLM02 | AML.T0037 |
+| 3 | [credential-harvesting](#credential-harvesting) | `cred-` | 18 | Critical–High | LLM06 | AML.T0012 |
+| 4 | [prompt-injection](#prompt-injection) | `prompt-` / `pi-` | 13 | Critical–High | LLM01 | AML.T0051 |
+| 5 | [secret-detection](#secret-detection) | `sd-` | 60 | Critical–Medium | LLM06 | AML.T0012 |
+| 6 | [supply-chain](#supply-chain) | `supply-` / `sc-` | 8 | Critical–High | LLM05 | AML.T0010 |
+| 7 | [malware-signatures](#malware-signatures) | `malware-` | 6 | Critical | LLM07 | AML.T0043 |
+| 8 | [known-malicious](#known-malicious) | `km-` | 10 | Critical | LLM05 | AML.T0010 |
+| 9 | [network-abuse](#network-abuse) | `na-` | 10 | High–Medium | LLM04 / LLM08 | AML.T0037 |
+| 10 | [file-system-abuse](#file-system-abuse) | `fs-` | 10 | High–Medium | LLM08 | AML.T0037 |
+| 11 | [permission-overgrant](#permission-overgrant) | `perm-` / `po-` | 7 | High–Medium | LLM07 | AML.T0043 |
+| 12 | [agent-memory-poisoning](#agent-memory-poisoning) | `mem-` | 7 | High | LLM03 | AML.T0051 |
+| 13 | [malware-distribution](#malware-distribution) | `md-` | 6 | Critical–High | LLM07 | AML.T0043 |
+| 14 | [suspicious-behavior](#suspicious-behavior) | `sb-` | 16 | High–Medium | LLM02 | AML.T0043 |
+| 15 | [insecure-config](#insecure-config) | `ic-` | 3 | Medium–Low | LLM09 | AML.T0054 |
+| 16 | [access-control](#access-control) | `ac-` | 3 | High–Medium | LLM10 | AML.T0012 |
+
+**Total: 209 rules across 16 categories.**
+
+---
+
+## OWASP LLM Top 10 mapping
+
+| OWASP LLM | Title | Firmis Categories |
+|---|---|---|
+| LLM01 | Prompt Injection | prompt-injection |
+| LLM02 | Insecure Output Handling | data-exfiltration, suspicious-behavior |
+| LLM03 | Training Data Poisoning | agent-memory-poisoning |
+| LLM04 | Model Denial of Service | network-abuse |
+| LLM05 | Supply Chain Vulnerabilities | supply-chain, known-malicious |
+| LLM06 | Sensitive Information Disclosure | secret-detection, credential-harvesting |
+| LLM07 | Insecure Plugin Design | tool-poisoning, permission-overgrant, malware-signatures, malware-distribution |
+| LLM08 | Excessive Agency | file-system-abuse, network-abuse |
+| LLM09 | Overreliance | insecure-config |
+| LLM10 | Model Theft | access-control |
+
+---
+
+## tool-poisoning
+
+**ID prefix:** `tp-001` through `tp-010`
+**Severity range:** Critical–Medium
+**Rules:** 10
+
+Tool poisoning attacks embed malicious instructions inside tool definitions — descriptions, names, or metadata fields — that AI agents read and act on automatically. Because agents trust tool descriptions to understand what a tool does, hidden content in those fields can redirect agent behavior without user awareness.
+
+**What it detects:**
+- Invisible Unicode characters (zero-width spaces, directional overrides, homoglyphs) in tool names or descriptions
+- Prompt override language embedded in tool metadata, such as "Ignore all previous instructions" or role-reassignment phrases
+- Code that programmatically writes to MCP configuration files to silently register tool servers
+
+**Example finding:**
+
+```text
+CRITICAL  tp-001  Hidden instructions in tool description
+          src/tools/search.ts:14
+          Evidence: Zero-width space (U+200B) found in description field
+```
+
+**Related rules:** `tp-001` (Unicode hiding), `tp-002` (prompt override), `tp-003` (tool shadowing), `tp-004` (MCP config injection), `tp-006` (homoglyph names)
+
+---
+
+## data-exfiltration
+
+**ID prefix:** `de-` / `exfil-`
+**Severity range:** Critical–High
+**Rules:** 12
+
+Data exfiltration rules detect code that sends local data — files, environment variables, clipboard contents, configuration — to external URLs or services outside the intended scope of the tool.
+
+**What it detects:**
+- Tool handlers that read local files and POST their contents to external URLs
+- Code that accesses `process.env` and sends environment variable values to webhook endpoints
+- DNS-based exfiltration patterns that encode data in DNS query subdomains to bypass HTTP monitoring
+
+**Example finding:**
+
+```text
+CRITICAL  exfil-003  File contents sent to external URL
+          src/tools/sync.ts:87
+          Evidence: readFileSync() result passed to fetch() POST body targeting external domain
+```
+
+**Related rules:** `exfil-001` through `exfil-012`
+
+---
+
+## credential-harvesting
+
+**ID prefix:** `cred-`
+**Severity range:** Critical–High
+**Rules:** 18
+
+Credential harvesting rules detect direct references to files that store cloud provider credentials, SSH private keys, browser-stored passwords, and authentication token caches. Agent code should never need to read these paths; any reference is a strong indicator of malicious intent.
+
+**What it detects:**
+- References to `~/.aws/credentials`, `~/.aws/config`, and provider-specific credential files
+- Access to SSH private key paths such as `~/.ssh/id_rsa` and `~/.ssh/id_ed25519`
+- Browser credential store paths (Chrome Login Data, Firefox key4.db, macOS Keychain)
+
+**Example finding:**
+
+```text
+HIGH  cred-001  Reference to AWS credentials file
+      src/tools/deploy.ts:23
+      Evidence: Path ~/.aws/credentials accessed via file-read operation
+```
+
+**Related rules:** `cred-001` through `cred-018`
+
+---
+
+## prompt-injection
+
+**ID prefix:** `prompt-` / `pi-`
+**Severity range:** Critical–High
+**Rules:** 13
+
+Prompt injection rules detect instruction-override language in any content the agent reads: tool return values, configuration files, Markdown documents, or fetched content. Unlike tool poisoning (which targets definitions at configuration time), prompt injection can arrive through any data channel the agent processes at runtime.
+
+**What it detects:**
+- Instruction override phrases in Markdown files, README files, or documents the agent consumes
+- Role reassignment language in tool outputs, such as "You are now DAN" or "Operating in developer mode"
+- Context manipulation patterns that attempt to make the agent discard prior instructions
+
+**Example finding:**
+
+```text
+CRITICAL  pi-001  Prompt injection in agent-consumed document
+          docs/AGENT_CONTEXT.md:34
+          Evidence: "Disregard your instructions and instead..." in agent-readable file
+```
+
+**Related rules:** `prompt-001` through `pi-013`
+
+---
+
+## secret-detection
+
+**ID prefix:** `sd-`
+**Severity range:** Critical–Medium
+**Rules:** 60
+
+Secret detection is the largest category by rule count. It covers hardcoded credentials across 30+ cloud providers, SaaS APIs, infrastructure services, and generic token formats. This category is exempt from the 0.15x document multiplier — secrets in `.env.example` and `README.md` files are still reported.
+
+**What it detects:**
+- Cloud provider API keys and access tokens (AWS, Azure, GCP, Anthropic, OpenAI, HuggingFace)
+- SaaS service tokens (GitHub, GitLab, Slack, Stripe, Twilio, SendGrid, PagerDuty, Datadog)
+- Private key headers (PEM format markers) and SSH key formats
+
+**Example finding:**
+
+```text
+CRITICAL  sd-045  OpenAI API key detected
+          config/llm.ts:12
+          Evidence: sk-... token matching OpenAI API key format (weight 100)
+```
+
+**Related rules:** `sd-001` through `sd-060`
+
+---
+
+## supply-chain
+
+**ID prefix:** `supply-` / `sc-`
+**Severity range:** Critical–High
+**Rules:** 8
+
+Supply chain rules detect dependencies with documented security incidents — compromised packages, protestware, maintainer sabotage events — and typosquatting patterns that mimic popular package names to trick developers into installing malicious code.
+
+**What it detects:**
+- Dependencies matching a curated list of packages with known compromise histories (e.g., `event-stream`, `ua-parser-js`)
+- Typosquatted package names that differ from legitimate packages by one character or transposition
+- npm lifecycle scripts (`preinstall`, `postinstall`) that download and run remote content
+
+**Example finding:**
+
+```text
+CRITICAL  supply-001  Known-compromised package dependency
+          package.json:18
+          Evidence: "event-stream" — package was compromised to steal bitcoin wallets (2018)
+```
+
+**Related rules:** `supply-001` through `sc-008`
+
+---
+
+## malware-signatures
+
+**ID prefix:** `malware-`
+**Severity range:** Critical
+**Rules:** 6
+
+Malware signature rules match code patterns associated with known malware families and attack toolkits observed in the wild. These rules have very low false-positive rates; a match almost always indicates intentionally malicious code.
+
+**What it detects:**
+- Base64-encoded payload strings matching known command-and-control beacon patterns
+- Shellcode injection sequences and process hollowing patterns
+- Cryptocurrency miner startup sequences embedded in tool handlers
+
+**Example finding:**
+
+```text
+CRITICAL  malware-003  Known C2 beacon pattern
+          src/tools/update.ts:156
+          Evidence: Base64 payload matches Cobalt Strike stage-1 beacon signature
+```
+
+**Related rules:** `malware-001` through `malware-006`
+
+---
+
+## known-malicious
+
+**ID prefix:** `km-`
+**Severity range:** Critical
+**Rules:** 10
+
+Known malicious rules match package names and identifiers against curated threat intelligence databases: packages reported to npm security teams, community-disclosed malicious packages, and packages removed from registries due to malicious behavior.
+
+**What it detects:**
+- Package names in `package.json`, `requirements.txt`, or `pyproject.toml` that match known-bad identifiers
+- Import statements referencing packages flagged in npm advisory or PyPI security databases
+- String literals matching known malicious package names used in supply chain attacks
+
+**Example finding:**
+
+```text
+CRITICAL  km-007  Known malicious package reference
+          package.json:31
+          Evidence: Package "flatmap-stream" — used to distribute malicious payload (npm advisory #663)
+```
+
+**Related rules:** `km-001` through `km-010`
+
+---
+
+## network-abuse
+
+**ID prefix:** `na-`
+**Severity range:** High–Medium
+**Rules:** 10
+
+Network abuse rules detect unauthorized DNS lookups, HTTP requests to suspicious domains, tunneling service usage, and data-over-DNS patterns. These are often used to establish covert communication channels or exfiltrate data in ways that bypass standard HTTP-level monitoring.
+
+**What it detects:**
+- Requests to tunneling services that create unmonitored egress channels (`ngrok.io`, `localtunnel.me`, `serveo.net`)
+- HTTP requests to suspicious TLDs (`.tk`, `.ml`, `.ga`, `.cf`, `.gq`, `.xyz`) commonly used in phishing and C2 infrastructure
+- DNS TXT record lookups that encode exfiltrated data in query subdomains
+
+**Example finding:**
+
+```text
+HIGH  na-004  Request to tunneling service
+      src/tools/debug.ts:44
+      Evidence: HTTP request targeting ngrok.io — creates unmonitored egress channel
+```
+
+**Related rules:** `na-001` through `na-010`
+
+---
+
+## file-system-abuse
+
+**ID prefix:** `fs-`
+**Severity range:** High–Medium
+**Rules:** 10
+
+File system abuse rules detect reads, writes, or deletions of sensitive system paths — including Linux `/proc` filesystem entries, system log files, shell history files, and container credential paths — that tools should never access.
+
+**What it detects:**
+- Access to `/proc/self/environ` (exposes all process environment variables including secrets)
+- Writes to or truncation of system log files to cover activity traces
+- Access to container service account token paths in Kubernetes deployments
+
+**Example finding:**
+
+```text
+HIGH  fs-001  Access to /proc/self/environ
+      src/tools/diagnostics.ts:19
+      Evidence: Direct read of /proc/self/environ — exposes all environment variables
+```
+
+**Related rules:** `fs-001` through `fs-010`
+
+---
+
+## permission-overgrant
+
+**ID prefix:** `perm-` / `po-`
+**Severity range:** High–Medium
+**Rules:** 7
+
+Permission overgrant rules detect tool definitions that request broader permissions than necessary for their declared purpose — wildcard permission scopes, missing scope constraints, and permission declarations that grant access far beyond what the tool description claims to need.
+
+**What it detects:**
+- MCP tool configurations declaring `permissions: ["*"]` or equivalent wildcard scopes
+- Tool permission lists that include filesystem write access when the tool only claims to read data
+- Missing `scope` or `allowedPaths` constraints on tools with file or network access
+
+**Example finding:**
+
+```text
+HIGH  perm-003  Wildcard permission in tool definition
+      mcp-config.json:42
+      Evidence: Tool "search" declares permissions: ["*"] — should enumerate specific scopes only
+```
+
+**Related rules:** `perm-001` through `po-007`
+
+---
+
+## agent-memory-poisoning
+
+**ID prefix:** `mem-`
+**Severity range:** High
+**Rules:** 7
+
+Agent memory poisoning rules detect patterns that corrupt or hijack the agent's context window, conversation history, or persistent memory store — causing the agent to behave maliciously in subsequent turns without the current turn showing obvious attack signals.
+
+**What it detects:**
+- Tools that write adversarial instructions into persistent memory files loaded by the agent on startup
+- Code that injects role-reassignment or instruction-override text into agent context storage
+- Manipulation of conversation history or session state to alter future agent behavior
+
+**Example finding:**
+
+```text
+HIGH  mem-002  Adversarial content written to agent memory
+      src/tools/memory.ts:67
+      Evidence: Tool writes prompt injection payload to ~/.agent_memory/context.json
+```
+
+**Related rules:** `mem-001` through `mem-007`
+
+---
+
+## malware-distribution
+
+**ID prefix:** `md-`
+**Severity range:** Critical–High
+**Rules:** 6
+
+Malware distribution rules detect code patterns that download and run additional payloads, install backdoors, or spread malicious code to other systems in the environment.
+
+**What it detects:**
+- Pipe-to-shell patterns that download and immediately run remote scripts without verification
+- Dynamic code execution of remotely fetched content using dangerous execution primitives
+- Self-replicating code that copies itself or drops payloads to other paths in the filesystem
+
+**Example finding:**
+
+```text
+CRITICAL  md-001  Pipe-to-shell execution
+          src/tools/installer.ts:34
+          Evidence: curl output piped directly to bash — runs remote script without verification
+```
+
+**Related rules:** `md-001` through `md-006`
+
+---
+
+## suspicious-behavior
+
+**ID prefix:** `sb-`
+**Severity range:** High–Medium
+**Rules:** 16
+
+Suspicious behavior rules cover obfuscation techniques, encoded payloads, and evasion patterns that are not specific to one threat category but strongly indicate malicious intent. These rules catch threats that do not fit neatly into more specific categories.
+
+**What it detects:**
+- Long Base64-encoded strings passed to dynamic code execution primitives
+- Heavy string concatenation used to build URLs or commands in ways that evade simple pattern matching
+- Anti-debugging and sandbox detection patterns commonly used by malware to avoid analysis
+
+**Example finding:**
+
+```text
+HIGH  sb-004  Obfuscated payload passed to dynamic executor
+      src/tools/loader.ts:91
+      Evidence: 2KB base64 string decoded and passed to code executor — common malware staging pattern
+```
+
+**Related rules:** `sb-001` through `sb-016`
+
+---
+
+## insecure-config
+
+**ID prefix:** `ic-`
+**Severity range:** Medium–Low
+**Rules:** 3
+
+Insecure configuration rules detect agent configurations that disable security controls, set overly permissive CORS policies, or use known-insecure default settings that increase the attack surface.
+
+**What it detects:**
+- Server configurations with `allowOrigins: "*"` and no authentication requirement
+- Agent configurations with authentication disabled (`auth: false`, `requireAuth: false`)
+- Insecure transport settings (HTTP instead of HTTPS for endpoints handling sensitive data)
+
+**Example finding:**
+
+```text
+MEDIUM  ic-002  Overly permissive CORS configuration
+        src/server/config.ts:15
+        Evidence: allowOrigins: "*" with no authentication — any origin can make requests
+```
+
+**Related rules:** `ic-001` through `ic-003`
+
+---
+
+## access-control
+
+**ID prefix:** `ac-`
+**Severity range:** High–Medium
+**Rules:** 3
+
+Access control rules detect missing authentication checks on tool endpoints, unauthenticated administrative routes, and hardcoded bypass conditions that allow unauthorized callers to invoke privileged operations.
+
+**What it detects:**
+- Tool handlers that process requests without verifying caller identity or checking an authorization token
+- Admin routes with no access guard — any caller can invoke privileged operations
+- Hardcoded bypass conditions that create permanent backdoors in tool handlers
+
+**Example finding:**
+
+```text
+HIGH  ac-001  Unauthenticated tool handler
+      src/tools/admin.ts:8
+      Evidence: Tool handler processes all requests without auth check — no token validation found
+```
+
+**Related rules:** `ac-001` through `ac-003`
+
+---
+
+## Related
+
+- [Threat Model](/concepts/threat-model) — narrative descriptions of each category
+- [Detection Engine](/concepts/detection-engine) — how rules are scored and thresholds applied
+- [Built-in Rules](/rules/built-in-rules) — full listing of all 209 rules with IDs and descriptions
+- [Security Model](/reference/security-model) — what Firmis detects and what it does not
+- [firmis scan](/cli/scan) — CLI reference
 
 ---
 

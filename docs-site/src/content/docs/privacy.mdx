@@ -1,6 +1,108 @@
 ---
-title: Privacy
-description: Privacy policy for Firmis and Firmis Labs.
+title: "Privacy"
+description: "Privacy policy for Firmis Scanner. Offline-first, no data collected by default."
 ---
 
-Content coming soon.
+> Firmis Scanner is offline-first. By default, nothing leaves your machine.
+
+**Last Updated:** 2026-02-07
+
+## Key principles
+
+1. The scanner works fully offline by default
+2. All cloud features are opt-in
+3. No personally identifiable information is collected
+4. You control what data is shared
+
+## Data collection summary
+
+| Data Type | Collected | Opt-in | Sent to Cloud |
+|-----------|-----------|--------|---------------|
+| File paths | No | — | Never |
+| Code snippets | No | — | Never |
+| Environment variables | No | — | Never |
+| IP address | No | — | Never |
+| Threat pattern hashes | Yes | Telemetry | Anonymized |
+| Platform statistics | Yes | Telemetry | Aggregated |
+| Behavioral features | Yes | Cloud scan | Numeric only |
+
+## Offline mode (default)
+
+When you run `firmis scan` without the `--cloud` flag:
+
+**What happens locally:**
+- Scans your AI agent components
+- Matches against bundled YAML rules
+- Generates reports (JSON, SARIF, HTML, terminal)
+
+**What is NOT collected or sent:**
+- Absolutely nothing leaves your machine
+- No network requests are made
+- No telemetry is collected
+- No usage tracking occurs
+
+## Cloud mode (opt-in)
+
+When you run `firmis scan --cloud`, we send **threat pattern hashes** to enhance your results:
+
+```json
+{
+  "signatureHash": "sha256:abc123...",
+  "category": "credential-harvesting",
+  "severity": "high",
+  "patternType": "file-access",
+  "platform": "claude",
+  "localConfidence": 85
+}
+```
+
+**What we DO NOT send:** file paths, file names, code snippets, directory structure, environment variables, or user/machine identifiers.
+
+For behavioral analysis, we send **numeric feature vectors only** — counts and booleans, never actual code, function names, variable names, or string literals.
+
+## Telemetry (opt-in)
+
+Enable with `firmis scan --cloud --contribute`. Telemetry helps identify new threats through collective intelligence and reduce false positives. What we collect:
+
+- A random event ID (not tied to your identity)
+- Scanner version
+- Aggregate platform component counts
+- Threat signature hashes (never code)
+- A rotating weekly installation ID (SHA256 hash, not personally identifiable)
+
+**Data retention:** Raw telemetry is kept 7 days; aggregated statistics up to 2 years. No PII is retained.
+
+## Your choices
+
+```bash
+# Fully offline (default)
+firmis scan
+
+# Cloud enrichment, no telemetry
+firmis scan --cloud
+
+# Contribute to collective defense
+firmis scan --cloud --contribute
+```
+
+To request deletion of telemetry data, email **privacy@firmislabs.com** with your installation ID.
+
+## GDPR
+
+Firmis is GDPR compliant (EU) and CCPA compliant (California). No personal data is collected in the default offline mode. Cloud features process only anonymous, non-reversible hashes and numeric metrics.
+
+## Third-party services
+
+| Service | Purpose | Data processed |
+|---------|---------|----------------|
+| Cloudflare | API gateway | Request routing (no logging) |
+| Supabase | Database | Threat signatures, aggregates |
+| ClickHouse Cloud | Analytics | Telemetry aggregates only |
+
+No third party receives your code, file paths, or personally identifiable information.
+
+## Contact
+
+For privacy questions or concerns:
+- Email: **privacy@firmislabs.com**
+- GitHub: [github.com/riteshkew/firmis-scanner/issues](https://github.com/riteshkew/firmis-scanner/issues)

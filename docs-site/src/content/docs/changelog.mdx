@@ -1,6 +1,56 @@
 ---
-title: Changelog
-description: Release history for Firmis.
+title: "Changelog"
+description: "Release history for Firmis Scanner. All notable changes documented."
 ---
 
-Content coming soon.
+> All notable changes to Firmis Scanner are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
+
+## [1.3.0] — 2026-03-01
+
+### Added
+- 34 new detection rules: access-control (3 rules), insecure-config (3 rules), expanded credential-harvesting, prompt-injection, supply-chain, and suspicious-behavior categories
+- Nanobot platform analyzer
+
+### Fixed
+- False positive reduction in secret detection for test fixtures
+- Discovery timeout on large monorepos (500-file limit per component)
+- Cross-platform finding deduplication
+
+### Security
+- Input validation on component names (path traversal prevention)
+- MAX_FILES_PER_COMPONENT=500 limit (DoS prevention)
+
+## [1.2.0] — 2026-02-18
+
+### Added
+- Credential harvesting and prompt injection rule hardening (Sprint B)
+- Supply chain detection improvements
+- Cross-platform dedup engine (`src/scanner/dedup.ts`)
+
+### Fixed
+- YAML escaping issues (`'\'` → `''` for literal quotes)
+- PlatformRegistry singleton state persistence across tests
+- Broad regex false positives in secret detection
+
+### Security
+- Component name validation against path traversal and XSS
+
+## [1.1.0] — 2026-02-16
+
+### Added
+- 8 platform analyzers: Claude, MCP, Codex, Cursor, CrewAI, AutoGPT, OpenClaw, Nanobot
+- 175+ YAML detection rules across 12 threat categories
+- YARA-like pattern matching engine
+- Secret detection (60 rules)
+- OSV vulnerability scanning
+- Discovery + Agent BOM (CycloneDX 1.7)
+- CI pipeline command (`firmis ci`)
+- SARIF 2.1.0 and HTML report output
+
+## [1.0.0] — 2026-02-12
+
+### Added
+- Initial release
+- Core scan engine with regex pattern matching
+- Terminal, JSON output formats
+- `scan`, `list`, `validate` commands

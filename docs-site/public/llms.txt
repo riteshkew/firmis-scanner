@@ -4,11 +4,11 @@
 
 ## Docs
 
-- [Changelog](https://docs.firmislabs.com/changelog): Release history for Firmis.
+- [Changelog](https://docs.firmislabs.com/changelog): Release history for Firmis Scanner. All notable changes documented.
 - [Installation](https://docs.firmislabs.com/installation): Install Firmis Scanner via npx (zero install), npm, or yarn. Requires Node.js 20+.
-- [Privacy](https://docs.firmislabs.com/privacy): Privacy policy for Firmis and Firmis Labs.
+- [Privacy](https://docs.firmislabs.com/privacy): Privacy policy for Firmis Scanner. Offline-first, no data collected by default.
 - [Quick Start — Your First Scan in 60 Seconds](https://docs.firmislabs.com/quickstart): Install Firmis and scan your AI agent components for security threats. Zero config, zero signup, runs entirely offline.
-- [Security](https://docs.firmislabs.com/security): Security policy and vulnerability reporting for Firmis.
+- [Security Policy](https://docs.firmislabs.com/security): How to report security vulnerabilities in Firmis Scanner.
 
 ## CLI Reference
 
@@ -44,11 +44,11 @@
 
 ## Reference
 
-- [Configuration](https://docs.firmislabs.com/reference/config-schema): Full reference for the Firmis configuration schema.
-- [CycloneDX BOM](https://docs.firmislabs.com/reference/cyclonedx-bom): Reference for the CycloneDX 1.7 Agent BOM format produced by Firmis.
-- [SARIF Output](https://docs.firmislabs.com/reference/sarif-output): Reference for the SARIF output format produced by Firmis.
-- [Security Model](https://docs.firmislabs.com/reference/security-model): The security model and data handling guarantees of Firmis.
-- [Threat Categories](https://docs.firmislabs.com/reference/threat-categories): Reference for all 16 threat categories detected by Firmis.
+- [Configuration Reference](https://docs.firmislabs.com/reference/config-schema): Complete reference for all Firmis configuration options — CLI flags, config file schema, environment variables, and defaults.
+- [CycloneDX BOM Reference](https://docs.firmislabs.com/reference/cyclonedx-bom): CycloneDX 1.7 Agent BOM output format — field mappings, JSON structure, generation commands, Dependency-Track integration, and a complete example.
+- [SARIF Output Reference](https://docs.firmislabs.com/reference/sarif-output): SARIF 2.1.0 output format produced by Firmis — field mappings, generation commands, GitHub Security tab integration, and a complete example.
+- [Security Model](https://docs.firmislabs.com/reference/security-model): What Firmis detects and what it does not — confidence scoring, false positive expectations, detection boundaries, and the limits of static analysis for AI agent security.
+- [Threat Categories Reference](https://docs.firmislabs.com/reference/threat-categories): All 16 threat categories detected by Firmis — rule counts, severity ranges, OWASP LLM Top 10 mappings, MITRE ATT&CK mappings, and per-category detection details.
 
 ## Optional
 

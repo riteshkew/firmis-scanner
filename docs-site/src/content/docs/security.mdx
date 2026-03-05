@@ -1,6 +1,39 @@
 ---
-title: Security
-description: Security policy and vulnerability reporting for Firmis.
+title: "Security Policy"
+description: "How to report security vulnerabilities in Firmis Scanner."
 ---
 
-Content coming soon.
+> Report security vulnerabilities responsibly. We take every report seriously.
+
+## Supported versions
+
+| Version | Supported |
+|---|---|
+| 1.3.x | Yes |
+| 1.2.x | Yes |
+| &lt; 1.2 | No |
+
+## Reporting a vulnerability
+
+**Email:** security@firmislabs.com
+
+Please include:
+- Description of the vulnerability
+- Steps to reproduce
+- Impact assessment
+- Affected version(s)
+
+We aim to acknowledge reports within 48 hours and provide a fix within 7 days for critical issues.
+
+## Security practices
+
+- All detection rules are open-source and auditable
+- Firmis runs entirely offline — no network access required
+- No telemetry collected by default
+- Dependencies are regularly audited with `npm audit`
+- We dogfood Firmis on itself — self-scan results are reviewed with each release
+
+## Related
+
+- [Security Model](/reference/security-model) — what Firmis detects and doesn't detect
+- [Privacy](/docs/privacy) — data collection policy

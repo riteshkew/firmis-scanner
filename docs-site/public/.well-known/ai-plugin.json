@@ -1,0 +1,20 @@
+{
+  "schema_version": "v1",
+  "name": "firmis",
+  "description": "AI agent security scanner — detect threats in Claude Skills, MCP Servers, Codex Plugins, and more",
+  "auth": { "type": "none" },
+  "api": {
+    "type": "cli",
+    "installation": "npx firmis",
+    "commands": {
+      "scan": "npx firmis scan [path] --json",
+      "discover": "npx firmis discover [path] --json",
+      "bom": "npx firmis bom [path]",
+      "ci": "npx firmis ci [path] --format sarif"
+    }
+  },
+  "docs_url": "https://docs.firmislabs.com/llms.txt",
+  "logo_url": "https://firmislabs.com/logo.png",
+  "contact_email": "security@firmislabs.com",
+  "legal_info_url": "https://docs.firmislabs.com/privacy"
+}
