@@ -13,6 +13,7 @@ import {
   printError,
   formatPlatformName,
 } from '../utils/output.js'
+import { openInBrowser } from '../utils/open.js'
 import type {
   FirmisConfig,
   OutputFormat,
@@ -99,6 +100,7 @@ async function action(targetPath: string | undefined, options: ScanOptions): Pro
           reportPath = resolve(process.cwd(), reportName)
           const htmlReporter = new HtmlReporter(reportPath)
           await htmlReporter.report(result)
+          openInBrowser(reportPath)
         }
 
         printCompactSummary(result, reportPath)

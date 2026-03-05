@@ -245,7 +245,7 @@ export function printCompactSummary(result: ScanResult, reportPath?: string): vo
 
   if (reportPath) {
     console.log(`  ${chalk.cyan(`Full report: ${reportPath}`)}`)
-    console.log(`  ${chalk.dim(`Open with: open ${reportPath.split('/').pop()}`)}`)
+    console.log(`  ${chalk.dim('Opened in browser')}`)
     console.log()
   }
 

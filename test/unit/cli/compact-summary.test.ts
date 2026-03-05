@@ -276,7 +276,7 @@ describe('printCompactSummary', () => {
     printCompactSummary(result, '/tmp/firmis-report-2026-03-05.html')
     const output = consoleOutput.join('\n')
     expect(output).toContain('Full report: /tmp/firmis-report-2026-03-05.html')
-    expect(output).toContain('firmis-report-2026-03-05.html')
+    expect(output).toContain('Opened in browser')
     // Should not show manual --html hint when report is auto-generated
     expect(output).not.toContain('firmis scan --html')
   })
