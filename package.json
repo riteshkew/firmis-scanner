@@ -1,6 +1,6 @@
 {
   "name": "firmis-scanner",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "AI agent runtime security scanner - detect malicious behavior in Claude Skills, MCP Servers, Codex Plugins, and more",
   "type": "module",
   "main": "./dist/index.js",
