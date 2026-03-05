@@ -1,6 +1,254 @@
 ---
 title: Pre-commit Hooks
-description: Run Firmis as a pre-commit hook to catch issues before they are committed.
+description: Run Firmis as a pre-commit hook to catch security threats before they reach your repository.
 ---
 
-Content coming soon.
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components'
+
+> Catch threats at commit time, before they ever reach CI. Pre-commit hooks are the fastest feedback loop in your security pipeline.
+
+## Why pre-commit scanning matters
+
+CI pipelines catch issues after a push, which means threats travel through git history and may be visible to collaborators before anyone acts on them. A pre-commit hook stops the commit entirely if threats are found, keeping your repository clean from the start.
+
+Firmis is well-suited for pre-commit use because it is:
+
+- **Fast** — most projects scan in under 3 seconds
+- **Zero-install** — runs via `npx` with no prior setup
+- **Offline** — no network requests for the core scan (OSV check is optional)
+
+## Setup options
+
+<Tabs>
+<TabItem label="Husky (npm/Node.js)">
+
+Husky is the standard pre-commit hook manager for Node.js projects.
+
+<Steps>
+1. Install Husky and configure it:
+
+   ```bash title="Terminal"
+   npx husky init
+   ```
+
+2. Add the Firmis scan command to `.husky/pre-commit`:
+
+   ```bash title=".husky/pre-commit"
+   #!/usr/bin/env sh
+   . "$(dirname -- "$0")/_/husky.sh"
+
+   # Run Firmis on staged files — fail commit if high/critical threats found
+   npx firmis scan . --severity high --quiet
+   ```
+
+3. Make the hook executable:
+
+   ```bash title="Terminal"
+   chmod +x .husky/pre-commit
+   ```
+
+4. Add Husky to your `package.json` prepare script so it installs for all contributors:
+
+   ```json title="package.json"
+   {
+     "scripts": {
+       "prepare": "husky"
+     }
+   }
+   ```
+</Steps>
+
+<Aside type="tip">
+  Use `--quiet` to suppress verbose output in the hook. Firmis will still print a summary of threats found and exit with a non-zero code if the threshold is breached.
+</Aside>
+
+### Scan only staged files
+
+For large projects, scanning only the files staged for commit reduces hook latency.
+
+```bash title=".husky/pre-commit"
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Get staged files
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | head -50)
+
+if [ -z "$STAGED" ]; then
+  exit 0
+fi
+
+# Write staged file list to a temp file
+TMPFILE=$(mktemp)
+echo "$STAGED" > "$TMPFILE"
+
+# Scan only the project root (firmis auto-discovers components)
+npx firmis scan . --severity high --quiet
+EXIT_CODE=$?
+
+rm -f "$TMPFILE"
+exit $EXIT_CODE
+```
+
+</TabItem>
+<TabItem label="pre-commit framework (Python)">
+
+If your project uses the [pre-commit](https://pre-commit.com/) framework (common in Python and polyglot projects), add Firmis as a local hook.
+
+<Steps>
+1. Ensure `pre-commit` is installed:
+
+   ```bash title="Terminal"
+   pip install pre-commit
+   ```
+
+2. Add the Firmis hook to `.pre-commit-config.yaml`:
+
+   ```yaml title=".pre-commit-config.yaml"
+   repos:
+     - repo: local
+       hooks:
+         - id: firmis-scan
+           name: Firmis Security Scan
+           language: node
+           entry: npx firmis scan . --severity high --quiet
+           pass_filenames: false
+           always_run: true
+           stages: [pre-commit]
+   ```
+
+3. Install the hooks:
+
+   ```bash title="Terminal"
+   pre-commit install
+   ```
+</Steps>
+
+<Aside type="note">
+  `pass_filenames: false` tells pre-commit not to pass individual file paths to Firmis. Firmis discovers AI agent components itself (Claude Skills, MCP Servers, etc.) and needs to scan the full project tree to find them correctly.
+</Aside>
+
+### Full `.pre-commit-config.yaml` with other hooks
+
+```yaml title=".pre-commit-config.yaml"
+repos:
+  # Standard hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: detect-private-key
+
+  # Firmis security scan
+  - repo: local
+    hooks:
+      - id: firmis-scan
+        name: Firmis — AI Agent Security Scan
+        language: node
+        entry: npx firmis scan . --severity high --quiet
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+        verbose: true
+```
+
+</TabItem>
+<TabItem label="Manual git hook">
+
+No framework required. Drop a script directly into `.git/hooks/`.
+
+<Steps>
+1. Create the hook file:
+
+   ```bash title=".git/hooks/pre-commit"
+   #!/usr/bin/env sh
+
+   echo "Running Firmis security scan..."
+
+   npx firmis scan . --severity high --quiet
+   EXIT_CODE=$?
+
+   if [ $EXIT_CODE -ne 0 ]; then
+     echo ""
+     echo "Firmis found high/critical threats. Commit blocked."
+     echo "Run 'npx firmis scan .' to see full details."
+     echo "To skip this check (not recommended): git commit --no-verify"
+     exit 1
+   fi
+
+   exit 0
+   ```
+
+2. Make it executable:
+
+   ```bash title="Terminal"
+   chmod +x .git/hooks/pre-commit
+   ```
+</Steps>
+
+<Aside type="caution">
+  Manual `.git/hooks/` scripts are not committed to the repository and must be set up manually by each contributor. Use Husky or the pre-commit framework for team-wide enforcement.
+</Aside>
+
+### Share manual hooks via a setup script
+
+If you prefer manual hooks but want to share them, commit the hook to a `.githooks/` directory and add a setup step.
+
+```bash title=".githooks/pre-commit"
+#!/usr/bin/env sh
+npx firmis scan . --severity high --quiet
+```
+
+```json title="package.json"
+{
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks && chmod +x .githooks/pre-commit"
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+## What to scan: full project vs. staged files only
+
+| Approach | Speed | Coverage | Recommended for |
+|---|---|---|---|
+| Full project scan | 1–5s | All agent components | Most projects |
+| Staged files only | Faster | Only committed files | Large monorepos |
+
+For most projects, scanning the full project is the right choice. Firmis auto-discovers AI agent components (Claude Skills, MCP servers, Cursor rules, etc.) and needs the full directory tree to find them. Scanning staged files individually can miss threats in component manifests that reference files not staged in the current commit.
+
+## Bypass hooks in exceptional cases
+
+If you need to commit without running the hook (for example, to commit a work-in-progress or suppress a known false positive), use:
+
+```bash title="Terminal"
+git commit --no-verify -m "wip: work in progress"
+```
+
+<Aside type="caution">
+  Reserve `--no-verify` for genuine exceptions. Habitual bypass defeats the purpose of the hook. Use `.firmisignore` to suppress known false positives instead.
+</Aside>
+
+## Suppress known false positives
+
+Rather than bypassing the hook, add false positives to `.firmisignore`.
+
+```text title=".firmisignore"
+# Suppress a specific rule on a specific file
+test/fixtures/evil-server.ts # firmis-ignore: sd-015
+
+# Ignore an entire directory
+test/fixtures/
+```
+
+See [Ignoring Findings](/rules/ignoring-findings) for full `.firmisignore` syntax.
+
+## Related
+
+- [GitHub Actions integration](/integrations/github-actions)
+- [GitLab CI integration](/integrations/gitlab-ci)
+- [Ignoring Findings](/rules/ignoring-findings)
+- [`firmis scan` command](/cli/scan)

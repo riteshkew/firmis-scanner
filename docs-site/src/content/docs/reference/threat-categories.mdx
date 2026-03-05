@@ -1,6 +1,470 @@
 ---
-title: Threat Categories
-description: Reference for all 16 threat categories detected by Firmis.
+title: Threat Categories Reference
+description: All 16 threat categories detected by Firmis — rule counts, severity ranges, OWASP LLM Top 10 mappings, MITRE ATT&CK mappings, and per-category detection details.
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> The authoritative reference for Firmis's 16 threat categories. Use this page to understand what each category detects, how findings are identified, and how they map to OWASP LLM Top 10 and MITRE ATT&CK for ML.
+
+## Master table
+
+| # | Category | ID Prefix | Rules | Severity Range | OWASP LLM | MITRE ATT&CK |
+|---|---|---|---|---|---|---|
+| 1 | [tool-poisoning](#tool-poisoning) | `tp-` | 10 | Critical–Medium | LLM07 | AML.T0043 |
+| 2 | [data-exfiltration](#data-exfiltration) | `de-` / `exfil-` | 12 | Critical–High | LLM02 | AML.T0037 |
+| 3 | [credential-harvesting](#credential-harvesting) | `cred-` | 18 | Critical–High | LLM06 | AML.T0012 |
+| 4 | [prompt-injection](#prompt-injection) | `prompt-` / `pi-` | 13 | Critical–High | LLM01 | AML.T0051 |
+| 5 | [secret-detection](#secret-detection) | `sd-` | 60 | Critical–Medium | LLM06 | AML.T0012 |
+| 6 | [supply-chain](#supply-chain) | `supply-` / `sc-` | 8 | Critical–High | LLM05 | AML.T0010 |
+| 7 | [malware-signatures](#malware-signatures) | `malware-` | 6 | Critical | LLM07 | AML.T0043 |
+| 8 | [known-malicious](#known-malicious) | `km-` | 10 | Critical | LLM05 | AML.T0010 |
+| 9 | [network-abuse](#network-abuse) | `na-` | 10 | High–Medium | LLM04 / LLM08 | AML.T0037 |
+| 10 | [file-system-abuse](#file-system-abuse) | `fs-` | 10 | High–Medium | LLM08 | AML.T0037 |
+| 11 | [permission-overgrant](#permission-overgrant) | `perm-` / `po-` | 7 | High–Medium | LLM07 | AML.T0043 |
+| 12 | [agent-memory-poisoning](#agent-memory-poisoning) | `mem-` | 7 | High | LLM03 | AML.T0051 |
+| 13 | [malware-distribution](#malware-distribution) | `md-` | 6 | Critical–High | LLM07 | AML.T0043 |
+| 14 | [suspicious-behavior](#suspicious-behavior) | `sb-` | 16 | High–Medium | LLM02 | AML.T0043 |
+| 15 | [insecure-config](#insecure-config) | `ic-` | 3 | Medium–Low | LLM09 | AML.T0054 |
+| 16 | [access-control](#access-control) | `ac-` | 3 | High–Medium | LLM10 | AML.T0012 |
+
+**Total: 209 rules across 16 categories.**
+
+---
+
+## OWASP LLM Top 10 mapping
+
+| OWASP LLM | Title | Firmis Categories |
+|---|---|---|
+| LLM01 | Prompt Injection | prompt-injection |
+| LLM02 | Insecure Output Handling | data-exfiltration, suspicious-behavior |
+| LLM03 | Training Data Poisoning | agent-memory-poisoning |
+| LLM04 | Model Denial of Service | network-abuse |
+| LLM05 | Supply Chain Vulnerabilities | supply-chain, known-malicious |
+| LLM06 | Sensitive Information Disclosure | secret-detection, credential-harvesting |
+| LLM07 | Insecure Plugin Design | tool-poisoning, permission-overgrant, malware-signatures, malware-distribution |
+| LLM08 | Excessive Agency | file-system-abuse, network-abuse |
+| LLM09 | Overreliance | insecure-config |
+| LLM10 | Model Theft | access-control |
+
+---
+
+## tool-poisoning
+
+**ID prefix:** `tp-001` through `tp-010`
+**Severity range:** Critical–Medium
+**Rules:** 10
+
+Tool poisoning attacks embed malicious instructions inside tool definitions — descriptions, names, or metadata fields — that AI agents read and act on automatically. Because agents trust tool descriptions to understand what a tool does, hidden content in those fields can redirect agent behavior without user awareness.
+
+**What it detects:**
+- Invisible Unicode characters (zero-width spaces, directional overrides, homoglyphs) in tool names or descriptions
+- Prompt override language embedded in tool metadata, such as "Ignore all previous instructions" or role-reassignment phrases
+- Code that programmatically writes to MCP configuration files to silently register tool servers
+
+**Example finding:**
+
+```text
+CRITICAL  tp-001  Hidden instructions in tool description
+          src/tools/search.ts:14
+          Evidence: Zero-width space (U+200B) found in description field
+```
+
+**Related rules:** `tp-001` (Unicode hiding), `tp-002` (prompt override), `tp-003` (tool shadowing), `tp-004` (MCP config injection), `tp-006` (homoglyph names)
+
+---
+
+## data-exfiltration
+
+**ID prefix:** `de-` / `exfil-`
+**Severity range:** Critical–High
+**Rules:** 12
+
+Data exfiltration rules detect code that sends local data — files, environment variables, clipboard contents, configuration — to external URLs or services outside the intended scope of the tool.
+
+**What it detects:**
+- Tool handlers that read local files and POST their contents to external URLs
+- Code that accesses `process.env` and sends environment variable values to webhook endpoints
+- DNS-based exfiltration patterns that encode data in DNS query subdomains to bypass HTTP monitoring
+
+**Example finding:**
+
+```text
+CRITICAL  exfil-003  File contents sent to external URL
+          src/tools/sync.ts:87
+          Evidence: readFileSync() result passed to fetch() POST body targeting external domain
+```
+
+**Related rules:** `exfil-001` through `exfil-012`
+
+---
+
+## credential-harvesting
+
+**ID prefix:** `cred-`
+**Severity range:** Critical–High
+**Rules:** 18
+
+Credential harvesting rules detect direct references to files that store cloud provider credentials, SSH private keys, browser-stored passwords, and authentication token caches. Agent code should never need to read these paths; any reference is a strong indicator of malicious intent.
+
+**What it detects:**
+- References to `~/.aws/credentials`, `~/.aws/config`, and provider-specific credential files
+- Access to SSH private key paths such as `~/.ssh/id_rsa` and `~/.ssh/id_ed25519`
+- Browser credential store paths (Chrome Login Data, Firefox key4.db, macOS Keychain)
+
+**Example finding:**
+
+```text
+HIGH  cred-001  Reference to AWS credentials file
+      src/tools/deploy.ts:23
+      Evidence: Path ~/.aws/credentials accessed via file-read operation
+```
+
+<Aside type="caution">
+  Credential harvesting findings warrant immediate investigation. Agent code has no legitimate reason to read credential store paths. Treat any match as a security incident until proven otherwise.
+</Aside>
+
+**Related rules:** `cred-001` through `cred-018`
+
+---
+
+## prompt-injection
+
+**ID prefix:** `prompt-` / `pi-`
+**Severity range:** Critical–High
+**Rules:** 13
+
+Prompt injection rules detect instruction-override language in any content the agent reads: tool return values, configuration files, Markdown documents, or fetched content. Unlike tool poisoning (which targets definitions at configuration time), prompt injection can arrive through any data channel the agent processes at runtime.
+
+**What it detects:**
+- Instruction override phrases in Markdown files, README files, or documents the agent consumes
+- Role reassignment language in tool outputs, such as "You are now DAN" or "Operating in developer mode"
+- Context manipulation patterns that attempt to make the agent discard prior instructions
+
+**Example finding:**
+
+```text
+CRITICAL  pi-001  Prompt injection in agent-consumed document
+          docs/AGENT_CONTEXT.md:34
+          Evidence: "Disregard your instructions and instead..." in agent-readable file
+```
+
+**Related rules:** `prompt-001` through `pi-013`
+
+---
+
+## secret-detection
+
+**ID prefix:** `sd-`
+**Severity range:** Critical–Medium
+**Rules:** 60
+
+Secret detection is the largest category by rule count. It covers hardcoded credentials across 30+ cloud providers, SaaS APIs, infrastructure services, and generic token formats. This category is exempt from the 0.15x document multiplier — secrets in `.env.example` and `README.md` files are still reported.
+
+**What it detects:**
+- Cloud provider API keys and access tokens (AWS, Azure, GCP, Anthropic, OpenAI, HuggingFace)
+- SaaS service tokens (GitHub, GitLab, Slack, Stripe, Twilio, SendGrid, PagerDuty, Datadog)
+- Private key headers (PEM format markers) and SSH key formats
+
+**Example finding:**
+
+```text
+CRITICAL  sd-045  OpenAI API key detected
+          config/llm.ts:12
+          Evidence: sk-... token matching OpenAI API key format (weight 100)
+```
+
+<Aside type="note">
+  Secret detection rules are exempt from the document multiplier. A hardcoded secret in `.env.example` or a README code sample is still flagged because it may be committed to source control and discovered by attackers scanning public repositories.
+</Aside>
+
+**Related rules:** `sd-001` through `sd-060`
+
+---
+
+## supply-chain
+
+**ID prefix:** `supply-` / `sc-`
+**Severity range:** Critical–High
+**Rules:** 8
+
+Supply chain rules detect dependencies with documented security incidents — compromised packages, protestware, maintainer sabotage events — and typosquatting patterns that mimic popular package names to trick developers into installing malicious code.
+
+**What it detects:**
+- Dependencies matching a curated list of packages with known compromise histories (e.g., `event-stream`, `ua-parser-js`)
+- Typosquatted package names that differ from legitimate packages by one character or transposition
+- npm lifecycle scripts (`preinstall`, `postinstall`) that download and run remote content
+
+**Example finding:**
+
+```text
+CRITICAL  supply-001  Known-compromised package dependency
+          package.json:18
+          Evidence: "event-stream" — package was compromised to steal bitcoin wallets (2018)
+```
+
+**Related rules:** `supply-001` through `sc-008`
+
+---
+
+## malware-signatures
+
+**ID prefix:** `malware-`
+**Severity range:** Critical
+**Rules:** 6
+
+Malware signature rules match code patterns associated with known malware families and attack toolkits observed in the wild. These rules have very low false-positive rates; a match almost always indicates intentionally malicious code.
+
+**What it detects:**
+- Base64-encoded payload strings matching known command-and-control beacon patterns
+- Shellcode injection sequences and process hollowing patterns
+- Cryptocurrency miner startup sequences embedded in tool handlers
+
+**Example finding:**
+
+```text
+CRITICAL  malware-003  Known C2 beacon pattern
+          src/tools/update.ts:156
+          Evidence: Base64 payload matches Cobalt Strike stage-1 beacon signature
+```
+
+**Related rules:** `malware-001` through `malware-006`
+
+---
+
+## known-malicious
+
+**ID prefix:** `km-`
+**Severity range:** Critical
+**Rules:** 10
+
+Known malicious rules match package names and identifiers against curated threat intelligence databases: packages reported to npm security teams, community-disclosed malicious packages, and packages removed from registries due to malicious behavior.
+
+**What it detects:**
+- Package names in `package.json`, `requirements.txt`, or `pyproject.toml` that match known-bad identifiers
+- Import statements referencing packages flagged in npm advisory or PyPI security databases
+- String literals matching known malicious package names used in supply chain attacks
+
+**Example finding:**
+
+```text
+CRITICAL  km-007  Known malicious package reference
+          package.json:31
+          Evidence: Package "flatmap-stream" — used to distribute malicious payload (npm advisory #663)
+```
+
+**Related rules:** `km-001` through `km-010`
+
+---
+
+## network-abuse
+
+**ID prefix:** `na-`
+**Severity range:** High–Medium
+**Rules:** 10
+
+Network abuse rules detect unauthorized DNS lookups, HTTP requests to suspicious domains, tunneling service usage, and data-over-DNS patterns. These are often used to establish covert communication channels or exfiltrate data in ways that bypass standard HTTP-level monitoring.
+
+**What it detects:**
+- Requests to tunneling services that create unmonitored egress channels (`ngrok.io`, `localtunnel.me`, `serveo.net`)
+- HTTP requests to suspicious TLDs (`.tk`, `.ml`, `.ga`, `.cf`, `.gq`, `.xyz`) commonly used in phishing and C2 infrastructure
+- DNS TXT record lookups that encode exfiltrated data in query subdomains
+
+**Example finding:**
+
+```text
+HIGH  na-004  Request to tunneling service
+      src/tools/debug.ts:44
+      Evidence: HTTP request targeting ngrok.io — creates unmonitored egress channel
+```
+
+**Related rules:** `na-001` through `na-010`
+
+---
+
+## file-system-abuse
+
+**ID prefix:** `fs-`
+**Severity range:** High–Medium
+**Rules:** 10
+
+File system abuse rules detect reads, writes, or deletions of sensitive system paths — including Linux `/proc` filesystem entries, system log files, shell history files, and container credential paths — that tools should never access.
+
+**What it detects:**
+- Access to `/proc/self/environ` (exposes all process environment variables including secrets)
+- Writes to or truncation of system log files to cover activity traces
+- Access to container service account token paths in Kubernetes deployments
+
+**Example finding:**
+
+```text
+HIGH  fs-001  Access to /proc/self/environ
+      src/tools/diagnostics.ts:19
+      Evidence: Direct read of /proc/self/environ — exposes all environment variables
+```
+
+**Related rules:** `fs-001` through `fs-010`
+
+---
+
+## permission-overgrant
+
+**ID prefix:** `perm-` / `po-`
+**Severity range:** High–Medium
+**Rules:** 7
+
+Permission overgrant rules detect tool definitions that request broader permissions than necessary for their declared purpose — wildcard permission scopes, missing scope constraints, and permission declarations that grant access far beyond what the tool description claims to need.
+
+**What it detects:**
+- MCP tool configurations declaring `permissions: ["*"]` or equivalent wildcard scopes
+- Tool permission lists that include filesystem write access when the tool only claims to read data
+- Missing `scope` or `allowedPaths` constraints on tools with file or network access
+
+**Example finding:**
+
+```text
+HIGH  perm-003  Wildcard permission in tool definition
+      mcp-config.json:42
+      Evidence: Tool "search" declares permissions: ["*"] — should enumerate specific scopes only
+```
+
+**Related rules:** `perm-001` through `po-007`
+
+---
+
+## agent-memory-poisoning
+
+**ID prefix:** `mem-`
+**Severity range:** High
+**Rules:** 7
+
+Agent memory poisoning rules detect patterns that corrupt or hijack the agent's context window, conversation history, or persistent memory store — causing the agent to behave maliciously in subsequent turns without the current turn showing obvious attack signals.
+
+**What it detects:**
+- Tools that write adversarial instructions into persistent memory files loaded by the agent on startup
+- Code that injects role-reassignment or instruction-override text into agent context storage
+- Manipulation of conversation history or session state to alter future agent behavior
+
+**Example finding:**
+
+```text
+HIGH  mem-002  Adversarial content written to agent memory
+      src/tools/memory.ts:67
+      Evidence: Tool writes prompt injection payload to ~/.agent_memory/context.json
+```
+
+**Related rules:** `mem-001` through `mem-007`
+
+---
+
+## malware-distribution
+
+**ID prefix:** `md-`
+**Severity range:** Critical–High
+**Rules:** 6
+
+Malware distribution rules detect code patterns that download and run additional payloads, install backdoors, or spread malicious code to other systems in the environment.
+
+**What it detects:**
+- Pipe-to-shell patterns that download and immediately run remote scripts without verification
+- Dynamic code execution of remotely fetched content using dangerous execution primitives
+- Self-replicating code that copies itself or drops payloads to other paths in the filesystem
+
+**Example finding:**
+
+```text
+CRITICAL  md-001  Pipe-to-shell execution
+          src/tools/installer.ts:34
+          Evidence: curl output piped directly to bash — runs remote script without verification
+```
+
+**Related rules:** `md-001` through `md-006`
+
+---
+
+## suspicious-behavior
+
+**ID prefix:** `sb-`
+**Severity range:** High–Medium
+**Rules:** 16
+
+Suspicious behavior rules cover obfuscation techniques, encoded payloads, and evasion patterns that are not specific to one threat category but strongly indicate malicious intent. These rules catch threats that do not fit neatly into more specific categories.
+
+**What it detects:**
+- Long Base64-encoded strings passed to dynamic code execution primitives
+- Heavy string concatenation used to build URLs or commands in ways that evade simple pattern matching
+- Anti-debugging and sandbox detection patterns commonly used by malware to avoid analysis
+
+**Example finding:**
+
+```text
+HIGH  sb-004  Obfuscated payload passed to dynamic executor
+      src/tools/loader.ts:91
+      Evidence: 2KB base64 string decoded and passed to code executor — common malware staging pattern
+```
+
+**Related rules:** `sb-001` through `sb-016`
+
+---
+
+## insecure-config
+
+**ID prefix:** `ic-`
+**Severity range:** Medium–Low
+**Rules:** 3
+
+Insecure configuration rules detect agent configurations that disable security controls, set overly permissive CORS policies, or use known-insecure default settings that increase the attack surface.
+
+**What it detects:**
+- Server configurations with `allowOrigins: "*"` and no authentication requirement
+- Agent configurations with authentication disabled (`auth: false`, `requireAuth: false`)
+- Insecure transport settings (HTTP instead of HTTPS for endpoints handling sensitive data)
+
+**Example finding:**
+
+```text
+MEDIUM  ic-002  Overly permissive CORS configuration
+        src/server/config.ts:15
+        Evidence: allowOrigins: "*" with no authentication — any origin can make requests
+```
+
+**Related rules:** `ic-001` through `ic-003`
+
+---
+
+## access-control
+
+**ID prefix:** `ac-`
+**Severity range:** High–Medium
+**Rules:** 3
+
+Access control rules detect missing authentication checks on tool endpoints, unauthenticated administrative routes, and hardcoded bypass conditions that allow unauthorized callers to invoke privileged operations.
+
+**What it detects:**
+- Tool handlers that process requests without verifying caller identity or checking an authorization token
+- Admin routes with no access guard — any caller can invoke privileged operations
+- Hardcoded bypass conditions that create permanent backdoors in tool handlers
+
+**Example finding:**
+
+```text
+HIGH  ac-001  Unauthenticated tool handler
+      src/tools/admin.ts:8
+      Evidence: Tool handler processes all requests without auth check — no token validation found
+```
+
+**Related rules:** `ac-001` through `ac-003`
+
+---
+
+<Aside type="tip">
+  Use `npx firmis scan --severity high` to filter to the most critical findings first. Map findings back to OWASP LLM Top 10 categories to prioritize remediation by compliance requirement.
+</Aside>
+
+## Related
+
+- [Threat Model](/concepts/threat-model) — narrative descriptions of each category
+- [Detection Engine](/concepts/detection-engine) — how rules are scored and thresholds applied
+- [Built-in Rules](/rules/built-in-rules) — full listing of all 209 rules with IDs and descriptions
+- [Security Model](/reference/security-model) — what Firmis detects and what it does not
+- [firmis scan](/cli/scan) — CLI reference

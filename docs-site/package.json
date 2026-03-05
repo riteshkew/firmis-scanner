@@ -4,7 +4,9 @@
   "version": "0.0.1",
   "scripts": {
     "generate:rules": "npx tsx scripts/generate-rules.ts",
-    "prebuild": "npm run generate:rules",
+    "generate:llms": "npx tsx scripts/generate-llms-txt.ts",
+    "generate": "npm run generate:rules && npm run generate:llms",
+    "prebuild": "npm run generate",
     "dev": "npm run generate:rules && astro dev",
     "start": "astro dev",
     "build": "astro build",
@@ -18,6 +20,7 @@
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
+    "fast-glob": "^3.3.3",
     "js-yaml": "^4.1.1",
     "tsx": "^4.21.0"
   }

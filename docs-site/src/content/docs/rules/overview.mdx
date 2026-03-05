@@ -1,6 +1,211 @@
 ---
 title: Rules Overview
-description: An overview of the Firmis detection rule system.
+description: How Firmis detection rules work — YAML anatomy, pattern matcher types, severity levels, and rule loading.
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis rules are YAML files that define what to look for and how confident to be before reporting a finding. Built-in rules ship with the npm package. Custom rules load from your project or config file.
+
+## What rules are
+
+Each rule describes a single threat pattern. At scan time, the rule engine evaluates every rule against every file in a detected component. When the computed confidence score meets or exceeds the rule's threshold, a finding is emitted.
+
+Rules live in YAML files under a top-level `rules:` list. A single YAML file can contain many rules of the same or different categories.
+
+```yaml title="rules/tool-poisoning.yaml (excerpt)"
+rules:
+  - id: tp-001
+    name: Hidden Instructions in Tool Descriptions
+    description: Detects invisible Unicode characters used to hide instructions
+    category: tool-poisoning
+    severity: critical
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 50
+    patterns:
+      - type: regex
+        pattern: '[\u200B\u200C\u200D\uFEFF]'
+        weight: 95
+        description: Zero-width space or BOM character
+    remediation: |
+      Remove all invisible Unicode characters from tool descriptions.
+    references:
+      - https://atlas.mitre.org/techniques/AML.T0051
+```
+
+---
+
+## Rule anatomy
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | string | Yes | Unique rule identifier (e.g., `tp-001`, `cred-042`) |
+| `name` | string | Yes | Short human-readable name shown in scan output |
+| `description` | string | Yes | What the rule detects and why it matters |
+| `category` | string | Yes | One of the 16 threat categories (e.g., `tool-poisoning`, `secret-detection`) |
+| `severity` | enum | Yes | `critical`, `high`, `medium`, or `low` |
+| `version` | string | No | Rule version for change tracking (e.g., `"1.0.0"`) |
+| `enabled` | boolean | No | Set to `false` to disable a rule globally. Defaults to `true` |
+| `confidenceThreshold` | number | No | Minimum confidence (0–100) required to emit a finding. Defaults to `50` |
+| `platforms` | string[] | No | Restrict the rule to specific platforms. Omit to apply to all |
+| `patterns` | array | Yes | One or more pattern objects (see below) |
+| `remediation` | string | No | Fix guidance shown in reports and terminal output |
+| `references` | string[] | No | URLs to MITRE, OWASP, or other reference material |
+
+---
+
+## Pattern objects
+
+Each item in `patterns` has the following fields:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `type` | enum | Yes | Matcher type — one of 7 values (see below) |
+| `pattern` | string | Yes | The pattern expression to match against file content |
+| `weight` | number | Yes | Contribution to the confidence score (0–100) |
+| `description` | string | No | Human label for this pattern, shown in verbose output |
+| `flags` | string | No | Regex flags for `regex` type patterns (e.g., `"i"` for case-insensitive) |
+
+---
+
+## The 7 pattern matcher types
+
+### `regex`
+
+Applies a JavaScript regular expression to raw file content. The most common and flexible matcher.
+
+```yaml
+- type: regex
+  pattern: 'AKIA[0-9A-Z]{16}'
+  weight: 100
+  description: AWS Access Key ID format
+```
+
+<Aside type="caution">
+  PCRE inline flags like `(?i)` are not supported — JavaScript's `RegExp` does not recognise them. Use the `flags` field instead: `flags: "i"`.
+</Aside>
+
+### `yara`
+
+Applies a YARA-style string match (not the YARA binary). Supports case-insensitive strings, hex strings, and simple conditions.
+
+```yaml
+- type: yara
+  pattern: '"bitcoin" nocase'
+  weight: 70
+  description: Reference to bitcoin wallet operations
+```
+
+### `file-access`
+
+Matches when the file content contains a reference to a specific file path — typically a sensitive credential or system file. Tilde expansion (`~` → home directory) is applied before matching.
+
+```yaml
+- type: file-access
+  pattern: "~/.aws/credentials"
+  weight: 90
+  description: Direct reference to AWS credentials file
+```
+
+### `import`
+
+Matches when a specific module or package import appears in the file. Handles Python `import`/`from` and JavaScript/TypeScript `require`/`import` statements.
+
+```yaml
+- type: import
+  pattern: "paramiko"
+  weight: 60
+  description: SSH library — check for unauthorized tunnel creation
+```
+
+### `network`
+
+Matches URL or hostname patterns in file content. Used to detect requests to suspicious TLDs, tunneling services, or known malicious domains.
+
+```yaml
+- type: network
+  pattern: "https?://[^/]*\\.(tk|ml|ga|cf|gq|xyz)/"
+  weight: 85
+  description: Request to suspicious top-level domain
+```
+
+### `string-literal`
+
+Matches an exact string literal including surrounding quotes. Used for known-bad package names and exact-match indicators.
+
+```yaml
+- type: string-literal
+  pattern: '"event-stream"'
+  weight: 90
+  description: event-stream — compromised to steal bitcoin wallets
+```
+
+### `text`
+
+Plain substring search against file content. No regex syntax. Fastest matcher — use it for simple keyword matches where regex overhead is not needed.
+
+```yaml
+- type: text
+  pattern: "DISABLE_AUTH=true"
+  weight: 80
+  description: Authentication bypass flag set in config
+```
+
+---
+
+## Severity levels
+
+| Severity | Meaning | Typical examples |
+|---|---|---|
+| `critical` | Immediate exploitable risk — block CI | Hidden instructions, hardcoded root credentials, auth bypass |
+| `high` | Significant vulnerability — fix before merge | API key exposure, data exfiltration, unsigned package installs |
+| `medium` | Noteworthy risk — fix in current sprint | Overly broad permissions, weak JWT configuration |
+| `low` | Informational — investigate when convenient | Debug logging left enabled, overly verbose error messages |
+
+Use `--severity` to filter output to a minimum level:
+
+```bash title="Terminal"
+# Only critical and high findings
+npx firmis scan --severity high
+
+# All findings including low
+npx firmis scan --severity low
+```
+
+---
+
+## How rules are loaded
+
+**Built-in rules** ship inside the npm package at `node_modules/firmis/rules/`. They are loaded automatically on every scan. You do not need to reference them in config.
+
+**Custom rules** are loaded from one of three places, in priority order:
+
+1. A path passed via `--rules` CLI flag:
+   ```bash title="Terminal"
+   npx firmis scan --rules ./rules/custom/
+   ```
+
+2. The `rules` key in your `.firmis.config.yaml` (or `.firmis.config.json`):
+   ```yaml title=".firmis.config.yaml"
+   rules:
+     - ./rules/custom/my-rules.yaml
+     - ./rules/custom/network-rules.yaml
+   ```
+
+3. A `rules/` directory at the project root — Firmis loads any `*.yaml` files found there automatically.
+
+Custom rules are merged with built-in rules. Custom rule IDs that collide with built-in IDs override the built-in rule.
+
+<Aside type="note">
+  Built-in rules can be disabled per-rule using `.firmisignore` or the `--ignore` flag without modifying the package. See [Ignoring Findings](/rules/ignoring-findings).
+</Aside>
+
+---
+
+## Related
+
+- [Built-in Rules](/rules/built-in-rules) — complete listing of all 209 rules with IDs and descriptions
+- [Custom Rules](/rules/custom-rules) — full YAML schema and working examples
+- [Ignoring Findings](/rules/ignoring-findings) — suppress false positives with `.firmisignore`
+- [Detection Engine](/concepts/detection-engine) — confidence scoring and deduplication internals

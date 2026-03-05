@@ -1,6 +1,399 @@
 ---
 title: TypeScript API
-description: Use the Firmis TypeScript API for programmatic scanning.
+description: Use the Firmis TypeScript API to scan, discover, and generate BOMs programmatically from your own scripts and applications.
 ---
 
-Content coming soon.
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components'
+
+> Embed Firmis scanning directly into your TypeScript or JavaScript tooling. The public API gives you full access to the scan engine, discovery, and reporters.
+
+## Installation
+
+Install `firmis-scanner` as a dependency rather than running it via `npx`.
+
+```bash title="Terminal"
+npm install firmis-scanner
+```
+
+```bash title="Terminal"
+# or with pnpm / yarn
+pnpm add firmis-scanner
+yarn add firmis-scanner
+```
+
+## Basic scan
+
+```typescript title="security-check.ts"
+import { ScanEngine } from 'firmis-scanner'
+import type { FirmisConfig, ScanResult } from 'firmis-scanner'
+
+const config: FirmisConfig = {
+  severity: 'low',
+  output: 'json',
+  verbose: false,
+  concurrency: 4,
+}
+
+const engine = new ScanEngine(config)
+await engine.initialize()
+
+const result: ScanResult = await engine.scan()
+
+console.log(`Security grade: ${result.score}`)
+console.log(`Threats found: ${result.summary.threatsFound}`)
+console.log(`Critical: ${result.summary.bySeverity.critical}`)
+console.log(`High: ${result.summary.bySeverity.high}`)
+```
+
+## Scan a specific path
+
+```typescript title="scan-directory.ts"
+import { ScanEngine } from 'firmis-scanner'
+import type { FirmisConfig } from 'firmis-scanner'
+
+async function scanDirectory(targetPath: string): Promise<void> {
+  const config: FirmisConfig = {
+    targetPath,
+    severity: 'high',
+    output: 'json',
+    verbose: false,
+    concurrency: 4,
+    failOnSeverity: 'high',
+  }
+
+  const engine = new ScanEngine(config)
+  await engine.initialize()
+
+  const result = await engine.scan()
+
+  if (result.summary.bySeverity.critical > 0 || result.summary.bySeverity.high > 0) {
+    console.error(`Found ${result.summary.threatsFound} threats — grade ${result.score}`)
+    process.exit(1)
+  }
+
+  console.log(`Clean scan — grade ${result.score}`)
+}
+
+await scanDirectory('./packages/agent')
+```
+
+## Scan specific platforms
+
+```typescript title="scan-mcp.ts"
+import { ScanEngine } from 'firmis-scanner'
+import type { FirmisConfig, PlatformType } from 'firmis-scanner'
+
+const platforms: PlatformType[] = ['mcp', 'claude']
+
+const config: FirmisConfig = {
+  platforms,
+  severity: 'low',
+  output: 'json',
+  verbose: false,
+  concurrency: 4,
+}
+
+const engine = new ScanEngine(config)
+await engine.initialize()
+
+const result = await engine.scan()
+
+for (const platformResult of result.platforms) {
+  console.log(`Platform: ${platformResult.platform}`)
+  console.log(`  Threats: ${platformResult.threats.length}`)
+
+  for (const threat of platformResult.threats) {
+    console.log(`  [${threat.severity.toUpperCase()}] ${threat.ruleId}: ${threat.message}`)
+    console.log(`    at ${threat.location.file}:${threat.location.line}`)
+  }
+}
+```
+
+## Progress events
+
+Use `onProgress` to stream scan milestones to your UI or logs.
+
+```typescript title="scan-with-progress.ts"
+import { ScanEngine } from 'firmis-scanner'
+import type { FirmisConfig, ProgressEvent } from 'firmis-scanner'
+
+const config: FirmisConfig = {
+  severity: 'low',
+  output: 'json',
+  verbose: false,
+  concurrency: 4,
+  onProgress: (event: ProgressEvent) => {
+    switch (event.type) {
+      case 'rules_loaded':
+        console.log('[1/3] Rules loaded')
+        break
+      case 'discovery_complete':
+        console.log('[2/3] Discovery complete')
+        break
+      case 'platform_start':
+        console.log(`[3/3] Scanning ${event.platform}...`)
+        break
+      case 'component_complete':
+        console.log(`      Done: ${event.component}`)
+        break
+    }
+  },
+}
+
+const engine = new ScanEngine(config)
+await engine.initialize()
+const result = await engine.scan()
+
+console.log(`Finished — ${result.summary.threatsFound} threats in ${result.duration}ms`)
+```
+
+## SARIF output
+
+```typescript title="scan-to-sarif.ts"
+import { ScanEngine, getReporter } from 'firmis-scanner'
+import type { FirmisConfig } from 'firmis-scanner'
+import { writeFile } from 'node:fs/promises'
+
+const config: FirmisConfig = {
+  severity: 'low',
+  output: 'sarif',
+  outputFile: 'firmis.sarif',
+  verbose: false,
+  concurrency: 4,
+}
+
+const engine = new ScanEngine(config)
+await engine.initialize()
+
+const result = await engine.scan()
+
+const reporter = getReporter('sarif')
+const sarifOutput = await reporter.generate(result, config)
+
+await writeFile('firmis.sarif', sarifOutput)
+console.log('SARIF written to firmis.sarif')
+```
+
+## Custom rules
+
+Load additional YAML rule files alongside the built-in rules.
+
+```typescript title="scan-with-custom-rules.ts"
+import { ScanEngine } from 'firmis-scanner'
+import type { FirmisConfig } from 'firmis-scanner'
+import { resolve } from 'node:path'
+
+const config: FirmisConfig = {
+  severity: 'low',
+  output: 'json',
+  verbose: false,
+  concurrency: 4,
+  customRules: [
+    resolve('./rules/company-policy.yaml'),
+    resolve('./rules/internal-secrets.yaml'),
+  ],
+}
+
+const engine = new ScanEngine(config)
+await engine.initialize()
+
+const result = await engine.scan()
+console.log(`Scanned with ${result.platforms.length} platforms`)
+```
+
+## Ignore rules programmatically
+
+```typescript title="scan-with-ignores.ts"
+import { ScanEngine } from 'firmis-scanner'
+import type { FirmisConfig } from 'firmis-scanner'
+
+const config: FirmisConfig = {
+  severity: 'low',
+  output: 'json',
+  verbose: false,
+  concurrency: 4,
+  ignoreRules: ['sd-015', 'pi-003'],   // skip these rule IDs
+  exclude: ['test/fixtures/', 'dist/'], // skip these paths
+}
+
+const engine = new ScanEngine(config)
+await engine.initialize()
+
+const result = await engine.scan()
+```
+
+## Error handling
+
+```typescript title="scan-with-error-handling.ts"
+import { ScanEngine, FirmisError, isFirmisError } from 'firmis-scanner'
+import type { FirmisConfig, ScanResult } from 'firmis-scanner'
+
+async function runScan(targetPath: string): Promise<ScanResult | null> {
+  const config: FirmisConfig = {
+    targetPath,
+    severity: 'low',
+    output: 'json',
+    verbose: false,
+    concurrency: 4,
+  }
+
+  try {
+    const engine = new ScanEngine(config)
+    await engine.initialize()
+    return await engine.scan()
+  } catch (err) {
+    if (isFirmisError(err)) {
+      // Structured Firmis error with a user-friendly message
+      console.error(`Firmis error [${err.code}]: ${err.message}`)
+    } else {
+      console.error('Unexpected error during scan:', err)
+    }
+    return null
+  }
+}
+
+const result = await runScan('./agent')
+if (result) {
+  console.log(`Grade: ${result.score}`)
+}
+```
+
+## API reference
+
+### `ScanEngine`
+
+The main entry point for programmatic scanning.
+
+```typescript
+class ScanEngine {
+  constructor(config: FirmisConfig)
+  initialize(): Promise<void>
+  scan(): Promise<ScanResult>
+}
+```
+
+### `FirmisConfig`
+
+Configuration object passed to `ScanEngine`.
+
+```typescript
+interface FirmisConfig {
+  /** Platforms to scan (undefined = auto-detect all) */
+  platforms?: PlatformType[]
+  /** Target path to scan */
+  targetPath?: string
+  /** Minimum severity to report */
+  severity: SeverityLevel
+  /** Custom rule file paths */
+  customRules?: string[]
+  /** Paths to exclude */
+  exclude?: string[]
+  /** Output format */
+  output: OutputFormat
+  /** Output file path (for json/sarif/html) */
+  outputFile?: string
+  /** Enable verbose logging */
+  verbose: boolean
+  /** Parallel worker count */
+  concurrency: number
+  /** Stop on first critical threat */
+  failFast?: boolean
+  /** Suppress terminal output */
+  quiet?: boolean
+  /** Rule IDs to skip */
+  ignoreRules?: string[]
+  /** Severity that triggers non-zero exit */
+  failOnSeverity?: SeverityLevel
+  /** Progress callback */
+  onProgress?: (event: ProgressEvent) => void
+}
+```
+
+### `ScanResult`
+
+Returned by `engine.scan()`.
+
+```typescript
+interface ScanResult {
+  id: string
+  startedAt: Date
+  completedAt: Date
+  duration: number            // milliseconds
+  platforms: PlatformScanResult[]
+  summary: ScanSummary
+  score: SecurityGrade        // 'A' | 'B' | 'C' | 'D' | 'F'
+  runtimeRisksNotCovered: string[]
+}
+```
+
+### `Threat`
+
+Individual detected threat.
+
+```typescript
+interface Threat {
+  id: string
+  ruleId: string
+  category: ThreatCategory
+  severity: SeverityLevel     // 'low' | 'medium' | 'high' | 'critical'
+  message: string
+  evidence: Evidence[]
+  location: SourceLocation
+  confidence: number          // 0–1
+  confidenceTier: ConfidenceTier  // 'suspicious' | 'likely' | 'confirmed'
+  remediation?: string
+}
+```
+
+### `getReporter`
+
+Get a reporter instance for a given output format.
+
+```typescript
+import { getReporter } from 'firmis-scanner'
+
+const reporter = getReporter('sarif')  // 'terminal' | 'json' | 'sarif' | 'html'
+const output = await reporter.generate(result, config)
+```
+
+### Error classes
+
+```typescript
+import { FirmisError, ConfigurationError, PlatformError, isFirmisError } from 'firmis-scanner'
+
+// isFirmisError narrows unknown to FirmisError
+if (isFirmisError(err)) {
+  console.error(err.code, err.message)
+}
+```
+
+<Aside type="note">
+  The `scan`, `discover`, and `generateBom` convenience functions shown in some examples are not yet part of the public API. Use `ScanEngine` directly as shown in this guide. The convenience API will be stabilized in a future release.
+</Aside>
+
+## TypeScript configuration
+
+Firmis is written in TypeScript and ships its own types. No `@types/firmis-scanner` package is needed.
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "strict": true
+  }
+}
+```
+
+<Aside type="caution">
+  Firmis uses ES module syntax (`import`/`export`). Your project must have `"type": "module"` in `package.json` or use `.mts` file extensions when importing from CommonJS projects.
+</Aside>
+
+## Related
+
+- [GitHub Actions integration](/integrations/github-actions)
+- [GitLab CI integration](/integrations/gitlab-ci)
+- [Configuration reference](/reference/config-schema)
+- [SARIF output reference](/reference/sarif-output)
+- [Threat categories reference](/reference/threat-categories)

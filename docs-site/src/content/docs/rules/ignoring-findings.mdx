@@ -1,6 +1,222 @@
 ---
 title: Ignoring Findings
-description: How to suppress false positives and ignore specific findings with .firmisignore.
+description: Suppress false positives and silence known-safe patterns using .firmisignore or the --ignore flag.
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Create a `.firmisignore` file in your project root to suppress false positives. Three rule types let you ignore by rule ID, by file path, or by a combination of both.
+
+## File locations
+
+Firmis looks for `.firmisignore` files in two locations, checked in this order:
+
+1. **Project root** — `<project>/.firmisignore`
+2. **Home directory** — `~/.firmis/.firmisignore`
+
+Both files are loaded and merged when present. Project-level rules take precedence over home-directory rules for the same rule/path combination.
+
+<Aside type="tip">
+  Check `.firmisignore` into version control so the whole team gets the same suppressions automatically.
+</Aside>
+
+---
+
+## Syntax
+
+- Lines starting with `#` are comments — use them liberally to explain why each entry exists
+- Blank lines are ignored
+- Each non-blank, non-comment line is a single ignore rule
+
+There are three rule types:
+
+| Type | Format | Effect |
+|---|---|---|
+| Rule ID only | `rule-id` | Suppresses that rule across all files |
+| File pattern only | `glob/pattern/**` | Suppresses all findings in matching files |
+| Rule and file combo | `rule-id:glob/pattern/**` | Suppresses that rule only in matching files |
+
+---
+
+## Rule ID only
+
+Suppress a specific rule everywhere in the project. Use this sparingly — it silences the rule even in files where it would be a genuine finding.
+
+```text title=".firmisignore"
+# Suppress credential rules globally (migrate to rule:file combos when possible)
+cred-001
+cred-002
+cred-003
+
+# Suppress a specific suspicious pattern rule
+sus-006
+```
+
+---
+
+## File pattern only
+
+Suppress all findings in files matching a glob pattern. Useful for muting entire directories like `test/`, `examples/`, or `vendor/`.
+
+```text title=".firmisignore"
+# Ignore all findings in documentation
+**/docs/**
+**/*.md
+**/README.md
+
+# Ignore test files
+**/test/**
+**/__tests__/**
+**/*.test.ts
+**/*.spec.ts
+
+# Ignore examples and sample code
+**/examples/**
+**/samples/**
+
+# Ignore vendored and generated code
+**/node_modules/**
+**/vendor/**
+**/dist/**
+```
+
+<Aside type="note">
+  Patterns are matched against file paths relative to the project root. The `**` glob matches zero or more path segments, so `**/test/**` matches `test/foo.ts`, `src/test/bar.ts`, and `a/b/test/c/d.ts`.
+</Aside>
+
+---
+
+## Rule and file combo
+
+Suppress a specific rule only in specific files. This is the most precise form and the recommended default — it avoids silencing a rule where it would be a genuine finding.
+
+```text title=".firmisignore"
+# Allow crypto operations in wallet skills only
+sus-006:**/wallet-skills/**
+sus-007:**/wallet-skills/**
+
+# Allow test credentials in test directories only
+cred-001:**/test/**
+cred-002:**/test/**
+cred-003:**/test/**
+cred-004:**/test/**
+
+# Allow example API keys in documentation only
+cred-001:**/docs/**
+cred-002:**/examples/**
+
+# Allow network calls in the API integration module
+exfil-001:**/api-integrations/**
+sus-003:**/api-integrations/**
+```
+
+---
+
+## Glob pattern syntax
+
+| Pattern | Meaning | Example matches |
+|---|---|---|
+| `*` | Any characters except `/` | `*.ts` matches `file.ts` but not `src/file.ts` |
+| `**` | Zero or more path segments | `**/test/**` matches `test/a.ts`, `src/test/b.ts` |
+| `?` | Single character except `/` | `file?.ts` matches `file1.ts`, `fileA.ts` |
+| `/` prefix | Anchored to project root | `/src/main.ts` matches only `src/main.ts` at root |
+
+---
+
+## Complete example
+
+A typical `.firmisignore` for a project with tests, documentation, and legitimate integrations:
+
+```text title=".firmisignore"
+# ============================================================
+# .firmisignore — Firmis Scanner Ignore Rules
+# ============================================================
+
+# Test Files
+# ============================================================
+# Mock credentials and test fixtures are expected
+cred-001:**/test/**
+cred-002:**/test/fixtures/**
+cred-003:**/test/mocks/**
+cred-004:**/test/**
+
+# Test spec files — pattern matches in test assertions are false positives
+**/*.test.ts
+**/*.spec.ts
+**/__tests__/**
+
+# Documentation
+# ============================================================
+# Example code in docs uses placeholder API keys
+cred-001:**/docs/**
+cred-002:**/examples/**
+
+# Legitimate Patterns
+# ============================================================
+# Crypto operations are expected in the wallet module
+sus-006:**/wallet/**
+sus-007:**/crypto/**
+sus-006:**/blockchain/**
+
+# Network calls are expected in the API integration module
+exfil-001:**/api-integrations/**
+sus-003:**/webhooks/**
+
+# Vendor / Generated Code
+# ============================================================
+**/node_modules/**
+**/vendor/**
+**/dist/**
+**/third-party/**
+
+# Development Files
+# ============================================================
+# .env.example is intentionally a template, not a real secret
+.env.example
+.env.sample
+**/config.example.js
+**/config.sample.js
+```
+
+---
+
+## The `--ignore` flag
+
+For one-off suppressions or CI overrides, pass rule IDs directly on the command line without editing `.firmisignore`:
+
+```bash title="Terminal"
+# Ignore a single rule
+npx firmis scan --ignore cred-001
+
+# Ignore multiple rules (comma-separated)
+npx firmis scan --ignore cred-001,sus-006,exfil-003
+```
+
+`--ignore` accepts rule IDs only, not file patterns. Use `.firmisignore` for file-based suppression.
+
+---
+
+## Best practices
+
+1. **Prefer rule:file combos** over global rule-ID suppression — be as specific as possible
+2. **Document why** — add a comment to every entry explaining the reason for suppression
+3. **Review regularly** — a quarterly `.firmisignore` audit prevents suppressions from outliving the code that needed them
+4. **Version-control the file** — commit `.firmisignore` so the whole team sees the same findings
+5. **Avoid broad globs** — suppressing `**/*.ts` is almost never correct; prefer a narrower path like `**/test/**`
+
+---
+
+## Limitations
+
+- `.firmisignore` is loaded once at scan initialisation — changes take effect on the next scan invocation
+- Patterns are matched against paths relative to the project root
+- Invalid glob patterns are silently skipped — run `npx firmis validate` if a suppression does not seem to be working
+
+---
+
+## Related
+
+- [Rules Overview](/rules/overview) — how rules load and how severity levels work
+- [Custom Rules](/rules/custom-rules) — writing YAML rules to extend detection
+- [firmis scan](/cli/scan) — full CLI reference including `--ignore` and `--severity`
+- [Detection Engine](/concepts/detection-engine) — how confidence scoring and deduplication work internally

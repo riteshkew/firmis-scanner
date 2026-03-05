@@ -17,6 +17,7 @@ hero:
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
+import FaqSchema from '../../components/FaqSchema.astro';
 
 ## What can you do with Firmis?
 
@@ -98,3 +99,50 @@ Firmis detects 16 categories of threats in AI agent code:
 | Access Control | Missing authentication/authorization | High–Medium |
 
 [View all 199 detection rules →](/rules/built-in-rules)
+
+## Frequently asked questions
+
+**How do I scan MCP servers for security issues?**
+Run `npx firmis scan --platform mcp` in your project directory. Firmis detects tool poisoning, data exfiltration, credential harvesting, and more. No configuration needed.
+
+**What security risks exist in Claude Skills?**
+Claude Skills can contain prompt injection attacks, hidden instructions that override agent behavior, hardcoded API keys, and unauthorized file system access. Firmis detects these with 45+ dedicated rules.
+
+**Does Firmis upload my code?**
+No. Firmis runs entirely offline. Your code never leaves your machine. No telemetry is collected by default.
+
+**How do I add Firmis to my CI/CD pipeline?**
+Run `npx firmis ci --fail-on high --format sarif` in your pipeline. This runs the full discover, BOM, scan, report pipeline and exits non-zero if high or critical findings are detected.
+
+**What is an Agent Bill of Materials (Agent BOM)?**
+An Agent BOM is a CycloneDX 1.7 inventory of all AI agent components, dependencies, and models in your project. Generate one with `npx firmis bom`.
+
+**How do I detect prompt injection in AI agents?**
+Firmis includes 13 prompt injection detection rules that scan tool descriptions, system prompts, and handler code for instruction override patterns, hidden directives, and context manipulation techniques.
+
+<FaqSchema faqs={[
+  {
+    question: "How do I scan MCP servers for security issues?",
+    answer: "Run npx firmis scan --platform mcp in your project directory. Firmis detects tool poisoning, data exfiltration, credential harvesting, and more. No configuration needed."
+  },
+  {
+    question: "What security risks exist in Claude Skills?",
+    answer: "Claude Skills can contain prompt injection attacks, hidden instructions that override agent behavior, hardcoded API keys, and unauthorized file system access. Firmis detects these with 45+ dedicated rules."
+  },
+  {
+    question: "Does Firmis upload my code?",
+    answer: "No. Firmis runs entirely offline. Your code never leaves your machine. No telemetry is collected by default."
+  },
+  {
+    question: "How do I add Firmis to my CI/CD pipeline?",
+    answer: "Run npx firmis ci --fail-on high --format sarif in your pipeline. This runs the full discover, BOM, scan, report pipeline and exits non-zero if high or critical findings are detected."
+  },
+  {
+    question: "What is an Agent Bill of Materials (Agent BOM)?",
+    answer: "An Agent BOM is a CycloneDX 1.7 inventory of all AI agent components, dependencies, and models in your project. Generate one with npx firmis bom. It lists every platform, tool, and package for supply chain visibility."
+  },
+  {
+    question: "How do I detect prompt injection in AI agents?",
+    answer: "Firmis includes 13 prompt injection detection rules that scan tool descriptions, system prompts, and handler code for instruction override patterns, hidden directives, and context manipulation techniques."
+  }
+]} />

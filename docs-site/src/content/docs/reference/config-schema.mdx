@@ -1,6 +1,227 @@
 ---
-title: Configuration
-description: Full reference for the Firmis configuration schema.
+title: Configuration Reference
+description: Complete reference for all Firmis configuration options — CLI flags, config file schema, environment variables, and defaults.
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis works with zero configuration — `npx firmis scan .` is enough for most projects. When you need to tune behavior for your project, this page documents every available option.
+
+## Configuration methods
+
+Firmis reads configuration from three sources, in order of precedence (highest to lowest):
+
+1. **CLI flags** — highest precedence, override everything
+2. **Config file** (`firmis.config.ts` or `firmis.config.json`) — project-level defaults
+3. **Built-in defaults** — lowest precedence, applied when nothing is specified
+
+---
+
+## CLI flags
+
+The most common way to configure Firmis. Passed directly to any command.
+
+### `firmis scan` flags
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--platform <name>` | string | auto-detect | Scan a specific platform: `claude`, `mcp`, `codex`, `cursor`, `crewai`, `autogpt`, `openclaw`, `nanobot` |
+| `--all` | boolean | `true` | Scan all detected platforms |
+| `--severity <level>` | enum | `low` | Minimum severity to report: `low`, `medium`, `high`, `critical` |
+| `--fail-on <level>` | enum | — | Exit non-zero if findings at this severity or above exist |
+| `--json` | boolean | `false` | Output findings as JSON |
+| `--sarif` | boolean | `false` | Output findings as SARIF 2.1.0 |
+| `--html` | boolean | `false` | Output findings as HTML report |
+| `--output <file>` | string | stdout | Write output to file instead of stdout |
+| `--config <file>` | string | — | Path to a custom config file |
+| `--ignore <rules>` | string | — | Skip specific rule IDs, comma-separated (e.g., `sd-045,sd-046`) |
+| `--concurrency <n>` | number | `4` | Number of parallel file workers |
+| `--verbose` | boolean | `false` | Show detailed scan progress per file |
+| `--quiet` | boolean | `false` | Suppress terminal output; only emit exit code |
+| `--fail-fast` | boolean | `false` | Stop scanning on first critical finding |
+
+### `firmis bom` flags
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--platform <name>` | string | auto-detect | Include only this platform in the BOM |
+| `--output <file>` | string | stdout | Save BOM JSON to file |
+| `--verbose` | boolean | `false` | Enable verbose logging |
+
+### `firmis ci` flags
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--fail-on <level>` | enum | `high` | Exit non-zero if findings at this severity or above |
+| `--format <fmt>` | enum | `sarif` | Output format: `sarif`, `json`, `html` |
+| `--output <file>` | string | `results.sarif` | Output file path |
+| `--platform <name>` | string | auto-detect | Limit to specific platform |
+| `--verbose` | boolean | `false` | Enable verbose logging |
+
+### `firmis discover` flags
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--json` | boolean | `false` | Output component list as JSON |
+| `--platform <name>` | string | auto-detect | Discover a specific platform only |
+| `--verbose` | boolean | `false` | Show discovery details |
+
+---
+
+## Config file
+
+For project-level defaults, create `firmis.config.ts` or `firmis.config.json` in your project root.
+
+### TypeScript config (recommended)
+
+```typescript title="firmis.config.ts"
+import type { FirmisConfig } from 'firmis-scanner'
+
+const config: Partial<FirmisConfig> = {
+  // Minimum severity to report (low | medium | high | critical)
+  severity: 'medium',
+
+  // Output format (terminal | json | sarif | html)
+  output: 'terminal',
+
+  // Platforms to scan — omit to auto-detect all
+  platforms: ['claude', 'mcp'],
+
+  // Custom rule directories to load in addition to built-in rules
+  customRules: ['./rules/custom'],
+
+  // Paths to exclude from scanning
+  exclude: ['test/fixtures/', 'node_modules/', 'dist/'],
+
+  // Rule IDs to skip globally
+  ignoreRules: ['sd-045', 'sd-046'],
+
+  // Exit non-zero if findings at this severity or above
+  failOnSeverity: 'high',
+
+  // Parallel file workers
+  concurrency: 4,
+
+  // Stop on first critical finding
+  failFast: false,
+
+  // Suppress terminal output
+  quiet: false,
+
+  // Verbose scan progress
+  verbose: false,
+}
+
+export default config
+```
+
+### JSON config
+
+```json title="firmis.config.json"
+{
+  "severity": "medium",
+  "output": "terminal",
+  "platforms": ["claude", "mcp"],
+  "customRules": ["./rules/custom"],
+  "exclude": ["test/fixtures/", "node_modules/", "dist/"],
+  "ignoreRules": ["sd-045", "sd-046"],
+  "failOnSeverity": "high",
+  "concurrency": 4,
+  "failFast": false,
+  "quiet": false,
+  "verbose": false
+}
+```
+
+---
+
+## Full configuration schema
+
+All fields in the `FirmisConfig` interface. All fields are optional — omit any field to use the built-in default.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `severity` | `low` \| `medium` \| `high` \| `critical` | `low` | Minimum severity level to report |
+| `output` | `terminal` \| `json` \| `sarif` \| `html` | `terminal` | Output format for findings |
+| `outputFile` | string | stdout | File path for JSON, SARIF, or HTML output |
+| `platforms` | `PlatformType[]` | auto-detect | Platforms to scan; omit to auto-detect all 8 |
+| `targetPath` | string | cwd | Target directory to scan; overrides platform default paths |
+| `customRules` | string[] | `[]` | Additional rule directories to load alongside built-in rules |
+| `exclude` | string[] | `[]` | Glob patterns or paths to exclude from scanning |
+| `ignoreRules` | string[] | `[]` | Rule IDs to skip (same as `--ignore` flag) |
+| `failOnSeverity` | `SeverityLevel` | — | Exit with code 1 if findings at this severity or above |
+| `failFast` | boolean | `false` | Stop on first critical finding |
+| `concurrency` | number | `4` | Number of parallel file analysis workers |
+| `verbose` | boolean | `false` | Enable detailed per-file scan progress output |
+| `quiet` | boolean | `false` | Suppress all terminal output; only emit exit code |
+| `onProgress` | function | — | Callback fired at scan milestones (TypeScript API only) |
+
+### Platform type values
+
+```typescript title="Valid platform names"
+type PlatformType =
+  | 'claude'     // Claude Skills (CLAUDE.md, .claude/)
+  | 'mcp'        // MCP Servers (mcp.json, .vscode/mcp.json)
+  | 'codex'      // Codex Plugins (codex.json, .codex/)
+  | 'cursor'     // Cursor Rules (.cursorrules, .cursor/)
+  | 'crewai'     // CrewAI Agents (crew.yaml, agents/)
+  | 'autogpt'    // AutoGPT Plugins (auto_gpt_plugin_template)
+  | 'openclaw'   // OpenClaw Skills (openclaw.yaml)
+  | 'nanobot'    // Nanobot Plugins (nanobot.json)
+```
+
+### Severity level values
+
+```typescript title="Valid severity levels"
+type SeverityLevel = 'low' | 'medium' | 'high' | 'critical'
+```
+
+---
+
+## Defaults
+
+```typescript title="Built-in defaults (FirmisConfig)"
+const DEFAULT_CONFIG = {
+  severity: 'low',        // Report all findings including low severity
+  output: 'terminal',     // Color-coded terminal output
+  verbose: false,         // No per-file progress
+  concurrency: 4,         // 4 parallel workers
+  failFast: false,        // Scan all files before stopping
+}
+```
+
+---
+
+## Environment variables
+
+Firmis does not currently read configuration from environment variables. Use CLI flags or a config file for CI/CD environments.
+
+```yaml title=".github/workflows/firmis.yml"
+- name: Scan with custom severity
+  run: npx firmis scan --severity high --fail-on high --sarif --output results.sarif
+```
+
+<Aside type="tip">
+  For CI/CD pipelines, prefer CLI flags over a config file. Flags are explicit, visible in the workflow definition, and override any project-level config file that developers may have customized locally.
+</Aside>
+
+---
+
+## Precedence example
+
+If `firmis.config.ts` sets `severity: 'medium'` and you run:
+
+```bash title="Terminal"
+npx firmis scan --severity low
+```
+
+The CLI flag `--severity low` wins. You see all findings including low severity.
+
+---
+
+## Related
+
+- [firmis scan](/cli/scan) — full scan command reference
+- [firmis ci](/cli/ci) — CI pipeline command reference
+- [Ignoring Findings](/rules/ignoring-findings) — `.firmisignore` syntax
+- [Custom Rules](/rules/custom-rules) — writing your own detection rules

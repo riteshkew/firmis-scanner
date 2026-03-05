@@ -1,6 +1,316 @@
 ---
 title: GitHub Actions
-description: Integrate Firmis into GitHub Actions CI/CD pipelines.
+description: Integrate Firmis into GitHub Actions CI/CD pipelines with SARIF upload, PR comments, and branch protection.
 ---
 
-Content coming soon.
+import { Aside, Card, CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components'
+
+> Add Firmis to your GitHub Actions pipeline in under 5 minutes. Get findings in the Security tab, PR annotations, and enforce security gates on every push.
+
+## Quickstart
+
+Add this workflow to your repository to scan on every push and pull request.
+
+```yaml title=".github/workflows/firmis.yml"
+name: Firmis Security Scan
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run Firmis CI
+        run: npx firmis ci --fail-on high --format sarif --output results.sarif
+      - name: Upload SARIF to GitHub
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+```
+
+<Aside type="note">
+  The `if: always()` condition on the SARIF upload step ensures findings are reported even when the scan fails the build. Without it, GitHub Security tab would not be populated on a failing scan.
+</Aside>
+
+## Workflow examples
+
+<Tabs>
+<TabItem label="Basic (fail on high)">
+
+The minimal workflow for a security gate. Fails the build on `high` or `critical` findings.
+
+```yaml title=".github/workflows/firmis.yml"
+name: Firmis Security Scan
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Scan with Firmis
+        run: npx firmis ci --fail-on high
+```
+
+</TabItem>
+<TabItem label="SARIF + Security Tab">
+
+Upload results to the GitHub Security tab for inline code annotations.
+
+```yaml title=".github/workflows/firmis-sarif.yml"
+name: Firmis Security Scan
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run Firmis CI
+        run: npx firmis ci --fail-on high --format sarif --output results.sarif
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+          category: firmis
+```
+
+</TabItem>
+<TabItem label="BOM + SARIF">
+
+Full pipeline: discover platforms, generate CycloneDX BOM, scan, and upload SARIF.
+
+```yaml title=".github/workflows/firmis-full.yml"
+name: Firmis Full Pipeline
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Firmis CI Pipeline
+        run: |
+          npx firmis ci \
+            --fail-on high \
+            --format sarif \
+            --output firmis.sarif
+      - name: Generate Agent BOM
+        run: npx firmis bom --format json --output firmis-bom.json
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: firmis.sarif
+      - name: Archive BOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-bom
+          path: firmis-bom.json
+          retention-days: 90
+```
+
+</TabItem>
+<TabItem label="With caching">
+
+Cache the Firmis rule set and npm install for faster CI runs.
+
+```yaml title=".github/workflows/firmis-cached.yml"
+name: Firmis Security Scan (Cached)
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Cache Firmis binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm/_npx
+          key: firmis-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            firmis-${{ runner.os }}-
+      - name: Run Firmis CI
+        run: npx firmis ci --fail-on high --format sarif --output results.sarif
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+```
+
+</TabItem>
+</Tabs>
+
+## SARIF upload to GitHub Security tab
+
+When you upload a SARIF file with `github/codeql-action/upload-sarif@v3`, GitHub displays findings as:
+
+- Inline annotations on pull request diffs
+- Code scanning alerts in the **Security** tab under **Code scanning**
+- Dismissed/resolved tracking across commits
+
+### Required permissions
+
+```yaml
+permissions:
+  security-events: write   # required to upload SARIF
+  contents: read            # required to check out code
+```
+
+<Aside type="caution">
+  Code scanning requires a GitHub repository with Advanced Security enabled. This is available on all public repositories and on GitHub Enterprise Cloud with Advanced Security. Private repositories on GitHub Free do not support SARIF upload.
+</Aside>
+
+## PR comment with findings summary
+
+Add a step to post a findings summary as a PR comment using the GitHub CLI.
+
+```yaml title=".github/workflows/firmis-pr-comment.yml"
+name: Firmis Security Scan
+on: [pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run Firmis CI
+        id: firmis
+        run: |
+          npx firmis ci \
+            --fail-on high \
+            --format sarif \
+            --output results.sarif \
+            --quiet 2>&1 | tee firmis-output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+      - name: Post PR comment
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SUMMARY=$(cat firmis-output.txt | tail -5)
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "## Firmis Security Scan
+
+          \`\`\`
+          ${SUMMARY}
+          \`\`\`
+
+          [View full results →](https://github.com/${{ github.repository }}/security/code-scanning)"
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+      - name: Fail if threats found
+        if: steps.firmis.outputs.exit_code != '0'
+        run: exit 1
+```
+
+## Branch protection rules
+
+To require Firmis to pass before merging, add it as a required status check.
+
+<Steps>
+1. Go to **Settings** → **Branches** in your GitHub repository.
+
+2. Click **Add branch protection rule** for `main` (or your default branch).
+
+3. Enable **Require status checks to pass before merging**.
+
+4. Search for and select `security` (the job name in your workflow).
+
+5. Optionally enable **Require branches to be up to date before merging** for stricter enforcement.
+
+6. Save the rule.
+</Steps>
+
+With this in place, pull requests that introduce `high` or `critical` findings will be blocked from merging.
+
+## Environment variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `FIRMIS_SEVERITY` | Minimum severity to report | `low` |
+| `FIRMIS_FAIL_ON` | Severity level that causes non-zero exit | `high` |
+
+You can set these in your workflow or in GitHub repository secrets/variables.
+
+```yaml
+- name: Run Firmis CI
+  env:
+    FIRMIS_FAIL_ON: critical   # only fail on critical in this workflow
+  run: npx firmis ci --fail-on ${{ env.FIRMIS_FAIL_ON }} --format sarif --output results.sarif
+```
+
+## Scan only changed files
+
+For large repositories, you can scope the scan to files changed in a PR to reduce scan time.
+
+```yaml
+- name: Get changed files
+  id: changed
+  uses: tj-actions/changed-files@v44
+  with:
+    dir_names: true
+    dir_names_exclude_current_dir: false
+
+- name: Run Firmis on changed directories
+  if: steps.changed.outputs.any_changed == 'true'
+  run: |
+    for dir in ${{ steps.changed.outputs.all_changed_files }}; do
+      npx firmis scan "$dir" --format sarif --output "results-${dir//\//-}.sarif" || true
+    done
+```
+
+<Aside type="tip">
+  For most projects, scanning the full repository takes only a few seconds. Scoping to changed files is only worth it for repositories with thousands of agent component files.
+</Aside>
+
+## Related
+
+- [GitLab CI integration](/integrations/gitlab-ci)
+- [Pre-commit hooks](/integrations/pre-commit-hooks)
+- [TypeScript API](/integrations/typescript-api)
+- [SARIF output reference](/reference/sarif-output)
+- [`firmis ci` command](/cli/ci)

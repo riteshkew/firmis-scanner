@@ -1,6 +1,143 @@
 ---
-title: Compliance Reporting
-description: Generate compliance reports mapped to SOC2, AI Act, GDPR, and NIST frameworks (Beta).
+title: "Compliance Reporting"
+description: "Generate compliance reports mapped to SOC 2, EU AI Act, GDPR, and NIST frameworks from Firmis scan findings (Beta)."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis maps every scan finding to compliance framework controls — so a security scan is also an audit artifact. One scan, five frameworks.
+
+<Aside type="caution" title="Beta">
+  Compliance reporting is in beta. Available in the Firmis Engine private beta. [Join the waitlist →](https://firmislabs.com)
+</Aside>
+
+## Frameworks supported
+
+Firmis maps findings to five compliance and regulatory frameworks:
+
+| Framework | Focus | Who needs it |
+|---|---|---|
+| **SOC 2 Type II** | Security, availability, confidentiality controls | SaaS companies, B2B vendors |
+| **EU AI Act** | Risk management, transparency, human oversight for AI systems | Companies deploying AI in the EU |
+| **GDPR** | Personal data protection, breach notification | Companies handling EU personal data |
+| **NIST AI RMF** | AI risk identification, measurement, management | US federal agencies, enterprises |
+| **OWASP LLM Top 10** | LLM-specific application security | AI/ML engineering teams |
+
+## How the mapping works
+
+Every Firmis detection rule is tagged with the compliance controls it provides evidence for. When a finding is detected, Firmis records it as evidence of a control gap. When a check passes (no finding), it records it as evidence of control adherence.
+
+```text
+Scan finding: tp-001 Hidden Instructions in Tool Description
+       │
+       ▼
+Compliance mapping:
+  SOC 2    → CC6.1 (Logical Access Controls)
+  EU AI Act → Art. 9 (Risk Management System)
+  NIST AI RMF → GOVERN 1.1 (Policies and Procedures)
+  OWASP LLM → LLM01 (Prompt Injection)
+```
+
+The compliance report aggregates all findings and generates:
+1. A control-by-control status table (pass / fail / not-applicable)
+2. Evidence citations linking each control status to specific scan findings or clean checks
+3. Remediation priority order ranked by compliance impact
+
+## Example usage
+
+Generate an HTML compliance report for the EU AI Act:
+
+```bash title="Terminal"
+firmis compliance --framework ai-act --output report.html
+```
+
+Generate reports for multiple frameworks at once:
+
+```bash title="Terminal"
+firmis compliance --framework soc2,ai-act,gdpr --output ./compliance-reports/
+```
+
+Generate a machine-readable JSON report for integration with GRC tools:
+
+```bash title="Terminal"
+firmis compliance --framework nist-ai-rmf --format json --output nist-report.json
+```
+
+Include compliance reporting in your CI pipeline:
+
+```bash title="Terminal"
+firmis ci --compliance soc2 --fail-on high --output ./reports/
+```
+
+## What the report contains
+
+### Executive summary
+
+A one-page summary with:
+- Overall compliance posture (percentage of controls passing)
+- Framework-specific risk rating
+- Top 5 control gaps by severity
+- Trend comparison if prior reports exist
+
+### Control matrix
+
+A table of every control in the framework, with status and evidence:
+
+```text title="Example — SOC 2 control matrix (excerpt)"
+Control     Title                          Status    Evidence
+────────────────────────────────────────────────────────────────────────
+CC6.1       Logical Access Controls        FAIL      3 findings: sd-014,
+                                                     sd-015, ac-001
+CC6.2       Authentication                 PASS      No findings in scope
+CC7.1       System Monitoring              PARTIAL   1 finding: cfg-002
+CC8.1       Change Management              PASS      No findings in scope
+```
+
+### Finding details
+
+Each control gap is accompanied by:
+- The specific Firmis finding (rule ID, file, line)
+- Plain-language explanation of the compliance relevance
+- Recommended remediation steps
+- Estimated effort to resolve (Low / Medium / High)
+
+### Remediation roadmap
+
+Findings sorted by compliance impact, with guidance on which fixes address the most framework controls simultaneously — so security work maps directly to audit evidence.
+
+## OWASP LLM Top 10 mapping
+
+Firmis is particularly thorough on the OWASP LLM Top 10 because its rule categories map directly to LLM-specific risks:
+
+| OWASP LLM Risk | Firmis Categories |
+|---|---|
+| LLM01 Prompt Injection | `prompt-injection`, `tool-poisoning` |
+| LLM02 Insecure Output Handling | `data-exfiltration`, `suspicious-behavior` |
+| LLM03 Training Data Poisoning | `agent-memory-poisoning` |
+| LLM06 Sensitive Information Disclosure | `secret-detection`, `credential-harvesting` |
+| LLM07 Insecure Plugin Design | `permission-overgrant`, `access-control` |
+| LLM09 Overreliance | `insecure-config` |
+| LLM10 Model Theft | `supply-chain`, `known-malicious` |
+
+## EU AI Act mapping
+
+The EU AI Act applies to AI systems deployed in the EU. For high-risk AI systems, Firmis covers:
+
+| Article | Requirement | Covered by |
+|---|---|---|
+| Art. 9 | Risk management system | All threat categories |
+| Art. 10 | Training and testing data governance | `supply-chain`, `known-malicious` |
+| Art. 12 | Record-keeping and logging | `access-control`, `insecure-config` |
+| Art. 13 | Transparency | `tool-poisoning`, `prompt-injection` |
+| Art. 15 | Accuracy, robustness, and cybersecurity | `secret-detection`, `data-exfiltration` |
+
+<Aside type="note">
+  Firmis compliance reports are designed as evidence artifacts for auditors, not as legal opinions. Consult your compliance team to determine which frameworks apply to your specific use case and jurisdiction.
+</Aside>
+
+## Related
+
+- [Threat Categories →](/reference/threat-categories)
+- [CI command reference →](/cli/ci)
+- [Agent Supply Chain Security →](/guides/agent-supply-chain-security)
+- [Firmis Engine private beta →](https://firmislabs.com)

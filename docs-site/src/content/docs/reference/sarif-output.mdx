@@ -1,6 +1,265 @@
 ---
-title: SARIF Output
-description: Reference for the SARIF output format produced by Firmis.
+title: SARIF Output Reference
+description: SARIF 2.1.0 output format produced by Firmis — field mappings, generation commands, GitHub Security tab integration, and a complete example.
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis outputs standard SARIF 2.1.0, the Static Analysis Results Interchange Format. SARIF is the format required by the GitHub Security tab, accepted by VS Code's SARIF Viewer, and supported by most CI security dashboards.
+
+## What is SARIF?
+
+SARIF (Static Analysis Results Interchange Format) is an OASIS open standard ([OASIS SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/)) for representing static analysis results as structured JSON. It defines a common schema so that any tool can produce results that any viewer can consume.
+
+Key benefits of SARIF output:
+
+| Benefit | Description |
+|---|---|
+| **GitHub Security tab** | Upload via `github/codeql-action/upload-sarif` — findings appear as code scanning alerts |
+| **PR annotations** | GitHub annotates pull request diffs with finding locations and messages |
+| **VS Code viewer** | The SARIF Viewer extension (Microsoft) renders findings in the Problems panel |
+| **CI dashboards** | Tools like Semgrep App, SonarQube, and Snyk Code accept SARIF imports |
+| **Historical tracking** | Compare SARIF files across runs to track remediation progress |
+
+---
+
+## Generating SARIF output
+
+```bash title="Terminal"
+# Print SARIF to stdout
+npx firmis scan --sarif
+
+# Save SARIF to a file
+npx firmis scan --sarif --output results.sarif
+
+# Scan only MCP servers, output SARIF
+npx firmis scan --platform mcp --sarif --output mcp-results.sarif
+
+# Full CI pipeline with SARIF output
+npx firmis ci --fail-on high --format sarif --output results.sarif
+```
+
+---
+
+## Field mapping
+
+How Firmis finding fields map to SARIF 2.1.0 fields:
+
+| Firmis Field | SARIF Field | Notes |
+|---|---|---|
+| `threat.ruleId` | `result.ruleId` | e.g., `tp-001`, `sd-045` |
+| `threat.message` | `result.message.text` | Human-readable finding description |
+| `threat.severity` | `result.level` | See severity mapping table below |
+| `threat.location.file` | `result.locations[].physicalLocation.artifactLocation.uri` | Relative path from scan root |
+| `threat.location.line` | `result.locations[].physicalLocation.region.startLine` | 1-indexed line number |
+| `threat.location.column` | `result.locations[].physicalLocation.region.startColumn` | 1-indexed column number |
+| `threat.evidence[].snippet` | `result.locations[].physicalLocation.region.snippet.text` | Code snippet at finding location |
+| `threat.remediation` | `result.fixes[]` or `result.message` | Remediation guidance when available |
+| `rule.name` | `run.tool.driver.rules[].name` | Human-readable rule name |
+| `rule.description` | `run.tool.driver.rules[].fullDescription.text` | Full rule description |
+| `rule.severity` | `run.tool.driver.rules[].defaultConfiguration.level` | Rule's default severity level |
+
+### Severity mapping
+
+SARIF uses a different severity vocabulary than Firmis:
+
+| Firmis Severity | SARIF Level |
+|---|---|
+| `critical` | `error` |
+| `high` | `error` |
+| `medium` | `warning` |
+| `low` | `note` |
+
+<Aside type="note">
+  Both `critical` and `high` map to SARIF `error` level. This is standard practice — SARIF only has three actionable levels (`error`, `warning`, `note`). Use Firmis's `--fail-on critical` or `--fail-on high` to distinguish between the two in CI logic.
+</Aside>
+
+---
+
+## Example SARIF document
+
+```json title="results.sarif"
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Firmis",
+          "version": "1.3.0",
+          "informationUri": "https://firmislabs.com",
+          "rules": [
+            {
+              "id": "tp-001",
+              "name": "HiddenInstructionsInToolDescriptions",
+              "shortDescription": {
+                "text": "Hidden Instructions in Tool Descriptions"
+              },
+              "fullDescription": {
+                "text": "Detects invisible Unicode characters and HTML comments used to hide malicious instructions inside tool or function descriptions."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://docs.firmislabs.com/reference/threat-categories#tool-poisoning"
+            },
+            {
+              "id": "sd-045",
+              "name": "OpenAIApiKeyDetected",
+              "shortDescription": {
+                "text": "OpenAI API Key Detected"
+              },
+              "fullDescription": {
+                "text": "A hardcoded OpenAI API key was found in the source file."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://docs.firmislabs.com/reference/threat-categories#secret-detection"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "tp-001",
+          "level": "error",
+          "message": {
+            "text": "Hidden instructions in tool description: zero-width space (U+200B) detected."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/tools/search.ts",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 18,
+                  "snippet": {
+                    "text": "description: \"Search the web\u200B and return results\""
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "sd-045",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded OpenAI API key detected. Rotate this key immediately and store it in an environment variable."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/llm.ts",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 15
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Uploading to GitHub Security tab
+
+GitHub's code scanning feature accepts SARIF files uploaded via the `upload-sarif` action.
+
+```yaml title=".github/workflows/firmis.yml"
+name: Firmis Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Firmis scan
+        run: npx firmis scan --sarif --output results.sarif
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+```
+
+<Aside type="tip">
+  Set `continue-on-error: true` on the scan step so the SARIF upload always runs, even when findings are present. The `upload-sarif` action will show the findings in the Security tab regardless of whether the scan step passed or failed.
+</Aside>
+
+After uploading, findings appear at **Security → Code scanning alerts** in your GitHub repository. Pull request diffs are annotated with inline finding markers at the relevant line numbers.
+
+---
+
+## Viewing SARIF locally
+
+### VS Code SARIF Viewer
+
+Install the [SARIF Viewer extension](https://marketplace.visualstudio.com/items?itemName=MS-SarifVSCode.sarif-viewer) from Microsoft. Open any `.sarif` file in VS Code to browse findings in the Problems panel with source location highlighting.
+
+### SARIF Web Viewer
+
+Microsoft maintains a browser-based viewer at [microsoft.github.io/sarif-web-component](https://microsoft.github.io/sarif-web-component/). Upload your `.sarif` file to inspect results without installing anything.
+
+---
+
+## SARIF in the CI pipeline
+
+The `firmis ci` command generates SARIF as part of the full discover → BOM → scan → report pipeline:
+
+```bash title="Terminal"
+npx firmis ci --fail-on high --format sarif --output results.sarif
+```
+
+This produces `results.sarif` alongside `agent-bom.json`. Both can be archived as CI artifacts:
+
+```yaml title=".github/workflows/firmis-ci.yml (excerpt)"
+- name: Run Firmis CI pipeline
+  run: npx firmis ci --fail-on high --format sarif --output results.sarif
+
+- name: Upload SARIF
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
+
+- name: Archive Agent BOM
+  uses: actions/upload-artifact@v4
+  with:
+    name: agent-bom
+    path: agent-bom.json
+```
+
+---
+
+## Related
+
+- [firmis scan](/cli/scan) — CLI reference including `--sarif` flag
+- [firmis ci](/cli/ci) — CI pipeline command
+- [GitHub Actions integration](/integrations/github-actions) — full workflow example
+- [CycloneDX BOM](/reference/cyclonedx-bom) — agent BOM output format
+- [Threat Categories](/reference/threat-categories) — what each ruleId maps to

@@ -1,6 +1,167 @@
 ---
 title: Security Model
-description: The security model and data handling guarantees of Firmis.
+description: What Firmis detects and what it does not — confidence scoring, false positive expectations, detection boundaries, and the limits of static analysis for AI agent security.
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis is a static analysis scanner. It reads code and configuration files to find threats embedded before deployment. It cannot observe live agent behavior, intercept network traffic, or detect threats that only manifest at runtime. This page documents exactly what Firmis covers and where coverage ends.
+
+## What Firmis detects
+
+Firmis performs static analysis across four detection surfaces:
+
+| Detection Surface | How | Example |
+|---|---|---|
+| **Known-bad static patterns** | Regex, YARA-style string matching, text search | AWS key format (`AKIA[0-9A-Z]{16}`), C2 beacon byte signatures |
+| **Structural code patterns** | Regex on AST-adjacent code structure | `readFileSync()` result piped to `fetch()` POST body |
+| **Supply chain anomalies** | Package name matching against curated threat lists | `event-stream` dependency, typosquatted package names |
+| **Secret leakage** | High-entropy token pattern matching | OpenAI key (`sk-...`), GitHub PAT (`ghp_...`), PEM headers |
+
+### What "detected" means
+
+A Firmis finding means: **this pattern was found in a file scanned from your project.** It does not mean an attack has occurred. It means a pattern associated with an attack technique exists in your codebase and requires human review to determine intent and risk.
+
+---
+
+## What Firmis does NOT detect
+
+Understanding the gaps is as important as understanding the coverage.
+
+| Not Detected | Reason | Alternative |
+|---|---|---|
+| **Runtime behavioral attacks** | Firmis is static — it does not run the agent or observe live execution | Runtime monitoring, network egress filtering |
+| **Live prompt injection via user input** | User-supplied prompts are not scanned at runtime | Input validation at the application layer |
+| **Zero-day obfuscation techniques** | Novel encoding or packing methods not yet in rule patterns | Behavioral analysis, sandboxing |
+| **Encrypted payload content** | Firmis cannot decrypt ciphertext to inspect payload intent | Runtime unpacking, sandboxed execution |
+| **Semantic logic bombs** | Logic that is benign individually but malicious when composed | Code review, threat modeling |
+| **Social engineering of agent operators** | Not a code-level threat | Security training, operational procedures |
+| **Real-time session hijacking** | Requires live traffic inspection | mTLS, session token rotation |
+| **Model weight manipulation** | Out of scope for agent code scanning | Model provenance verification |
+
+<Aside type="caution">
+  Static analysis covers threats embedded in code and configuration before deployment. It does not replace runtime monitoring for behavioral threats that only appear during agent operation.
+</Aside>
+
+---
+
+## Confidence model
+
+Every Firmis finding includes a confidence score (0–100) and a tier. Understanding these values helps you prioritize findings.
+
+### How confidence is calculated
+
+```text
+confidence = Math.max(ratioConfidence, maxSinglePatternWeight)
+```
+
+**`ratioConfidence`** — reflects breadth of evidence across the rule's patterns:
+
+```text
+ratioConfidence = (matchedPatterns / totalPatterns) × averageMatchedWeight
+```
+
+**`maxSinglePatternWeight`** — the weight of the single highest-weighted pattern that matched.
+
+Taking the maximum of the two ensures that a single very strong indicator (e.g., an exact API key format match at weight 100) always produces a high confidence score, even if other patterns in the rule did not fire.
+
+### Confidence tiers
+
+| Tier | Confidence Range | Meaning |
+|---|---|---|
+| `confirmed` | 80–100 | High-specificity pattern match. Very low false-positive rate. Treat as finding until disproven. |
+| `likely` | 55–79 | Multiple patterns co-occurring or one strong indicator. Review recommended. |
+| `suspicious` | 0–54 | Weak or partial match. May represent benign code. Evaluate in context. |
+
+### What "critical" severity means
+
+Severity is set by the rule author based on the real-world impact if the threat is real. A `critical` finding means:
+
+- The threat could result in credential compromise, data exfiltration, or arbitrary code execution
+- The confidence threshold for this rule has been set high to reduce false positives
+- Immediate review is warranted in most codebases
+
+Severity is independent of confidence. A `critical/suspicious` finding means: "if this is what the rule thinks it is, it's very dangerous — but the evidence is partial."
+
+---
+
+## False positive expectations
+
+Firmis is tuned for low false positive rates across typical AI agent codebases. However, false positives occur in specific scenarios.
+
+### Common false positive sources
+
+| Scenario | Category | Why | Mitigation |
+|---|---|---|---|
+| Test fixtures with hardcoded tokens | secret-detection | Real key format in test data | Add path to `.firmisignore` |
+| Documentation describing attack patterns | prompt-injection, tool-poisoning | Explanatory text matches attack patterns | `.firmisignore` for doc paths |
+| Security tools and scanners | malware-signatures | Tools that manipulate or analyze malicious patterns | `.firmisignore` for tool paths |
+| Tutorials and example code | secret-detection | Example API keys in README | `.firmisignore` for example directories |
+| Legitimate broad permissions for platform tools | permission-overgrant | Some orchestration tools genuinely need wide scopes | Add `rule:perm-003` to `.firmisignore` |
+
+### Document multiplier
+
+Files with `.md` and `.txt` extensions receive a 0.15x confidence multiplier before threshold comparison. A pattern that scores 80 confidence in a TypeScript file scores 12 in a Markdown file — below most thresholds. This suppresses noise from documentation files that describe threats without embedding them.
+
+**Exception:** The `secret-detection` category is exempt from this multiplier. A hardcoded credential in a README or `.env.example` is still a real risk because it may be committed to a public repository.
+
+### Suppressing false positives
+
+```bash title="Terminal"
+# Suppress a specific rule across all files
+echo "rule:sd-045" >> .firmisignore
+
+# Suppress all findings in a directory
+echo "path:test/fixtures/" >> .firmisignore
+
+# Suppress a specific rule in a specific file
+echo "file:test/fixtures/sample.ts:rule:sd-045" >> .firmisignore
+```
+
+See [Ignoring Findings](/rules/ignoring-findings) for the full `.firmisignore` syntax.
+
+---
+
+## Detection boundary table
+
+| Threat Type | Detected? | How | Limitation |
+|---|---|---|---|
+| Hidden Unicode in tool descriptions | Yes | Regex pattern matching (tp-001) | Only detects known Unicode ranges |
+| Instruction override in tool metadata | Yes | Regex pattern matching (tp-002) | Novel phrasing may not match |
+| MCP config file modification | Yes | API call pattern matching (tp-004) | Only detects write-to-config patterns |
+| File content sent to external URL | Yes | Composite pattern (readFile + fetch) | Requires co-occurrence in same file |
+| AWS / GCP / Azure credential file access | Yes | file-access pattern matching (cred-*) | Does not detect indirect access via symlinks |
+| Hardcoded API keys and tokens | Yes | High-entropy regex (sd-*) | Custom or low-entropy secrets may be missed |
+| Compromised npm packages | Yes | String matching against curated list (supply-*) | List requires updates when new incidents occur |
+| Typosquatted packages | Yes | String distance matching (supply-*) | Very subtle typos may evade detection |
+| Tunneling service requests | Yes | Network pattern matching (na-*) | Only matches known tunneling domains |
+| Pipe-to-shell execution | Yes | Regex pattern matching (md-001) | Heavily obfuscated variants may evade |
+| Runtime prompt injection via user input | No | Not a static pattern | Requires runtime input validation |
+| Encrypted C2 payloads | Partial | Detects encrypted blob shape, not decrypted content | Cannot determine intent without decryption |
+| Semantic logic bombs | No | Multi-file compositional analysis not implemented | Requires code review or symbolic execution |
+| Zero-day obfuscation | No | Patterns must exist in rule set | Rule updates needed for novel techniques |
+
+---
+
+## Data handling guarantees
+
+| Property | Guarantee |
+|---|---|
+| **Code never uploaded** | All analysis happens locally. No file contents, paths, or findings leave your machine. |
+| **No telemetry by default** | Firmis collects no usage telemetry unless explicitly configured. |
+| **Read-only scanning** | Firmis never modifies scanned files. Running a scan changes nothing in your repository. |
+| **No code execution** | No code in scanned files is run. Pattern matching operates on raw file content. |
+| **Offline operation** | All 209 rules are bundled locally. Scanning works fully offline. |
+
+<Aside type="note">
+  See the [Privacy Policy](/privacy) for the full data handling commitment.
+</Aside>
+
+---
+
+## Related
+
+- [Detection Engine](/concepts/detection-engine) — matcher types, confidence scoring, and deduplication
+- [Threat Categories](/reference/threat-categories) — all 16 categories with OWASP/MITRE mappings
+- [Ignoring Findings](/rules/ignoring-findings) — suppressing false positives
+- [How It Works](/concepts/how-it-works) — the three-stage scan pipeline

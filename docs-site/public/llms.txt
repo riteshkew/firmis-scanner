@@ -1,0 +1,67 @@
+# Firmis
+
+> AI agent security scanner. Static analysis only — does not modify code or require network access. Detects threats in Claude Skills, MCP Servers, Codex Plugins, Cursor Rules, CrewAI, AutoGPT, OpenClaw, and Nanobot. 199 YAML detection rules across 16 threat categories. Zero install: `npx firmis scan`. Fully offline. MIT licensed.
+
+## Docs
+
+- [Changelog](https://docs.firmislabs.com/changelog): Release history for Firmis.
+- [Installation](https://docs.firmislabs.com/installation): Install Firmis Scanner via npx (zero install), npm, or yarn. Requires Node.js 20+.
+- [Privacy](https://docs.firmislabs.com/privacy): Privacy policy for Firmis and Firmis Labs.
+- [Quick Start — Your First Scan in 60 Seconds](https://docs.firmislabs.com/quickstart): Install Firmis and scan your AI agent components for security threats. Zero config, zero signup, runs entirely offline.
+- [Security](https://docs.firmislabs.com/security): Security policy and vulnerability reporting for Firmis.
+
+## CLI Reference
+
+- [firmis bom — Generate Agent Bill of Materials](https://docs.firmislabs.com/cli/bom): Generate a CycloneDX 1.7 Agent Bill of Materials listing all AI agent components, dependencies, and models.
+- [firmis ci — CI Pipeline Command](https://docs.firmislabs.com/cli/ci): Run the full Firmis CI pipeline: discover → BOM → scan → report. One command for CI/CD integration.
+- [firmis compliance — Compliance Reporting](https://docs.firmislabs.com/cli/compliance): Generate compliance evidence reports for SOC2, AI Act, GDPR, and NIST frameworks. Beta feature.
+- [firmis discover — Discover AI Platforms and Components](https://docs.firmislabs.com/cli/discover): Auto-detect AI agent platforms, components, dependencies, and models in your project. JSON output for automation.
+- [firmis fix — Auto-Fix Security Threats](https://docs.firmislabs.com/cli/fix): Automatically remediate detected security threats in AI agent configurations. Beta feature.
+- [firmis list — List Detected Platforms](https://docs.firmislabs.com/cli/list): List all AI agent platforms detected in the current project directory.
+- [firmis monitor — Runtime Monitoring](https://docs.firmislabs.com/cli/monitor): Monitor AI agent behavior in real-time using Claude Code hooks and MCP proxy. Beta feature.
+- [firmis pentest — Pentest MCP Servers](https://docs.firmislabs.com/cli/pentest): Run security probes against MCP servers to test for vulnerabilities. Beta feature.
+- [firmis policy — Policy Engine](https://docs.firmislabs.com/cli/policy): Define and enforce custom security policies for your AI agent projects. Beta feature.
+- [firmis scan — Scan AI Agent Components](https://docs.firmislabs.com/cli/scan): Scan Claude Skills, MCP Servers, Codex Plugins, and more for security threats. Supports JSON, SARIF, HTML output. 199 built-in detection rules.
+- [firmis validate — Validate Rule Files](https://docs.firmislabs.com/cli/validate): Validate custom or built-in YAML detection rules for syntax errors, invalid regex, and schema compliance.
+
+## Platforms
+
+- [AutoGPT Plugins — Security Guide](https://docs.firmislabs.com/platforms/autogpt-plugins): Detect malware distribution, privilege escalation, and unrestricted network access in AutoGPT plugin configurations. 199 detection rules.
+- [Claude Skills — Security Guide](https://docs.firmislabs.com/platforms/claude-skills): Detect tool poisoning, prompt injection, hardcoded secrets, and excessive permissions in Claude Skills and CLAUDE.md files. 199 detection rules.
+- [Codex Plugins — Security Guide](https://docs.firmislabs.com/platforms/codex-plugins): Detect tool poisoning, unauthorized file access, and network abuse in OpenAI Codex plugin configurations. 199 detection rules.
+- [CrewAI Agents — Security Guide](https://docs.firmislabs.com/platforms/crewai-agents): Detect agent memory poisoning, excessive agency, and credential harvesting in CrewAI agent and task definitions. 199 detection rules.
+- [Cursor Rules — Security Guide](https://docs.firmislabs.com/platforms/cursor-rules): Detect prompt injection, hidden instructions, and insecure configuration in Cursor IDE rule files. 199 detection rules.
+- [MCP Servers — Security Guide](https://docs.firmislabs.com/platforms/mcp-servers): Detect tool poisoning, credential harvesting, data exfiltration, and supply chain attacks in Model Context Protocol servers. 199 detection rules.
+- [Nanobot Plugins — Security Guide](https://docs.firmislabs.com/platforms/nanobot-plugins): Detect tool poisoning, insecure configuration, and file system abuse in Nanobot plugin configurations. 199 detection rules.
+- [OpenClaw Skills — Security Guide](https://docs.firmislabs.com/platforms/openclaw-skills): Detect tool poisoning, wildcard permissions, data exfiltration, and supply chain risks in OpenClaw skill definitions. 199 detection rules.
+
+## Rules
+
+- [Built-in Rules](https://docs.firmislabs.com/rules/built-in-rules): Complete reference for all 209 built-in Firmis detection rules across 16 threat categories.
+- [Custom Rules](https://docs.firmislabs.com/rules/custom-rules): Write and load your own YAML detection rules to extend Firmis with project-specific threat patterns.
+- [Ignoring Findings](https://docs.firmislabs.com/rules/ignoring-findings): Suppress false positives and silence known-safe patterns using .firmisignore or the --ignore flag.
+- [Rules Overview](https://docs.firmislabs.com/rules/overview): How Firmis detection rules work — YAML anatomy, pattern matcher types, severity levels, and rule loading.
+
+## Reference
+
+- [Configuration](https://docs.firmislabs.com/reference/config-schema): Full reference for the Firmis configuration schema.
+- [CycloneDX BOM](https://docs.firmislabs.com/reference/cyclonedx-bom): Reference for the CycloneDX 1.7 Agent BOM format produced by Firmis.
+- [SARIF Output](https://docs.firmislabs.com/reference/sarif-output): Reference for the SARIF output format produced by Firmis.
+- [Security Model](https://docs.firmislabs.com/reference/security-model): The security model and data handling guarantees of Firmis.
+- [Threat Categories](https://docs.firmislabs.com/reference/threat-categories): Reference for all 16 threat categories detected by Firmis.
+
+## Optional
+
+- [GitHub Actions](https://docs.firmislabs.com/integrations/github-actions): Integrate Firmis into GitHub Actions CI/CD pipelines with SARIF upload, PR comments, and branch protection.
+- [GitLab CI](https://docs.firmislabs.com/integrations/gitlab-ci): Integrate Firmis into GitLab CI/CD pipelines with SAST report upload and merge request blocking.
+- [Pre-commit Hooks](https://docs.firmislabs.com/integrations/pre-commit-hooks): Run Firmis as a pre-commit hook to catch security threats before they reach your repository.
+- [TypeScript API](https://docs.firmislabs.com/integrations/typescript-api): Use the Firmis TypeScript API to scan, discover, and generate BOMs programmatically from your own scripts and applications.
+- [Agent BOM](https://docs.firmislabs.com/concepts/agent-bom): What an Agent Bill of Materials is, why AI agents need one, and how Firmis generates CycloneDX 1.7 BOMs.
+- [Detection Engine](https://docs.firmislabs.com/concepts/detection-engine): How Firmis's YARA-inspired pattern matching engine evaluates rules, scores confidence, and suppresses false positives.
+- [How It Works](https://docs.firmislabs.com/concepts/how-it-works): A walkthrough of Firmis's three-stage detection pipeline — Discovery, Rule Engine, and Reporter.
+- [Platforms](https://docs.firmislabs.com/concepts/platforms): What "platform" means in Firmis, how auto-detection works, and detection signals for all 8 supported platforms.
+- [Threat Model](https://docs.firmislabs.com/concepts/threat-model): All 16 threat categories detected by Firmis, with descriptions, example findings, severity ranges, and rule counts.
+- [Agent Supply Chain Security](https://docs.firmislabs.com/guides/agent-supply-chain-security): How supply chain attacks target AI agents, what threat vectors exist, and how Firmis detects compromised dependencies, typosquatted packages, and malicious MCP servers.
+- [Compliance Reporting](https://docs.firmislabs.com/guides/compliance-reporting): Generate compliance reports mapped to SOC 2, EU AI Act, GDPR, and NIST frameworks from Firmis scan findings (Beta).
+- [Scanning Claude Skills](https://docs.firmislabs.com/guides/scanning-claude-skills): A step-by-step guide to scanning Claude Skills and CLAUDE.md files for prompt injection, hardcoded secrets, and excessive permissions.
+- [Securing MCP Servers](https://docs.firmislabs.com/guides/securing-mcp-servers): A step-by-step guide to finding and fixing security issues in Model Context Protocol servers — tool poisoning, data exfiltration, and secret exposure.

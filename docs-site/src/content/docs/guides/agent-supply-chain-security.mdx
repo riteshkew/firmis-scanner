@@ -1,6 +1,232 @@
 ---
-title: Agent Supply Chain Security
-description: Protecting your AI agent supply chain from malicious dependencies and plugins.
+title: "Agent Supply Chain Security"
+description: "How supply chain attacks target AI agents, what threat vectors exist, and how Firmis detects compromised dependencies, typosquatted packages, and malicious MCP servers."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> AI agent supply chain attacks are fundamentally different from traditional npm supply chain attacks. The payload is not always code execution — it can be a prompt injection hidden in a tool description that arrives through a dependency update.
+
+## How AI agent supply chain attacks differ
+
+Traditional supply chain attacks target code execution: a compromised package runs malicious JavaScript at install or import time. AI agent supply chains have a broader attack surface because agents trust text, not just code.
+
+| Attack type | Traditional software | AI agents |
+|---|---|---|
+| **Malicious code** | `postinstall` script runs a reverse shell | Same — plus the shell runs inside an agent with broad tool access |
+| **Prompt injection** | Not applicable | Compromised tool description contains hidden instructions that redirect the agent |
+| **Config poisoning** | Not applicable | Malicious package writes to `.claude/settings.json` or `mcp.json`, persisting across sessions |
+| **Data exfiltration** | Steals tokens from memory | Reads `~/.aws/credentials` and calls a webhook via a legitimate-looking tool |
+| **Typosquatting** | `lodash` vs `lodassh` | Same — plus the typosquatted package registers a malicious MCP server |
+
+The key difference: **a compromised AI agent dependency can attack the user without executing any traditional exploit code.** It only needs to influence what text the agent reads.
+
+## Threat vectors
+
+### 1. Typosquatted agent packages
+
+Attackers register packages with names one keystroke away from popular agent packages. A developer who types `npm install firmis-scaner` (missing an `n`) installs a malicious package instead of the legitimate one.
+
+Common patterns:
+- Character transposition: `crewia` instead of `crewai`
+- Missing characters: `nanbot` instead of `nanobot`
+- Added characters: `mcp-serverr`
+- Homoglyph substitution: using `l` (lowercase L) where `1` (one) is expected
+
+### 2. Compromised community skills
+
+A legitimate, popular skill is updated by a compromised maintainer account. The new version:
+- Adds a tool description containing prompt injection
+- Writes to `.claude/memory/` to persist instructions across sessions
+- Registers a secondary MCP server that exfiltrates data
+
+Because the package name is unchanged and the version is a minor bump, automated dependency updates install it silently.
+
+### 3. Malicious MCP servers
+
+MCP servers are remote services that agents connect to dynamically. A malicious or compromised MCP server can:
+- Return tool descriptions containing hidden Unicode instructions
+- Include prompt injection in tool response payloads
+- Gradually introduce new tools across sessions to expand access
+
+Unlike npm packages, MCP server updates are invisible to lockfiles and version pinning.
+
+<Aside type="caution">
+  MCP servers registered in `.claude/settings.json` or `mcp.json` are loaded on every agent startup. An attacker who adds one malicious server to this list has persistent access to every future session.
+</Aside>
+
+### 4. Protestware and sabotaged packages
+
+Maintainers of legitimate packages have deliberately introduced malicious behavior during geopolitical events (the `node-ipc` incident, `colors` and `faker` breakage). This risk is highest for:
+- Single-maintainer packages with no organizational backing
+- Packages with broad permissions in their `package.json` scripts
+- Packages that have recently changed ownership
+
+## How Firmis detects supply chain threats
+
+### OSV vulnerability integration
+
+Firmis queries the [OSV (Open Source Vulnerabilities)](https://osv.dev) database against your `package.json` dependencies. OSV aggregates advisories from GitHub, npm, and community security databases.
+
+```bash title="Terminal"
+npx firmis scan --platform mcp
+# Supply chain findings appear alongside code findings
+```
+
+```text title="Example output"
+ HIGH  supply-001  Compromised Package in Dependencies
+       package.json:14
+       Pattern: event-stream@3.3.6 — known compromised version (bitcoin wallet theft)
+```
+
+### Known-malicious pattern matching
+
+Firmis maintains a list of packages with documented security incidents, including packages that were:
+- Removed from npm for malicious behavior
+- Flagged in security advisories
+- Associated with protestware incidents
+- Identified as typosquats of popular packages
+
+```text title="Example output"
+ CRITICAL  km-007  Known Malicious Package
+           package.json:22
+           Pattern: "ua-parser-js" — version range includes compromised 0.7.29/1.0.0/2.0.0
+```
+
+### Dependency analysis for agent-specific threats
+
+Standard npm audit checks for CVEs. Firmis additionally checks for agent-specific supply chain patterns:
+- Packages that write to agent configuration directories (`postinstall` writing to `.claude/`)
+- Packages that register MCP servers without declaration in their README
+- Tool handler code that reads credential files and posts to external URLs
+
+```text title="Example output"
+ HIGH  supply-005  Suspicious Postinstall Script
+       node_modules/agent-helper/package.json
+       Pattern: postinstall writes to ~/.claude/settings.json
+```
+
+## Best practices
+
+### Pin dependency versions
+
+Use exact versions in `package.json` for direct dependencies, and commit your lockfile.
+
+```json title="package.json — before"
+{
+  "dependencies": {
+    "crewai-tools": "^2.1.0"
+  }
+}
+```
+
+```json title="package.json — after"
+{
+  "dependencies": {
+    "crewai-tools": "2.1.4"
+  }
+}
+```
+
+Pinning prevents silent upgrades. Review and test each upgrade deliberately.
+
+### Audit MCP server registrations
+
+Treat every entry in `mcp.json` or `.claude/settings.json` as a trust decision. Before adding an MCP server:
+
+1. Review the server's source code or its published manifest
+2. Confirm the server is from a trusted publisher
+3. Verify the server's tool descriptions contain only plain ASCII text
+4. Run Firmis against the server manifest before adding it
+
+```bash title="Terminal"
+# Scan a downloaded MCP server manifest before registering it
+npx firmis scan ./downloaded-mcp-server/ --platform mcp --severity high
+```
+
+### Use BOM for dependency visibility
+
+Generate a Software Bill of Materials (BOM) to get a complete inventory of what your agent depends on:
+
+```bash title="Terminal"
+npx firmis bom --format cyclonedx --output agent-bom.json
+```
+
+The BOM lists every agent component, skill, and dependency with version information — the prerequisite for supply chain monitoring.
+
+### Run supply chain scans in CI
+
+```yaml title=".github/workflows/security.yml"
+name: Supply Chain Scan
+
+on:
+  push:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'mcp.json'
+      - '.claude/settings.json'
+
+jobs:
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Scan for supply chain threats
+        run: npx firmis ci --fail-on high --format sarif
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: firmis-report.sarif
+```
+
+Triggering on changes to `package.json`, `mcp.json`, and `.claude/settings.json` ensures every supply chain change is scanned before merge.
+
+### Review single-maintainer packages carefully
+
+Before adding any agent-related package, check:
+
+```bash title="Terminal"
+npm info <package-name> maintainers
+npm info <package-name> time
+```
+
+Packages with a single maintainer and no recent activity are higher risk. Prefer packages from organizations with documented security practices.
+
+## Example scan targeting supply chain findings
+
+Run a focused scan for supply chain and known-malicious categories:
+
+```bash title="Terminal"
+npx firmis scan . --severity high
+```
+
+Look for rule IDs in the `supply-`, `km-` (known malicious), and `mal-` (malware signatures) prefixes:
+
+```text title="Example output"
+ CRITICAL  km-003  Known Malicious Package
+           package.json:8
+           Pattern: xz-utils@5.6.0 — backdoored version (CVE-2024-3094)
+
+ HIGH      supply-002  Typosquatted Package Name
+           package.json:15
+           Pattern: "crewia" — possible typosquat of "crewai"
+
+ HIGH      supply-008  Postinstall Script with Network Access
+           node_modules/suspicious-tool/package.json
+           Pattern: postinstall script contains curl to external URL
+```
+
+Each of these is actionable: remove the package, verify it is a typosquat or intended, or audit the postinstall script before continuing.
+
+## Related
+
+- [Agent BOM concept →](/concepts/agent-bom)
+- [Threat Categories — Supply Chain →](/reference/threat-categories)
+- [Threat Categories — Known Malicious →](/reference/threat-categories)
+- [CI command reference →](/cli/ci)
+- [Securing MCP Servers guide →](/guides/securing-mcp-servers)

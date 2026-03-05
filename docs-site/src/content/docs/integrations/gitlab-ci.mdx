@@ -1,6 +1,240 @@
 ---
 title: GitLab CI
-description: Integrate Firmis into GitLab CI/CD pipelines.
+description: Integrate Firmis into GitLab CI/CD pipelines with SAST report upload and merge request blocking.
 ---
 
-Content coming soon.
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components'
+
+> Add Firmis to your GitLab pipeline to surface security findings in merge requests and block merges on high-severity threats.
+
+## Quickstart
+
+Add a `firmis-scan` job to your `.gitlab-ci.yml` to scan on every push.
+
+```yaml title=".gitlab-ci.yml"
+firmis-scan:
+  stage: test
+  image: node:20-slim
+  script:
+    - npx firmis ci --fail-on high --format sarif --output firmis.sarif
+  artifacts:
+    reports:
+      sast: firmis.sarif
+    paths:
+      - firmis.sarif
+    expire_in: 30 days
+  allow_failure: false
+```
+
+<Aside type="note">
+  The `reports.sast` key uploads the SARIF file to GitLab's Security Dashboard and displays findings inline in merge requests. This requires GitLab Ultimate for private repositories or is available on all plans for public repositories.
+</Aside>
+
+## Pipeline examples
+
+<Tabs>
+<TabItem label="Basic (fail on high)">
+
+Minimal job that fails the pipeline on `high` or `critical` findings.
+
+```yaml title=".gitlab-ci.yml"
+stages:
+  - test
+
+firmis-scan:
+  stage: test
+  image: node:20-slim
+  script:
+    - npx firmis ci --fail-on high
+  allow_failure: false
+```
+
+</TabItem>
+<TabItem label="SAST report upload">
+
+Upload findings to GitLab's Security Dashboard as a SAST report.
+
+```yaml title=".gitlab-ci.yml"
+stages:
+  - test
+
+firmis-scan:
+  stage: test
+  image: node:20-slim
+  script:
+    - npx firmis ci --fail-on high --format sarif --output firmis.sarif
+  artifacts:
+    reports:
+      sast: firmis.sarif
+    paths:
+      - firmis.sarif
+    expire_in: 30 days
+  allow_failure: false
+```
+
+</TabItem>
+<TabItem label="JSON artifacts">
+
+Produce a JSON report as a pipeline artifact for downstream processing.
+
+```yaml title=".gitlab-ci.yml"
+stages:
+  - test
+  - report
+
+firmis-scan:
+  stage: test
+  image: node:20-slim
+  script:
+    - npx firmis ci --fail-on high --format json --output firmis-results.json
+  artifacts:
+    paths:
+      - firmis-results.json
+    expose_as: 'Firmis Security Report'
+    expire_in: 7 days
+  allow_failure: false
+```
+
+</TabItem>
+<TabItem label="BOM + SARIF">
+
+Full pipeline: generate an Agent BOM and upload SARIF in a single job.
+
+```yaml title=".gitlab-ci.yml"
+stages:
+  - security
+
+firmis-full:
+  stage: security
+  image: node:20-slim
+  script:
+    - npx firmis ci --fail-on high --format sarif --output firmis.sarif
+    - npx firmis bom --format json --output firmis-bom.json
+  artifacts:
+    reports:
+      sast: firmis.sarif
+    paths:
+      - firmis.sarif
+      - firmis-bom.json
+    expose_as: 'Firmis Agent BOM'
+    expire_in: 90 days
+  allow_failure: false
+```
+
+</TabItem>
+<TabItem label="With caching">
+
+Cache npm to speed up subsequent pipeline runs.
+
+```yaml title=".gitlab-ci.yml"
+stages:
+  - test
+
+firmis-scan:
+  stage: test
+  image: node:20-slim
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npx firmis ci --fail-on high --format sarif --output firmis.sarif
+  artifacts:
+    reports:
+      sast: firmis.sarif
+    expire_in: 30 days
+```
+
+</TabItem>
+</Tabs>
+
+## Viewing results in GitLab
+
+After the pipeline runs with `reports.sast`, findings appear in two places.
+
+### Merge request security widget
+
+When a merge request triggers the pipeline, GitLab adds a **Security scanning** widget at the bottom of the MR. It shows a diff of new threats introduced by the branch compared to the target branch.
+
+### Security Dashboard
+
+Go to **Security** → **Security Dashboard** in your project or group to see all findings across branches and time periods.
+
+<Aside type="tip">
+  The Security Dashboard and merge request security widget require GitLab Ultimate for private repositories. Public repositories have access on all GitLab plans including GitLab.com Free.
+</Aside>
+
+## Block merges on security findings
+
+To prevent merging when Firmis detects high-severity threats, configure an approval rule.
+
+<Steps>
+1. Go to **Settings** → **Merge requests** in your GitLab project.
+
+2. Under **Merge request approvals**, click **Add approval rule**.
+
+3. Name it `Security scan must pass` and set the required approvals to `1`.
+
+4. Alternatively, use **Security Approvals** (GitLab Ultimate): go to **Security** → **Policies** and create a scan result policy that requires approval for `critical` or `high` findings.
+
+5. Enable **Pipelines must succeed** under **Merge checks** to block merges if the `firmis-scan` job fails.
+</Steps>
+
+With `allow_failure: false` on the job and **Pipelines must succeed** enabled, any build with `high` or `critical` findings will block the merge.
+
+## Multi-project pipelines
+
+If you use GitLab's parent-child pipeline feature, you can run Firmis as a child pipeline for a specific subdirectory.
+
+```yaml title=".gitlab-ci.yml"
+trigger-firmis:
+  stage: test
+  trigger:
+    include: .gitlab/firmis-pipeline.yml
+    strategy: depend
+```
+
+```yaml title=".gitlab/firmis-pipeline.yml"
+firmis-scan:
+  stage: test
+  image: node:20-slim
+  script:
+    - cd $CI_PROJECT_DIR
+    - npx firmis ci --fail-on high --format sarif --output firmis.sarif
+  artifacts:
+    reports:
+      sast: firmis.sarif
+    expire_in: 30 days
+```
+
+## Scheduled scans
+
+Run a nightly scan against your main branch to catch newly published vulnerabilities (OSV database is queried at scan time).
+
+```yaml title=".gitlab-ci.yml"
+firmis-nightly:
+  stage: test
+  image: node:20-slim
+  script:
+    - npx firmis ci --fail-on medium --format json --output firmis-nightly.json
+  artifacts:
+    paths:
+      - firmis-nightly.json
+    expire_in: 7 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+```
+
+Create the schedule at **CI/CD** → **Schedules** in your GitLab project, targeting your default branch.
+
+## Related
+
+- [GitHub Actions integration](/integrations/github-actions)
+- [Pre-commit hooks](/integrations/pre-commit-hooks)
+- [SARIF output reference](/reference/sarif-output)
+- [`firmis ci` command](/cli/ci)
+- [`firmis bom` command](/cli/bom)

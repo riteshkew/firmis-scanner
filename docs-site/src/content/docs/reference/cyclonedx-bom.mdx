@@ -1,6 +1,280 @@
 ---
-title: CycloneDX BOM
-description: Reference for the CycloneDX 1.7 Agent BOM format produced by Firmis.
+title: CycloneDX BOM Reference
+description: CycloneDX 1.7 Agent BOM output format — field mappings, JSON structure, generation commands, Dependency-Track integration, and a complete example.
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis generates Agent Bills of Materials in CycloneDX 1.7 format — the same standard used for software supply chain compliance. This page is the output format field reference. For the concept and motivation, see [Agent BOM](/concepts/agent-bom).
+
+## What is CycloneDX?
+
+[CycloneDX](https://cyclonedx.org/) is an OWASP-sponsored open standard for Software Bill of Materials (SBOM) interchange. Version 1.7 added first-class support for machine learning components (`machine-learning-model` type), which Firmis uses to record AI model references found in agent configurations.
+
+CycloneDX BOMs are widely accepted by:
+
+| Tool | Use case |
+|---|---|
+| [OWASP Dependency-Track](https://dependencytrack.org/) | Continuous vulnerability tracking against component inventory |
+| [Grype](https://github.com/anchore/grype) | Vulnerability matching against BOM components |
+| GitHub Dependency Graph | Import as SBOM to populate the dependency graph |
+| [FOSSA](https://fossa.com/) | License compliance analysis |
+| [Anchore Enterprise](https://anchore.com/) | Policy-based security gates on component inventory |
+
+---
+
+## Generating the BOM
+
+```bash title="Terminal"
+# Generate BOM for current directory (stdout)
+npx firmis bom
+
+# Save BOM to file
+npx firmis bom --output agent-bom.json
+
+# BOM for a specific platform only
+npx firmis bom --platform mcp --output mcp-bom.json
+
+# As part of the full CI pipeline
+npx firmis ci --fail-on high
+# Produces agent-bom.json alongside results.sarif
+```
+
+---
+
+## Top-level structure
+
+A Firmis Agent BOM is a valid CycloneDX 1.7 JSON document with four top-level fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `bomFormat` | string | Always `"CycloneDX"` |
+| `specVersion` | string | Always `"1.7"` |
+| `version` | number | BOM document version, starts at `1` |
+| `metadata` | object | Scan metadata (timestamp, tool info, project root) |
+| `components` | array | AI agent components, dependencies, and models |
+| `dependencies` | array | Dependency relationships between components |
+
+---
+
+## `metadata` section
+
+Records when the BOM was generated, which tool generated it, and what project was inventoried.
+
+| Field | Type | Description |
+|---|---|---|
+| `metadata.timestamp` | string (ISO 8601) | UTC timestamp of BOM generation |
+| `metadata.tools` | array | Tool entries: `[{ "name": "firmis", "version": "1.3.0" }]` |
+| `metadata.component` | object | The root project component being inventoried |
+| `metadata.component.type` | string | `"application"` for the root project |
+| `metadata.component.name` | string | Directory name of the scanned project |
+| `metadata.component.version` | string | Version from `package.json` if present |
+
+---
+
+## `components` section
+
+Each AI agent component discovered during the scan is listed as a CycloneDX component. Firmis produces three types of component entries:
+
+### Agent components (tools, skills, plugins)
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | string | `"library"` for tools and plugins, `"service"` for MCP servers |
+| `name` | string | Component name from manifest or directory name |
+| `version` | string | Version from `package.json`, `skill.json`, or `pyproject.toml` |
+| `description` | string | Short description from the manifest, if available |
+| `purl` | string | Package URL (e.g., `pkg:npm/my-tool@0.2.1`) if published to a registry |
+| `hashes` | array | SHA-256 hash of the component directory for integrity verification |
+| `properties` | array | Firmis-specific properties: `platform`, `componentType`, `filesScanned` |
+
+### Dependency components (npm / pip packages)
+
+Dependencies resolved from `package.json`, `requirements.txt`, and `pyproject.toml` are listed as separate components with type `"library"`.
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | string | `"library"` |
+| `name` | string | Package name (e.g., `axios`) |
+| `version` | string | Resolved version (e.g., `1.6.0`) |
+| `purl` | string | `pkg:npm/axios@1.6.0` or `pkg:pypi/requests@2.31.0` |
+
+### Model components
+
+When a model reference is detected in a configuration file (e.g., `"model": "claude-3-5-sonnet-20241022"`), it is recorded as a `machine-learning-model` component.
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | string | `"machine-learning-model"` |
+| `name` | string | Model identifier as it appears in the config |
+| `description` | string | `"AI model referenced in agent configuration"` |
+
+---
+
+## `dependencies` section
+
+Maps component references to their resolved dependencies.
+
+```json title="dependencies structure"
+{
+  "dependencies": [
+    {
+      "ref": "my-search-tool",
+      "dependsOn": ["axios@1.6.0", "dotenv@16.0.0"]
+    }
+  ]
+}
+```
+
+`ref` is the component's name. `dependsOn` lists the names of components that this component declares as dependencies.
+
+---
+
+## Complete example
+
+```json title="agent-bom.json"
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-03-05T10:00:00.000Z",
+    "tools": [
+      {
+        "name": "firmis",
+        "version": "1.3.0",
+        "vendor": "Firmis Labs"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "name": "my-agent-project",
+      "version": "1.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "service",
+      "name": "web-search-mcp",
+      "version": "0.3.1",
+      "description": "Web search MCP server for Claude",
+      "purl": "pkg:npm/web-search-mcp@0.3.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": [
+        { "name": "firmis:platform", "value": "mcp" },
+        { "name": "firmis:componentType", "value": "server" },
+        { "name": "firmis:filesScanned", "value": "12" }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "my-search-skill",
+      "version": "1.0.0",
+      "description": "Claude skill for web search",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b94d27b9934d3e08a52e52d7da7dabfac484efe04bcd9e5bcd832d9cd4f19f6a"
+        }
+      ],
+      "properties": [
+        { "name": "firmis:platform", "value": "claude" },
+        { "name": "firmis:componentType", "value": "skill" },
+        { "name": "firmis:filesScanned", "value": "5" }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "name": "claude-3-5-sonnet-20241022",
+      "description": "AI model referenced in agent configuration"
+    },
+    {
+      "type": "library",
+      "name": "axios",
+      "version": "1.6.0",
+      "purl": "pkg:npm/axios@1.6.0"
+    },
+    {
+      "type": "library",
+      "name": "dotenv",
+      "version": "16.4.5",
+      "purl": "pkg:npm/dotenv@16.4.5"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "web-search-mcp",
+      "dependsOn": ["axios@1.6.0", "dotenv@16.4.5"]
+    },
+    {
+      "ref": "my-search-skill",
+      "dependsOn": []
+    }
+  ]
+}
+```
+
+---
+
+## Firmis-specific properties
+
+Firmis adds custom properties to each component using the `firmis:` namespace. These are valid CycloneDX custom properties and are ignored by tools that do not recognize them.
+
+| Property | Description |
+|---|---|
+| `firmis:platform` | The platform this component belongs to (e.g., `mcp`, `claude`) |
+| `firmis:componentType` | Firmis component type: `skill`, `server`, `plugin`, `extension`, `agent` |
+| `firmis:filesScanned` | Number of files scanned in this component |
+
+---
+
+## Using the BOM with downstream tools
+
+### OWASP Dependency-Track
+
+Upload the BOM via the Dependency-Track API or web UI. Dependency-Track continuously checks your component list against the NVD, GitHub Advisory Database, and OSV — alerting you when a new vulnerability affects a component in your inventory.
+
+```bash title="Terminal — upload via curl"
+curl -X "PUT" "https://your-dtrack-instance/api/v1/bom" \
+  -H "X-Api-Key: your-api-key" \
+  -H "Content-Type: multipart/form-data" \
+  -F "projectName=my-agent-project" \
+  -F "projectVersion=1.0.0" \
+  -F "autoCreate=true" \
+  -F "bom=@agent-bom.json"
+```
+
+### Grype
+
+Grype accepts CycloneDX BOMs directly for vulnerability scanning:
+
+```bash title="Terminal"
+grype sbom:./agent-bom.json
+```
+
+### GitHub Dependency Graph
+
+Upload using the GitHub Dependency Submission API to populate the Dependency Graph with your agent's component inventory:
+
+```bash title="Terminal"
+gh api --method POST /repos/:owner/:repo/dependency-graph/snapshots \
+  --input agent-bom.json
+```
+
+<Aside type="tip">
+  Archiving BOMs as CI artifacts gives you a dated record of your agent's composition at every deployment. This directly supports SOC 2 Type II audit evidence and AI Act Article 13 transparency requirements.
+</Aside>
+
+---
+
+## Related
+
+- [Agent BOM concept](/concepts/agent-bom) — what Agent BOMs are and why they matter
+- [firmis bom](/cli/bom) — CLI reference for BOM generation
+- [firmis ci](/cli/ci) — full discover → BOM → scan → report pipeline
+- [SARIF Output](/reference/sarif-output) — scan findings output format
