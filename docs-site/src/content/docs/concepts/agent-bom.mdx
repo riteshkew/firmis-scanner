@@ -1,6 +1,160 @@
 ---
 title: Agent BOM
-description: Understanding Agent Bills of Materials (CycloneDX 1.7) in Firmis.
+description: What an Agent Bill of Materials is, why AI agents need one, and how Firmis generates CycloneDX 1.7 BOMs.
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> An Agent BOM is a machine-readable inventory of every component, dependency, and model in your AI agent stack. Firmis generates Agent BOMs in CycloneDX 1.7 format — the same format used for software supply chain compliance.
+
+## What is an Agent BOM?
+
+A Bill of Materials (BOM) is an inventory document. In software, a Software Bill of Materials (SBOM) lists every package a piece of software depends on. An **Agent BOM** extends this concept to AI agent stacks: it lists not just software packages, but also the tools, skills, plugins, servers, and models that make up the agent system.
+
+Firmis generates Agent BOMs following the [CycloneDX 1.7 specification](https://cyclonedx.org/specification/overview/), a widely adopted open standard for SBOM interchange.
+
+---
+
+## Why AI agents need BOMs
+
+Traditional software supply chain tooling accounts for code dependencies. AI agent stacks introduce a second supply chain: the tools and models the agent uses at runtime.
+
+| Problem | How an Agent BOM helps |
+|---|---|
+| **Audit trail** | Compliance reviews require knowing exactly which tools were installed and when |
+| **Supply chain visibility** | A BOM makes it possible to correlate a vulnerability report against your actual installed components |
+| **Drift detection** | Comparing BOMs across deployments reveals which components were added, removed, or updated |
+| **CI/CD gating** | Automated pipelines can reject deployments if a new component lacks a known-good BOM entry |
+| **Incident response** | When a tool is flagged as malicious, a BOM tells you exactly which agent deployments are affected |
+
+---
+
+## What goes into the BOM
+
+A Firmis Agent BOM contains four sections:
+
+### Components
+
+Each AI agent tool, skill, or plugin discovered during the scan is listed as a CycloneDX component. Component fields include:
+
+| Field | Description |
+|---|---|
+| `type` | Component type: `library`, `service`, or `application` |
+| `name` | Component name from the manifest or directory name |
+| `version` | Version from `package.json`, `skill.json`, or `pyproject.toml` |
+| `description` | Short description from the manifest |
+| `purl` | Package URL if the component is a published npm or PyPI package |
+| `hashes` | SHA-256 hash of the component directory for integrity verification |
+
+### Dependencies
+
+npm and pip packages referenced in `package.json`, `requirements.txt`, and `pyproject.toml` are enumerated and listed as dependency components. These are the packages the agent's tools depend on at runtime.
+
+### Models
+
+When a model reference is detected in a configuration file (e.g., `"model": "claude-3-5-sonnet-20241022"` in a skill config), it is recorded as a component of type `machine-learning-model`.
+
+### Metadata
+
+The BOM metadata section records:
+
+| Field | Value |
+|---|---|
+| `timestamp` | ISO 8601 scan time |
+| `tools` | Firmis version and configuration |
+| `component` | The root project being inventoried |
+
+---
+
+## Generating a BOM
+
+```bash title="Terminal"
+# Generate BOM for the current directory (stdout)
+npx firmis bom
+
+# Save BOM to a file
+npx firmis bom --output agent-bom.json
+
+# BOM for a specific platform only
+npx firmis bom --platform mcp --output mcp-bom.json
+```
+
+The output is a valid CycloneDX 1.7 JSON document:
+
+```json title="agent-bom.json (excerpt)"
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-03-05T10:00:00Z",
+    "tools": [{ "name": "firmis", "version": "1.3.0" }]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "my-search-tool",
+      "version": "0.2.1",
+      "description": "Web search tool for Claude",
+      "hashes": [{ "alg": "SHA-256", "content": "e3b0c44..." }]
+    }
+  ],
+  "dependencies": [
+    { "ref": "my-search-tool", "dependsOn": ["axios@1.6.0"] }
+  ]
+}
+```
+
+---
+
+## Using the BOM in CI/CD
+
+The `firmis ci` command runs the full discover → BOM → scan → report pipeline in one step:
+
+```bash title="Terminal"
+npx firmis ci --fail-on high
+```
+
+This generates a BOM as an artifact alongside the SARIF scan results. You can archive the BOM in your CI system to maintain a history of exactly what was deployed at each run.
+
+```yaml title=".github/workflows/firmis.yml (excerpt)"
+- name: Run Firmis
+  run: npx firmis ci --fail-on high --sarif --output results.sarif
+
+- name: Upload BOM artifact
+  uses: actions/upload-artifact@v4
+  with:
+    name: agent-bom
+    path: agent-bom.json
+
+- name: Upload SARIF
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
+```
+
+<Aside type="tip">
+  Archiving BOMs as CI artifacts gives you a dated record of your agent's composition at every deployment. This is directly useful for SOC 2 Type II audit evidence and AI Act Article 13 transparency requirements.
+</Aside>
+
+---
+
+## Consuming the BOM
+
+Because the output is standard CycloneDX 1.7 JSON, it can be consumed by any tool that supports the format:
+
+| Tool | Use case |
+|---|---|
+| [OWASP Dependency-Track](https://dependencytrack.org/) | Continuous vulnerability tracking against the component inventory |
+| [Grype](https://github.com/anchore/grype) | Vulnerability matching against the BOM |
+| GitHub Dependency Graph | Import as an SBOM to populate the dependency graph |
+| Custom automation | Parse the JSON to extract component names, versions, and hashes |
+
+---
+
+## Related
+
+- [firmis bom](/cli/bom) — CLI reference for BOM generation
+- [firmis ci](/cli/ci) — discover → BOM → scan → report pipeline
+- [CycloneDX BOM format](/reference/cyclonedx-bom) — output format field reference
+- [How It Works](/concepts/how-it-works) — the three-stage detection pipeline

@@ -1,6 +1,90 @@
 ---
-title: AutoGPT Plugins
-description: Scanning AutoGPT plugins with Firmis.
+title: "AutoGPT Plugins — Security Guide"
+description: "Detect malware distribution, privilege escalation, and unrestricted network access in AutoGPT plugin configurations. 199 detection rules."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis scans your AutoGPT plugin manifests, `ai_settings.yaml`, and plugin code for malware delivery mechanisms, privilege escalation patterns, and unrestricted network access that can compromise autonomous agent workloads.
+
+<Aside type="caution">
+  AutoGPT plugin support is **Experimental**. Detection rules are functional but coverage is still expanding. Validate findings in context before acting on them.
+</Aside>
+
+## What Firmis detects
+
+| Threat Category | Rules | Coverage | Example Finding |
+|---|---|---|---|
+| Malware Distribution | 6 | High | `curl ... \| bash` in plugin install script |
+| Privilege Escalation | 0 | Low | (`rules in development`) |
+| Network Abuse | 10 | High | Unrestricted outbound requests to any host |
+| Secret Detection | 60 | High | Hardcoded API key in `ai_settings.yaml` |
+| Supply Chain | 8 | High | Known malicious Python package in plugin requirements |
+| Data Exfiltration | 12 | Medium | Archive creation followed by HTTP upload |
+| Prompt Injection | 13 | Medium | Instruction override in plugin description |
+| Insecure Config | 3 | Medium | SSL verification disabled in plugin HTTP calls |
+| Access Control | 3 | Medium | Authentication bypass flag in plugin settings |
+
+## Files Firmis scans
+
+| File Pattern | What It Contains |
+|---|---|
+| `ai_settings.yaml` | AutoGPT agent goals, constraints, and plugin settings |
+| `plugin_manifest.json` | Plugin capability declarations |
+| `**/*.py` | Plugin command implementations |
+| `requirements.txt`, `pyproject.toml` | Plugin Python dependencies |
+| `package.json` | Plugin Node.js dependencies if applicable |
+
+## Scan AutoGPT Plugins
+
+```bash title="Terminal"
+npx firmis scan --platform autogpt
+```
+
+## Common findings and remediation
+
+### Remote script piping in plugin installer
+
+```text title="Finding"
+CRITICAL  malware-004  Remote Script Piping
+          scripts/install.sh:3
+          Pattern: curl https://... | bash
+```
+
+**What it means.** The plugin installation script downloads and immediately executes a remote shell script. This is one of the most dangerous patterns in software distribution: the downloaded content can be anything, it bypasses all static analysis, and it runs with full user permissions. AutoGPT plugins are high-value targets because they operate with substantial system access during autonomous runs.
+
+**How to fix.** Never pipe remote content to a shell interpreter. Download the file first, verify its integrity (checksum or signature), inspect the content, then execute. Use package managers (`pip install plugin-name`) that provide dependency pinning and provenance verification rather than raw shell installers.
+
+---
+
+### Hardcoded credentials in ai_settings.yaml
+
+```text title="Finding"
+HIGH  ic-003  Default or Hardcoded Credentials in Config Files
+      ai_settings.yaml:14
+      Pattern: api_key: "sk-..."
+```
+
+**What it means.** An API key is hardcoded in `ai_settings.yaml`. This file is commonly shared with other AutoGPT users as part of plugin documentation or example configurations. Any recipient of the file gains access to the credential. AutoGPT's autonomous operation mode can amplify the damage: a compromised key may be used to issue thousands of API calls before detection.
+
+**How to fix.** Replace the key with an environment variable reference. Configure AutoGPT to load secrets from `.env` or your system's secrets store. Rotate the exposed key immediately. Never share configuration files containing live credentials.
+
+---
+
+### Known malicious Python package
+
+```text title="Finding"
+CRITICAL  supply-005  Known Malicious Python Package
+          requirements.txt:7
+          Pattern: colourama (typosquat of colorama — credential stealer)
+```
+
+**What it means.** A plugin dependency matches a known malicious Python package. The package `colourama` is a typosquat of the legitimate `colorama` library. It installs a credential stealer that exfiltrates environment variables (including API keys) to a remote server. AutoGPT plugins run with the same process privileges as the AutoGPT agent, making this a high-impact compromise.
+
+**How to fix.** Remove the malicious package immediately. Audit your system for signs of compromise: check for unexpected outbound network connections and review environment variables that may have been exfiltrated. Install the legitimate package (`colorama`) and pin it to a verified version. Use `pip audit` or `safety check` to scan all dependencies.
+
+## Related
+
+- [scan command →](/cli/scan)
+- [Malware Distribution threat category →](/reference/threat-categories)
+- [Agent Supply Chain Security guide →](/guides/agent-supply-chain-security)

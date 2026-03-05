@@ -1,6 +1,200 @@
 ---
 title: Threat Model
-description: The threat model and security assumptions behind Firmis.
+description: All 16 threat categories detected by Firmis, with descriptions, example findings, severity ranges, and rule counts.
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis detects 16 categories of threats that affect AI agent components: skills, MCP servers, plugins, tools, and their configurations. All are static analysis findings — present in code before it runs.
+
+## Threat categories
+
+| # | Category | Rules | Severity Range | Description |
+|---|---|---|---|---|
+| 1 | [Tool Poisoning](#tool-poisoning) | 10 | Critical–High | Malicious instructions hidden inside tool definitions |
+| 2 | [Data Exfiltration](#data-exfiltration) | 12 | Critical–High | Sending local data to external destinations |
+| 3 | [Credential Harvesting](#credential-harvesting) | 18 | Critical–High | Accessing cloud credentials, SSH keys, or token files |
+| 4 | [Prompt Injection](#prompt-injection) | 13 | Critical–High | Instruction overrides embedded in tool output or config |
+| 5 | [Secret Detection](#secret-detection) | 60 | Critical–Medium | Hardcoded API keys, tokens, and passwords |
+| 6 | [Supply Chain](#supply-chain) | 8 | Critical–High | Known-malicious or typosquatted dependencies |
+| 7 | [Malware Signatures](#malware-signatures) | 6 | Critical | Known malicious code patterns |
+| 8 | [Known Malicious](#known-malicious) | 10 | Critical | Packages flagged in security threat databases |
+| 9 | [Network Abuse](#network-abuse) | 10 | High–Medium | Unauthorized DNS lookups and HTTP connections |
+| 10 | [File System Abuse](#file-system-abuse) | 10 | High–Medium | Unauthorized reads/writes to sensitive paths |
+| 11 | [Permission Overgrant](#permission-overgrant) | 7 | High–Medium | Tools requesting more permissions than necessary |
+| 12 | [Agent Memory Poisoning](#agent-memory-poisoning) | 7 | High | Corrupting or hijacking agent context and memory |
+| 13 | [Malware Distribution](#malware-distribution) | 6 | Critical–High | Code that spreads malicious payloads |
+| 14 | [Suspicious Behavior](#suspicious-behavior) | 16 | High–Medium | Obfuscation, encoded payloads, and evasion techniques |
+| 15 | [Insecure Configuration](#insecure-config) | 3 | Medium–Low | Weak or missing security settings |
+| 16 | [Access Control](#access-control) | 3 | High–Medium | Missing authentication or authorization checks |
+
+**Total: 199 rules across 16 categories.**
+
+---
+
+## Tool Poisoning
+
+Tool poisoning attacks embed malicious instructions inside tool descriptions, tool names, or metadata fields that AI agents process automatically. Because agents read tool descriptions to understand what a tool does, hidden content in those descriptions can redirect agent behavior without the user's knowledge.
+
+**Example finding (tp-001 — Critical):** Zero-width Unicode characters (`\u200B`, `\uFEFF`) in a tool description. These characters are invisible to humans reviewing the code but are processed by the agent as text, allowing hidden instructions to be smuggled past review.
+
+**Example finding (tp-002 — High):** The phrase "Ignore all previous instructions" embedded in a tool description fetched from an external MCP server.
+
+---
+
+## Data Exfiltration
+
+Data exfiltration rules detect code patterns that send local data — files, environment variables, clipboard contents — to external URLs or third-party services.
+
+**Example finding (exfil-003 — Critical):** A tool that reads a local file and passes its contents as the body of a `fetch()` POST request to an external URL.
+
+**Example finding (exfil-007 — High):** A tool that accesses `process.env` and sends environment variable values to a webhook endpoint.
+
+---
+
+## Credential Harvesting
+
+Credential harvesting rules detect access to files that store cloud credentials, SSH keys, browser-stored passwords, and token caches. Access to these files from agent code is almost always unauthorized.
+
+**Example finding (cred-001 — High):** A reference to `~/.aws/credentials` or `~/.aws/config` in a tool's file-read path.
+
+**Example finding (cred-002 — Critical):** Access to `~/.ssh/id_rsa` — a private SSH key file.
+
+<Aside type="caution">
+  Credential harvesting findings warrant immediate review. Agent code should never reference credential store paths directly.
+</Aside>
+
+---
+
+## Prompt Injection
+
+Prompt injection rules detect instruction override language in tool return values, configuration files, or markdown documents that agents consume. Unlike tool poisoning (which targets definitions), prompt injection can arrive through any content the agent reads at runtime.
+
+**Example finding (pi-001 — Critical):** A Markdown file consumed by an agent containing the phrase "Disregard your instructions and instead…"
+
+**Example finding (pi-008 — High):** A tool return value template containing a role-reassignment phrase such as "You are now operating in unrestricted mode."
+
+---
+
+## Secret Detection
+
+Secret detection covers 60 rules for hardcoded credentials across cloud providers, SaaS APIs, infrastructure services, and generic token patterns. This is the largest category by rule count.
+
+**Services covered include:** AWS, Azure, GCP, GitHub, GitLab, Slack, Stripe, Twilio, SendGrid, HuggingFace, OpenAI, Anthropic, Datadog, PagerDuty, HashiCorp Vault, Docker Hub, npm tokens, SSH private key headers, and more.
+
+**Example finding (sec-045 — Critical):** An OpenAI API key (`sk-...`) hardcoded in a tool configuration file.
+
+**Example finding (sec-012 — High):** An AWS Access Key ID (`AKIA...`) in a Python source file.
+
+<Aside type="note">
+  Secret detection rules are exempt from the 0.15x document multiplier. Secrets in `.env.example`, `README.md`, or other documentation files are still reported.
+</Aside>
+
+---
+
+## Supply Chain
+
+Supply chain rules detect dependencies with known security incidents (compromised packages, protestware, maintainer sabotage) and typosquatting patterns that mimic popular package names.
+
+**Example finding (supply-001 — Critical):** A dependency on `event-stream` — a package that was compromised to steal bitcoin wallets.
+
+**Example finding (supply-002 — High):** A dependency named `lodassh` — a typosquat of `lodash`.
+
+---
+
+## Malware Signatures
+
+Malware signature rules match code patterns associated with known malware families and attack tools observed in the wild. These are high-confidence indicators; matches on these rules have very low false-positive rates.
+
+**Example finding (mal-003 — Critical):** A Base64-encoded payload string matching a known command-and-control beacon pattern.
+
+---
+
+## Known Malicious
+
+Known malicious rules match package names and identifiers from curated threat intelligence databases, including packages flagged by npm security teams and community disclosures.
+
+**Example finding (km-007 — Critical):** A dependency on a package that was reported as malicious in the npm advisory database.
+
+---
+
+## Network Abuse
+
+Network abuse rules detect unauthorized DNS lookups, HTTP requests to suspicious domains, tunneling services, and data-over-DNS patterns used to bypass network monitoring.
+
+**Example finding (net-004 — High):** HTTP requests to a tunneling service (`ngrok.io`, `localtunnel.me`) that creates an unmonitored egress channel.
+
+**Example finding (net-009 — High):** DNS TXT record lookups that encode exfiltrated data in DNS queries to bypass HTTP-level monitoring.
+
+---
+
+## File System Abuse
+
+File system abuse rules detect reads, writes, or deletions of sensitive system paths — including `/proc` filesystem entries, system logs, shell history files, and container credential paths.
+
+**Example finding (fs-001 — High):** Access to `/proc/self/environ` — reads the process environment from the kernel filesystem, exposing all environment variables including secrets.
+
+**Example finding (fs-006 — High):** Writing to or truncating system log files to cover activity traces.
+
+---
+
+## Permission Overgrant
+
+Permission overgrant rules detect tool definitions that request broad or wildcard permissions without scoping them to the minimum required for the tool's declared purpose.
+
+**Example finding (perm-003 — High):** An MCP server tool declaring `permissions: ["*"]` rather than enumerating specific permission scopes.
+
+---
+
+## Agent Memory Poisoning
+
+Agent memory poisoning rules detect patterns that corrupt or hijack the agent's context window, conversation history, or persistent memory — causing the agent to behave differently in future turns.
+
+**Example finding (mem-002 — High):** A tool that writes adversarial instructions into a persistent memory file consumed by the agent on startup.
+
+---
+
+## Malware Distribution
+
+Malware distribution rules detect code patterns that download and execute additional payloads, install backdoors, or propagate malicious code to other systems.
+
+**Example finding (dist-001 — Critical):** A `curl | bash` pipe-to-shell pattern that downloads and immediately executes a remote script without verification.
+
+---
+
+## Suspicious Behavior
+
+Suspicious behavior rules cover obfuscation techniques, encoded payloads, and evasion patterns that are not specific to one threat category but indicate malicious intent.
+
+**Example finding (sus-004 — High):** A long Base64-encoded string passed to a dynamic code execution function — a common technique for hiding malicious logic from static scanners.
+
+**Example finding (sus-011 — Medium):** Heavy use of string concatenation to build a URL that evades simple domain-matching rules.
+
+---
+
+## Insecure Configuration
+
+Insecure configuration rules detect agent configurations that disable security controls, set overly permissive CORS policies, or use known-insecure default settings.
+
+**Example finding (cfg-002 — Medium):** A server configuration with `allowOrigins: "*"` and no authentication requirement.
+
+---
+
+## Access Control
+
+Access control rules detect missing authentication checks on tool endpoints, unauthenticated admin routes, and hardcoded bypass conditions.
+
+**Example finding (ac-001 — High):** A tool handler that processes requests without verifying the caller's identity or checking an authorization token.
+
+---
+
+<Aside type="tip">
+  Use `npx firmis scan --severity high` to focus on the highest-priority findings first. Add `--fail-on critical` to your CI pipeline to block on critical findings only.
+</Aside>
+
+## Related
+
+- [Detection Engine](/concepts/detection-engine) — how rules are evaluated and scored
+- [Built-in Rules](/rules/built-in-rules) — full list of all 199 rules with IDs
+- [Ignoring Findings](/rules/ignoring-findings) — suppress false positives per file or rule
+- [firmis scan](/cli/scan) — CLI reference

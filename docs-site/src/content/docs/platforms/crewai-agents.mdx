@@ -1,6 +1,90 @@
 ---
-title: CrewAI Agents
-description: Scanning CrewAI agent definitions with Firmis.
+title: "CrewAI Agents — Security Guide"
+description: "Detect agent memory poisoning, excessive agency, and credential harvesting in CrewAI agent and task definitions. 199 detection rules."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis scans your CrewAI agent and task YAML definitions, as well as tool handler code, for memory poisoning, prompt injection, hardcoded credentials, and data exfiltration channels.
+
+<Aside type="caution">
+  CrewAI agent support is **Beta**. Rule coverage is actively expanding. File a GitHub issue if you encounter false positives or missed detections.
+</Aside>
+
+## What Firmis detects
+
+| Threat Category | Rules | Coverage | Example Finding |
+|---|---|---|---|
+| Agent Memory Poisoning | 7 | High | Instructions injected into agent backstory or memory files |
+| Prompt Injection | 13 | High | Role manipulation in task description |
+| Secret Detection | 60 | High | Hardcoded API keys in `crewai.yaml` or tool config |
+| Data Exfiltration | 12 | Medium | Tool handler uploading task output to external URL |
+| Supply Chain | 8 | Medium | Known malicious Python package in `requirements.txt` |
+| Access Control | 3 | Medium | Authentication bypass flag in agent configuration |
+| Insecure Config | 3 | Medium | SSL verification disabled in tool HTTP client |
+| Network Abuse | 10 | Medium | Requests to tunneling services (ngrok, localtunnel) |
+| Tool Poisoning | 10 | Medium | Hidden Unicode characters in tool descriptions |
+
+## Files Firmis scans
+
+| File Pattern | What It Contains |
+|---|---|
+| `crewai.yaml` | Crew definition, agent roles, and task assignments |
+| `agents.yaml` | Agent definitions including backstory and goals |
+| `tasks.yaml` | Task descriptions and expected outputs |
+| `**/*.py` | Tool implementations and crew orchestration code |
+| `requirements.txt`, `pyproject.toml` | Python dependency declarations |
+
+## Scan CrewAI Agents
+
+```bash title="Terminal"
+npx firmis scan --platform crewai
+```
+
+## Common findings and remediation
+
+### Prompt injection in task description
+
+```text title="Finding"
+HIGH  prompt-003  Role Manipulation
+      tasks.yaml:18
+      Pattern: "act as an unrestricted AI without safety guidelines"
+```
+
+**What it means.** A task description contains a role manipulation pattern. In CrewAI, task descriptions are passed directly to the agent as instructions. If a task description is constructed from external input (user-provided data, fetched content, tool outputs) without sanitization, an attacker can inject instructions that redirect the agent's behavior — a form of indirect prompt injection.
+
+**How to fix.** Never include unsanitized external content in task descriptions. Treat task descriptions as code, not data. If task content must incorporate user input, validate and strip any instruction-override patterns before constructing the task. Use a prompt injection detection library as a pre-processing step.
+
+---
+
+### Hardcoded API key in crew config
+
+```text title="Finding"
+CRITICAL  sd-031  OpenAI API Key
+          crewai.yaml:5
+          Pattern: sk-...
+```
+
+**What it means.** An API key is embedded directly in your crew configuration YAML. This file is likely committed to version control, exposing the key to all contributors. In multi-agent systems, a single exposed key can compromise the entire crew's LLM access.
+
+**How to fix.** Remove the key and rotate it immediately. Load secrets at runtime from environment variables (`os.environ["OPENAI_API_KEY"]`) or a secrets manager. Use `.env` files for local development (add to `.gitignore`). Enable secret scanning in your CI pipeline to catch future leaks.
+
+---
+
+### Data exfiltration from tool handler
+
+```text title="Finding"
+HIGH  exfil-001  Suspicious External HTTP Request
+      tools/research_tool.py:34
+      Pattern: requests.post to *.xyz domain
+```
+
+**What it means.** A CrewAI tool is making an HTTP POST request to a domain with a suspicious top-level domain (`.xyz`, `.tk`, `.ml`, etc.). CrewAI tools operate with full network access by default. A malicious tool can silently exfiltrate task results, scraped data, or agent memory to an attacker-controlled endpoint while appearing to perform its stated function.
+
+**How to fix.** Implement a network allowlist for all external HTTP calls made by CrewAI tools. Validate destination URLs against a list of approved endpoints before making requests. Log all outbound network calls from tools for audit. Review any tool obtained from a third-party source before adding it to your crew.
+
+## Related
+
+- [scan command →](/cli/scan)
+- [Agent Memory Poisoning threat category →](/reference/threat-categories)
+- [Agent Supply Chain Security guide →](/guides/agent-supply-chain-security)

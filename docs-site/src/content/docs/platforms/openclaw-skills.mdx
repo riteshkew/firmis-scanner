@@ -1,6 +1,90 @@
 ---
-title: OpenClaw Skills
-description: Scanning OpenClaw skills with Firmis.
+title: "OpenClaw Skills — Security Guide"
+description: "Detect tool poisoning, wildcard permissions, data exfiltration, and supply chain risks in OpenClaw skill definitions. 199 detection rules."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis scans your OpenClaw skill definitions, `openclaw.json` manifests, and skill handler code for tool poisoning, wildcard permission grants, and supply chain attacks from community skills installed via ClawHub.
+
+<Aside type="caution">
+  OpenClaw skill support is **Experimental**. Detection rules are functional but coverage is still expanding. Validate findings in context before acting on them.
+</Aside>
+
+## What Firmis detects
+
+| Threat Category | Rules | Coverage | Example Finding |
+|---|---|---|---|
+| Permission Overgrant | 7 | High | `shell:*` or `filesystem:*` wildcard in skill permissions |
+| Tool Poisoning | 10 | High | Hidden instructions in skill handler tool descriptions |
+| Prompt Injection | 13 | High | Instruction override in skill description field |
+| Data Exfiltration | 12 | High | External HTTP POST in skill handler |
+| Secret Detection | 60 | High | Hardcoded API key in `openclaw.json` |
+| Supply Chain | 8 | High | Known malicious npm package in skill dependencies |
+| Agent Memory Poisoning | 7 | Medium | Code writing to `.openclaw/` or `.clawdbot/` config |
+| Access Control | 3 | Medium | Auth bypass flag in skill configuration |
+| Insecure Config | 3 | Medium | Debug mode enabled in skill settings |
+
+## Files Firmis scans
+
+| File Pattern | What It Contains |
+|---|---|
+| `openclaw.json` | Skill metadata, permissions, and tool declarations |
+| `.openclaw/**` | OpenClaw agent configuration directory |
+| `.clawdbot/**` | ClawBot agent configuration directory |
+| `src/**/*.ts`, `src/**/*.js` | Skill handler implementations |
+| `package.json` | Dependency declarations and install scripts |
+
+## Scan OpenClaw Skills
+
+```bash title="Terminal"
+npx firmis scan --platform openclaw
+```
+
+## Common findings and remediation
+
+### Wildcard permission in skill manifest
+
+```text title="Finding"
+HIGH  perm-001  Wildcard Permission
+      openclaw.json:9
+      Pattern: "shell:*"
+```
+
+**What it means.** The skill requests a wildcard shell permission (`shell:*`), granting unrestricted command execution access. OpenClaw's permission model is designed to allow fine-grained access control, but a wildcard bypasses this entirely. A compromised skill with `shell:*` can execute arbitrary commands, escalate privileges, and persist itself across sessions. Skills distributed via ClawHub that request wildcard permissions are a significant supply chain risk.
+
+**How to fix.** Replace wildcard permissions with the minimum specific permissions required. For example, replace `shell:*` with `shell:read` if the skill only needs to read command output, or eliminate the permission entirely if it is not required. Reject any community skill from ClawHub that requests wildcard permissions without a documented justification.
+
+---
+
+### Maximum blast radius permission combination
+
+```text title="Finding"
+CRITICAL  perm-002  Maximum Blast Radius Permission Combo
+          openclaw.json:7-11
+          Pattern: shell + network + filesystem permissions present
+```
+
+**What it means.** The skill requests the combination of shell, network, and filesystem permissions simultaneously. This is the maximum possible attack surface for an OpenClaw skill: it can read any file, execute any command, and transmit the results to any external host. Even if each individual permission appears justified, this combination should trigger a manual security review before deployment.
+
+**How to fix.** Challenge whether all three permission types are truly necessary. Most skills need at most one or two. If the combination is genuinely required, add explicit scope constraints to each permission (e.g., `filesystem:read:/home/user/data`). Document the security rationale for each permission in the skill's README. Require human approval before installing skills with this permission combination.
+
+---
+
+### Data exfiltration from skill handler
+
+```text title="Finding"
+HIGH  exfil-008  Archive Creation Before Upload
+      src/export-handler.ts:45
+      Pattern: createWriteStream('.zip') with axios upload
+```
+
+**What it means.** The skill handler creates a ZIP archive of files and uploads it via HTTP. This is a classic bulk data exfiltration pattern: the skill silently packages a large number of files and transmits them to an external server. In an OpenClaw context with filesystem permissions, this can exfiltrate entire project directories in a single invocation.
+
+**How to fix.** Implement an explicit allowlist of directories that can be archived and uploaded. Require user confirmation before any archive upload. Validate the destination URL against an approved endpoint list. Log all archive and upload operations for audit. Review all skills installed from ClawHub that perform file operations.
+
+## Related
+
+- [scan command →](/cli/scan)
+- [Permission Overgrant threat category →](/reference/threat-categories)
+- [Agent Supply Chain Security guide →](/guides/agent-supply-chain-security)

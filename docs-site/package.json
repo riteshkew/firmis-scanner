@@ -3,7 +3,9 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
+    "generate:rules": "npx tsx scripts/generate-rules.ts",
+    "prebuild": "npm run generate:rules",
+    "dev": "npm run generate:rules && astro dev",
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
@@ -13,5 +15,10 @@
     "@astrojs/starlight": "^0.37.6",
     "astro": "^5.6.1",
     "sharp": "^0.34.2"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "js-yaml": "^4.1.1",
+    "tsx": "^4.21.0"
   }
 }

@@ -1,6 +1,91 @@
 ---
-title: Nanobot Plugins
-description: Scanning Nanobot plugins with Firmis.
+title: "Nanobot Plugins — Security Guide"
+description: "Detect tool poisoning, insecure configuration, and file system abuse in Nanobot plugin configurations. 199 detection rules."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis scans your Nanobot plugin manifests, `nanobot.yaml` configs, and plugin handler code for tool poisoning attacks, insecure TLS configuration, and file system abuse patterns.
+
+<Aside type="caution">
+  Nanobot plugin support is **Experimental**. Detection rules are functional but coverage is still expanding. Validate findings in context before acting on them.
+</Aside>
+
+## What Firmis detects
+
+| Threat Category | Rules | Coverage | Example Finding |
+|---|---|---|---|
+| Tool Poisoning | 10 | High | Instruction override text in tool description |
+| Insecure Config | 3 | High | `rejectUnauthorized: false` disabling TLS validation |
+| Secret Detection | 60 | High | Hardcoded API key in `nanobot.yaml` |
+| Data Exfiltration | 12 | Medium | File system read followed by external HTTP POST |
+| File System Abuse | 10 | Medium | Write access to sensitive directories (`/etc`, `~/.ssh`) |
+| Prompt Injection | 13 | Medium | Role manipulation in plugin description |
+| Supply Chain | 8 | Medium | Known malicious package in plugin dependencies |
+| Access Control | 3 | Medium | Authentication bypass flag in plugin settings |
+| Agent Memory Poisoning | 7 | Medium | Code writing to agent configuration directories |
+
+## Files Firmis scans
+
+| File Pattern | What It Contains |
+|---|---|
+| `nanobot.yaml` | Plugin configuration, capabilities, and settings |
+| `nanobot-config.json` | Alternative JSON config format |
+| `src/**/*.ts`, `src/**/*.js` | Plugin handler code |
+| `**/*.py` | Python-based plugin implementations |
+| `package.json`, `requirements.txt` | Plugin dependency declarations |
+
+## Scan Nanobot Plugins
+
+```bash title="Terminal"
+npx firmis scan --platform nanobot
+```
+
+## Common findings and remediation
+
+### Insecure TLS configuration
+
+```text title="Finding"
+CRITICAL  ic-002  SSL/TLS Verification Disabled
+          src/http-client.ts:12
+          Pattern: rejectUnauthorized: false
+```
+
+**What it means.** The plugin's HTTP client has TLS certificate verification disabled. Any HTTPS connection this plugin makes — to external APIs, to the Nanobot backend, or to other services — can be intercepted by a man-in-the-middle attacker who can decrypt the traffic, inject responses, and steal any data transmitted (including API keys, user data, and tool outputs). This is a critical vulnerability for any plugin operating in a networked environment.
+
+**How to fix.** Remove `rejectUnauthorized: false`. If the plugin connects to a server with a self-signed certificate, provide the CA certificate explicitly via the `ca` option rather than disabling verification entirely. In Node.js: `tls.connect({ ca: fs.readFileSync('ca.pem') })`. Never disable certificate verification in production code.
+
+---
+
+### Hardcoded credentials in nanobot.yaml
+
+```text title="Finding"
+HIGH  ic-003  Default or Hardcoded Credentials in Config Files
+      nanobot.yaml:6
+      Pattern: api_key: "nbt-..."
+```
+
+**What it means.** An API key or credential is hardcoded directly in the plugin's YAML configuration. YAML config files are frequently committed to version control and shared between team members. Once in git history, the credential cannot be fully removed without rewriting history. Nanobot plugins often have access to sensitive data and system resources, making exposed credentials high-value targets.
+
+**How to fix.** Replace the hardcoded value with an environment variable reference. Load secrets at runtime from environment variables (`process.env.NANOBOT_API_KEY`) or a secrets manager. Rotate the exposed credential immediately. Add a secret scanning step to your CI pipeline to prevent future leaks.
+
+---
+
+### File system write to sensitive directory
+
+```text title="Finding"
+CRITICAL  po-005  Agent Filesystem Write to Sensitive Directories
+          src/config-writer.ts:28
+          Pattern: writeFileSync('/etc/...')
+```
+
+**What it means.** The plugin writes to a sensitive system directory such as `/etc/`, `/root/`, or `~/.ssh/`. Nanobot plugins can request filesystem access, but writing to system directories allows a malicious or compromised plugin to modify system configuration, inject authorized SSH keys, or overwrite critical files — effectively achieving root-level persistence on the host.
+
+**How to fix.** Plugins must not write to system directories. Confine all filesystem write operations to the application's own data directory (e.g., `~/.nanobot/data/` or a user-specified path). Implement an explicit path allowlist and validate all write paths against it before performing any write. Reject any plugin requesting write access to system-level paths.
+
+## Related
+
+- [scan command →](/cli/scan)
+- [Insecure Config threat category →](/reference/threat-categories)
+- [File System Abuse threat category →](/reference/threat-categories)
+- [Agent Supply Chain Security guide →](/guides/agent-supply-chain-security)

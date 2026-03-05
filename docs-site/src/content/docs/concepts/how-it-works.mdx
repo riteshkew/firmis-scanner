@@ -1,6 +1,123 @@
 ---
 title: How It Works
-description: An overview of how the Firmis detection engine analyzes AI agent configurations.
+description: A walkthrough of Firmis's three-stage detection pipeline — Discovery, Rule Engine, and Reporter.
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis runs a three-stage static analysis pipeline entirely on your machine. Your code is never uploaded. No network access is required to scan.
+
+## The pipeline
+
+```text
+npx firmis scan .
+       │
+       ▼
+┌──────────────────┐
+│   1. Discovery   │
+│                  │
+│ Auto-detect      │
+│ 8 platforms      │
+│ Enumerate        │
+│ components       │
+│ Resolve deps     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ 2. Rule Engine   │
+│                  │
+│ 199 YAML rules   │
+│ 7 matcher types  │
+│ Confidence score │
+│ Deduplication    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  3. Reporter     │
+│                  │
+│ Terminal (color) │
+│ JSON             │
+│ SARIF 2.1.0      │
+│ HTML report      │
+└──────────────────┘
+```
+
+---
+
+## Stage 1: Discovery
+
+The discovery stage finds AI agent components in your project without requiring any configuration.
+
+**Platform detection.** Firmis scans well-known file paths and glob patterns for each of the 8 supported platforms. For example, an MCP server is detected when `~/.config/mcp/mcp.json` or `.vscode/mcp.json` exists. A CrewAI project is detected when a `crew.yaml` file is present. Each platform defines its own detection signals.
+
+**Component enumeration.** Once a platform is detected, Firmis enumerates its components — skills, servers, plugins, agents, or extensions — by traversing subdirectories and reading manifest files. Components are the unit of scanning: one component = one set of files analyzed together.
+
+**Dependency resolution.** For each component, Firmis collects the list of files to scan. This includes source files (`.ts`, `.js`, `.py`, `.go`, `.rs`), configuration files (`package.json`, `pyproject.toml`, `Cargo.toml`), and manifest files. The `node_modules/` and `dist/` directories are excluded automatically.
+
+**Limits.** A maximum of 500 files per component is enforced to prevent excessive scan times in large repositories.
+
+<Aside type="note">
+  Discovery respects `.firmisignore` and `.gitignore` files. Paths excluded via either file are skipped during component enumeration.
+</Aside>
+
+---
+
+## Stage 2: Rule Engine
+
+Every collected file is passed through the rule engine. The engine loads 199 YAML rules across 16 threat categories.
+
+**Rule evaluation.** Each rule defines one or more patterns. Firmis applies each pattern to the file content and records a match weight (0–100) for each hit. The confidence score for a finding is computed as:
+
+```text
+confidence = Math.max(ratioConfidence, maxSinglePatternWeight)
+```
+
+Where `ratioConfidence` reflects how many of the rule's patterns matched relative to the total, and `maxSinglePatternWeight` is the weight of the single strongest match. A rule's `confidenceThreshold` field sets the minimum confidence required for a finding to be emitted.
+
+**Document multiplier.** Files with `.md` and `.txt` extensions receive a 0.15x confidence multiplier before threshold comparison. This suppresses low-weight matches in documentation files that are unlikely to represent real threats. The `secret-detection` category is exempt from this multiplier because secrets in `.env.example` files are still actionable.
+
+**Deduplication.** When a path-based scan runs, the same file may be indexed by multiple platforms (for example, a shared `src/` directory picked up by both `claude` and `mcp`). Firmis deduplicates findings with the same `(ruleId, file, line)` triple, keeping the first occurrence and discarding the rest.
+
+---
+
+## Stage 3: Reporter
+
+After all platforms are scanned, findings are passed to the reporter.
+
+| Format | Flag | Description |
+|---|---|---|
+| Terminal | (default) | Color-coded output with severity, rule ID, file, and line |
+| JSON | `--json` | Machine-readable array of finding objects |
+| SARIF 2.1.0 | `--sarif` | Standard format for GitHub Security tab and CI tools |
+| HTML | `--html` | Self-contained report with summary table and finding details |
+
+The terminal reporter groups findings by severity (critical → high → medium → low) and prints a summary line with total counts and scan duration.
+
+---
+
+## What Firmis does NOT do
+
+Understanding the scope of static analysis helps you plan a complete security posture.
+
+| Firmis does NOT... | Why it matters |
+|---|---|
+| Modify your code | Firmis is read-only. Running a scan changes nothing in your repository. |
+| Require network access | All 199 rules are bundled locally. Scanning works fully offline. |
+| Upload telemetry by default | No code, paths, findings, or metadata leave your machine unless you explicitly opt in to telemetry in config. |
+| Detect runtime behavioral attacks | Firmis is a static scanner. It cannot observe live prompt injection via user input, real-time exfiltration, or session hijacking. |
+| Execute code | No code in scanned files is run. Pattern matching operates on raw file content and AST nodes. |
+
+<Aside type="caution">
+  Static analysis covers threats embedded in your agent's configuration and source code before deployment. It does not replace runtime monitoring for live behavioral threats.
+</Aside>
+
+---
+
+## Related
+
+- [Detection Engine](/concepts/detection-engine) — deep dive into matcher types and confidence scoring
+- [Threat Model](/concepts/threat-model) — all 16 threat categories explained
+- [Platforms](/concepts/platforms) — how each platform is auto-detected
+- [firmis scan](/cli/scan) — CLI reference

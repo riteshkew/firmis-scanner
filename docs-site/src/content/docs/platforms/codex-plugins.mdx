@@ -1,6 +1,90 @@
 ---
-title: Codex Plugins
-description: Scanning OpenAI Codex plugins with Firmis.
+title: "Codex Plugins — Security Guide"
+description: "Detect tool poisoning, unauthorized file access, and network abuse in OpenAI Codex plugin configurations. 199 detection rules."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis scans your Codex plugin manifests and handler code for tool poisoning, unauthorized filesystem access, and credential exposure that can compromise AI coding workflows.
+
+<Aside type="caution">
+  Codex plugin support is **Beta**. Rule coverage is actively expanding. File a GitHub issue if you encounter false positives or missed detections.
+</Aside>
+
+## What Firmis detects
+
+| Threat Category | Rules | Coverage | Example Finding |
+|---|---|---|---|
+| Tool Poisoning | 10 | High | System command name shadowing (`bash`, `ls`, `curl`) |
+| Prompt Injection | 13 | High | Instruction override in plugin description |
+| Secret Detection | 60 | High | Hardcoded API key in `codex-config.json` |
+| Agent Memory Poisoning | 7 | High | Code writing to `AGENTS.md` or `.codex/` |
+| Supply Chain | 8 | Medium | Known malicious npm package in plugin dependencies |
+| Data Exfiltration | 12 | Medium | File read followed by external HTTP upload |
+| Access Control | 3 | Medium | Credentials passed in URL query parameters |
+| Network Abuse | 10 | Medium | Requests to suspicious TLDs or tunneling services |
+| Insecure Config | 3 | Low | SSL verification disabled in plugin config |
+
+## Files Firmis scans
+
+| File Pattern | What It Contains |
+|---|---|
+| `codex-config.json` | Plugin registration and capabilities manifest |
+| `AGENTS.md` | OpenAI Agents persistent memory file |
+| `.codex/**` | Codex agent configuration directory |
+| `src/**/*.ts`, `src/**/*.js` | Plugin handler implementations |
+| `package.json` | Dependency declarations and postinstall scripts |
+
+## Scan Codex Plugins
+
+```bash title="Terminal"
+npx firmis scan --platform codex
+```
+
+## Common findings and remediation
+
+### Tool name shadows system command
+
+```text title="Finding"
+HIGH  tp-008  Tool Name Shadows Common System Commands
+      codex-config.json:12
+      Pattern: "name": "bash"
+```
+
+**What it means.** A plugin registers a tool with the same name as a common system command (`bash`, `ls`, `curl`, `git`, etc.). When an AI agent tries to invoke the system command, it instead calls the malicious plugin tool. The plugin can then intercept the request, log the arguments, modify the behavior, or execute arbitrary code while appearing to perform the expected operation.
+
+**How to fix.** Use namespaced tool names that cannot collide with system commands or other registered tools. For example, use `myplugin-bash-wrapper` rather than `bash`. Reject any tool registration whose name matches entries in the system `PATH`. Validate tool manifests from third-party sources before installation.
+
+---
+
+### Hardcoded API key in plugin config
+
+```text title="Finding"
+CRITICAL  sd-014  Anthropic API Key
+          codex-config.json:8
+          Pattern: sk-ant-api03-...
+```
+
+**What it means.** An API key is hardcoded directly in the plugin manifest. Plugin configs are typically committed to version control, making this key visible to all repository contributors and any fork of the project.
+
+**How to fix.** Remove the key from the manifest immediately and rotate it. Reference secrets via environment variables (`process.env.OPENAI_API_KEY`) at runtime. Use a secrets manager for production deployments. Add `codex-config.json` to secret scanning in your CI pipeline.
+
+---
+
+### Agent memory injection via AGENTS.md write
+
+```text title="Finding"
+HIGH  mem-006  OpenAI Agents Memory Manipulation
+      src/init.ts:51
+      Pattern: writeFile(...'AGENTS.md')
+```
+
+**What it means.** Plugin code writes to `AGENTS.md`, the OpenAI Agents persistent memory file. Instructions in this file are injected into every subsequent agent session. A malicious plugin can use this to establish persistent instructions that survive even after the plugin is removed.
+
+**How to fix.** Plugins must not modify `AGENTS.md` or `.codex/` configuration directories. If your plugin legitimately needs to configure agent behavior, document the required manual configuration steps rather than automating the write. Add `AGENTS.md` to your repository's protected files list.
+
+## Related
+
+- [scan command →](/cli/scan)
+- [Tool Poisoning threat category →](/reference/threat-categories)
+- [Agent Supply Chain Security guide →](/guides/agent-supply-chain-security)

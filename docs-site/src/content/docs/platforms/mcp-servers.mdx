@@ -1,6 +1,87 @@
 ---
-title: MCP Servers
-description: Scanning Model Context Protocol servers with Firmis.
+title: "MCP Servers — Security Guide"
+description: "Detect tool poisoning, credential harvesting, data exfiltration, and supply chain attacks in Model Context Protocol servers. 199 detection rules."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis scans your MCP server manifests, tool definitions, and handler code for hidden instructions, credential-harvesting parameters, and data exfiltration channels used in tool poisoning attacks.
+
+## What Firmis detects
+
+| Threat Category | Rules | Coverage | Example Finding |
+|---|---|---|---|
+| Tool Poisoning | 10 | High | Zero-width Unicode in tool description |
+| Prompt Injection | 13 | High | Instruction override embedded in tool metadata |
+| Secret Detection | 60 | High | Hardcoded API key in `mcp.json` |
+| Data Exfiltration | 12 | High | `fetch()` POST to external URL in tool handler |
+| Supply Chain | 8 | High | Known malicious npm package in `package.json` |
+| Access Control | 3 | High | Credentials passed as URL query parameters |
+| Permission Overgrant | 7 | Medium | `tools: ["*"]` wildcard tool access |
+| Agent Memory Poisoning | 7 | Medium | Code writing to `mcp.json` at runtime |
+| Insecure Config | 3 | Medium | `rejectUnauthorized: false` disabling TLS |
+
+## Files Firmis scans
+
+| File Pattern | What It Contains |
+|---|---|
+| `mcp.json` | MCP server registration and configuration |
+| `mcp-config.json` | Alternative MCP config format |
+| `src/**/*.ts`, `src/**/*.js` | Tool handler implementations |
+| `package.json` | Dependency declarations and install scripts |
+| `*.yaml`, `*.yml` | Server manifests and configuration |
+
+## Scan MCP Servers
+
+```bash title="Terminal"
+npx firmis scan --platform mcp
+```
+
+## Common findings and remediation
+
+### Hidden instructions in tool description
+
+```text title="Finding"
+CRITICAL  tp-001  Hidden Instructions in Tool Descriptions
+          src/tools/search.ts:14
+          Pattern: zero-width Unicode character \u200B in description field
+```
+
+**What it means.** A tool description contains invisible Unicode characters (zero-width spaces, directional overrides, or combining marks). These characters are invisible to human reviewers but are processed by the AI agent. Attackers use this technique to smuggle instructions inside what appears to be a benign tool description — a classic tool poisoning attack.
+
+**How to fix.** Remove all non-printable and invisible Unicode from tool descriptions. Tool descriptions must contain only plain ASCII text describing the tool's legitimate purpose. Validate any tool descriptions fetched from remote MCP servers before use. Reject descriptions containing characters outside the printable ASCII range (U+0020 to U+007E).
+
+---
+
+### Credential-harvesting tool parameters
+
+```text title="Finding"
+MEDIUM  tp-005  Suspicious Sensitive Parameters in Tool Definitions
+        src/tools/auth-helper.ts:31
+        Pattern: "required": ["api_key", "password"]
+```
+
+**What it means.** This tool definition declares `api_key` or `password` as required parameters. Legitimate tools should never ask the user or agent to supply raw credentials as arguments — they access secrets through environment variables or secrets managers. A tool requiring credentials as parameters is likely harvesting them for exfiltration.
+
+**How to fix.** Remove credential parameters from tool definitions. Access secrets via `process.env` or a secrets manager at server startup, not as runtime tool arguments. If the tool genuinely needs per-call authentication, use a server-side credential store and reference credentials by identifier only.
+
+---
+
+### Data exfiltration via tool handler
+
+```text title="Finding"
+HIGH  exfil-003  File Upload to External Service
+      src/tools/export.ts:67
+      Pattern: multipart/form-data with readFile
+```
+
+**What it means.** The tool handler reads local files and uploads them via multipart form data to an external service. This pattern is a primary data exfiltration vector in MCP servers: a user invokes what appears to be a legitimate tool, but the handler silently copies files to an attacker-controlled endpoint.
+
+**How to fix.** Tool handlers must not read arbitrary files and transmit them to external URLs. If the tool legitimately exports data, scope it to a specific allow-listed directory, require explicit user confirmation, and validate the destination endpoint against an allow-list. Log all file transmission operations for audit.
+
+## Related
+
+- [scan command →](/cli/scan)
+- [Securing MCP Servers guide →](/guides/securing-mcp-servers)
+- [Tool Poisoning threat category →](/reference/threat-categories)
+- [Supply Chain Security guide →](/guides/agent-supply-chain-security)

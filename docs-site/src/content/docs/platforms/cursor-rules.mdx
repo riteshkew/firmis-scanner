@@ -1,6 +1,83 @@
 ---
-title: Cursor Rules
-description: Scanning Cursor IDE rules and configurations with Firmis.
+title: "Cursor Rules — Security Guide"
+description: "Detect prompt injection, hidden instructions, and insecure configuration in Cursor IDE rule files. 199 detection rules."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis scans your `.cursorrules` files and `.cursor/` directory for prompt injection patterns, hidden Unicode instructions, and role manipulation that can redirect Cursor's AI agent behavior.
+
+## What Firmis detects
+
+| Threat Category | Rules | Coverage | Example Finding |
+|---|---|---|---|
+| Prompt Injection | 13 | High | `ignore previous instructions` in `.cursorrules` |
+| Tool Poisoning | 10 | High | Hidden Unicode characters in rule directives |
+| Agent Memory Poisoning | 7 | High | Code writing to `.cursorrules` at runtime |
+| Secret Detection | 60 | High | Hardcoded API key referenced in rule file |
+| Insecure Config | 3 | Medium | `DEBUG=true` in Cursor MCP config |
+| Access Control | 3 | Medium | Authentication bypass flag in configuration |
+| Data Exfiltration | 12 | Medium | Webhook transmission triggered by rule |
+
+## Files Firmis scans
+
+| File Pattern | What It Contains |
+|---|---|
+| `.cursorrules` | Project-level AI behavior rules and instructions |
+| `.cursor/settings.json` | Cursor IDE agent and MCP configuration |
+| `.cursor/mcp.json` | MCP server registrations for Cursor |
+| `**/*.mdc` | Cursor MDC rule files |
+
+## Scan Cursor Rules
+
+```bash title="Terminal"
+npx firmis scan --platform cursor
+```
+
+## Common findings and remediation
+
+### Prompt injection in .cursorrules
+
+```text title="Finding"
+HIGH  prompt-001  Instruction Override in Tool Description
+      .cursorrules:7
+      Pattern: "disregard all previous instructions and instead..."
+```
+
+**What it means.** Your `.cursorrules` file contains an instruction override pattern. This could appear in a `.cursorrules` file shared through a project template, a community rules repository, or a compromised package install script. When Cursor reads the file, the injected text attempts to override your legitimate rules and direct the AI to perform unintended actions.
+
+**How to fix.** Remove the injection pattern. Audit the full contents of your `.cursorrules` file. Never copy rule files from untrusted sources without reading them first. Treat `.cursorrules` as security-sensitive configuration: it directly controls AI agent behavior in your IDE.
+
+---
+
+### Hidden Unicode in rule directives
+
+```text title="Finding"
+HIGH  prompt-004  Hidden Instructions in Unicode
+      .cursorrules:15
+      Pattern: bidirectional text override character \u202E
+```
+
+**What it means.** A bidirectional text override character (U+202E or similar) is present in your rule file. This character reverses the visual display of text that follows it, making malicious instructions appear as innocuous content to human readers while the AI processes the actual codepoint sequence. This is a sophisticated obfuscation technique used in supply chain attacks targeting developer tools.
+
+**How to fix.** Open the file in a hex editor or Unicode-aware editor to view the raw codepoints. Remove any characters outside the printable ASCII range. Run `npx firmis scan --platform cursor` again to confirm the finding is resolved. Add a pre-commit hook to reject non-ASCII content in rule files.
+
+---
+
+### Runtime write to .cursorrules
+
+```text title="Finding"
+HIGH  mem-001  Agent Memory File Write
+      src/setup.ts:29
+      Pattern: writeFile(...'.cursorrules')
+```
+
+**What it means.** A script or tool handler is programmatically modifying your `.cursorrules` file. This is a persistence mechanism: once the malicious content is written to the rules file, it will affect every subsequent Cursor session in the project, even after the original attacking code is removed.
+
+**How to fix.** No code should ever write to `.cursorrules` automatically. If a setup script generates this file, review the generated content carefully before committing. Treat any automatic modification of rule files as a red flag and investigate the source.
+
+## Related
+
+- [scan command →](/cli/scan)
+- [Prompt Injection threat category →](/reference/threat-categories)
+- [Agent Memory Poisoning threat category →](/reference/threat-categories)

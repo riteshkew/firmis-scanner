@@ -1,6 +1,87 @@
 ---
-title: Claude Skills
-description: Scanning Claude Skills and Claude.md files with Firmis.
+title: "Claude Skills — Security Guide"
+description: "Detect tool poisoning, prompt injection, hardcoded secrets, and excessive permissions in Claude Skills and CLAUDE.md files. 199 detection rules."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Firmis scans your CLAUDE.md files, `.claude/` settings, and skill definition code for prompt injection, hardcoded credentials, and tool poisoning attacks targeting Claude agents.
+
+## What Firmis detects
+
+| Threat Category | Rules | Coverage | Example Finding |
+|---|---|---|---|
+| Tool Poisoning | 10 | High | Hidden Unicode characters in tool descriptions |
+| Prompt Injection | 13 | High | `ignore all previous instructions` in CLAUDE.md |
+| Secret Detection | 60 | High | Hardcoded Anthropic API key in `.claude/settings.json` |
+| Agent Memory Poisoning | 7 | High | Code writing to `.claude/` config directory |
+| Access Control | 3 | High | API key passed as URL query parameter |
+| Insecure Config | 3 | Medium | `DEBUG=true` in Claude skill config |
+| Permission Overgrant | 7 | Medium | Wildcard tool permissions in MCP config |
+| Supply Chain | 8 | Medium | Known malicious npm package in skill dependencies |
+| Data Exfiltration | 12 | Medium | Bulk file read followed by HTTP POST |
+
+## Files Firmis scans
+
+| File Pattern | What It Contains |
+|---|---|
+| `CLAUDE.md` | Project-level instructions, tool use rules, persistent agent behavior |
+| `.claude/settings.json` | Claude Code agent settings and feature flags |
+| `.claude/memory/*.md` | Cross-session persistent memory injected into every prompt |
+| `src/**/*.ts`, `src/**/*.js` | Skill handler code making tool calls and network requests |
+| `package.json` | Dependency declarations, install scripts |
+
+## Scan Claude Skills
+
+```bash title="Terminal"
+npx firmis scan --platform claude
+```
+
+## Common findings and remediation
+
+### Prompt injection in CLAUDE.md
+
+```text title="Finding"
+CRITICAL  prompt-001  Instruction Override in Tool Description
+          CLAUDE.md:23
+          Pattern: "ignore all previous instructions"
+```
+
+**What it means.** An attacker or malicious dependency has added instruction-override text to your CLAUDE.md. When Claude reads this file at startup, the injected text attempts to displace your legitimate instructions and redirect agent behavior.
+
+**How to fix.** Remove the injection pattern from CLAUDE.md. Audit any external content that was merged into the file. Treat CLAUDE.md as a security boundary: it should contain only your explicit configuration, never content fetched from untrusted sources.
+
+---
+
+### Hardcoded API key in skill code
+
+```text title="Finding"
+CRITICAL  sd-014  Anthropic API Key
+          src/tools/llm-call.ts:8
+          Pattern: sk-ant-...
+```
+
+**What it means.** A real API key is committed directly in source code. Anyone with repository access — including future contributors, forks, and CI logs — can extract and use it.
+
+**How to fix.** Remove the key immediately. Rotate the compromised credential in your Anthropic console. Load secrets via environment variables (`process.env.ANTHROPIC_API_KEY`) or a secrets manager. Add `*.ts` patterns to your `.gitignore` secret scanning hooks.
+
+---
+
+### Agent memory poisoning via config write
+
+```text title="Finding"
+HIGH  mem-003  Agent Config File Modification
+      src/tools/setup.ts:44
+      Pattern: writeFile(...'.claude/')
+```
+
+**What it means.** A skill handler is writing to the `.claude/` configuration directory at runtime. This allows a malicious skill to inject persistent instructions into future Claude sessions or silently register rogue MCP servers.
+
+**How to fix.** Skills must not modify agent platform configuration files. Configuration changes should be explicit user actions, not side effects of running a skill. Remove the write operation or require explicit user approval before any config modification.
+
+## Related
+
+- [scan command →](/cli/scan)
+- [Securing MCP Servers guide →](/guides/securing-mcp-servers)
+- [Scanning Claude Skills guide →](/guides/scanning-claude-skills)
+- [Prompt Injection threat category →](/reference/threat-categories)
