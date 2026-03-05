@@ -1,0 +1,11 @@
+/* Firmis docs custom styles */
+:root {
+  --sl-color-accent-low: #1a1a2e;
+  --sl-color-accent: #4a6cf7;
+  --sl-color-accent-high: #e8ecff;
+}
+:root[data-theme='dark'] {
+  --sl-color-accent-low: #e8ecff;
+  --sl-color-accent: #4a6cf7;
+  --sl-color-accent-high: #1a1a2e;
+}
