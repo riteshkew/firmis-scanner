@@ -64,19 +64,19 @@ export function getDarkThemeStyles(): string {
       border-color: var(--border);
     }
 
-    body.dark .threat-header.severity-critical {
+    body.dark .threat-toggle.severity-critical {
       background: #3d0000;
     }
 
-    body.dark .threat-header.severity-high {
+    body.dark .threat-toggle.severity-high {
       background: #2d0a0a;
     }
 
-    body.dark .threat-header.severity-medium {
+    body.dark .threat-toggle.severity-medium {
       background: #2d1a00;
     }
 
-    body.dark .threat-header.severity-low {
+    body.dark .threat-toggle.severity-low {
       background: #001a2d;
     }
 
@@ -120,5 +120,42 @@ export function getDarkThemeStyles(): string {
       color: var(--text);
       border-bottom-color: var(--border);
     }
+
+    body.dark .grade-badge {
+      background: rgba(0,0,0,0.3);
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    body.dark .grade-ring {
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.1), 0 4px 14px rgba(0,0,0,0.4);
+    }
+
+    body.dark .filter-bar {
+      background: var(--surface);
+      border-bottom-color: var(--border);
+    }
+
+    body.dark .filter-label { color: var(--text-muted); }
+
+    body.dark .filter-btn {
+      background: var(--card-bg);
+      border-color: var(--border);
+      color: var(--text-muted);
+    }
+
+    body.dark .filter-btn.active {
+      color: var(--text);
+      border-color: #4b5563;
+    }
+
+    body.dark .expand-all-btn {
+      background: var(--card-bg);
+      border-color: var(--border);
+      color: var(--text-muted);
+    }
+
+    body.dark .platform-toggle h2 { color: var(--text); }
+    body.dark .platform-chevron::after { color: var(--text-muted); }
+    body.dark .threat-chevron::after { color: var(--text-muted); }
   `
 }

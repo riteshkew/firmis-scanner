@@ -43,15 +43,21 @@ const GRADE_COLORS: Record<SecurityGrade, string> = {
   F: '#e74c3c',
 }
 
-const THEME_SCRIPT = `<script>(function(){var s=localStorage.getItem('firmis-theme');if(s==='dark')document.body.classList.add('dark');document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('theme-toggle');if(!b)return;b.textContent=document.body.classList.contains('dark')?'Light Mode':'Dark Mode';b.addEventListener('click',function(){var d=document.body.classList.toggle('dark');localStorage.setItem('firmis-theme',d?'dark':'light');b.textContent=d?'Light Mode':'Dark Mode';});});}());<\/script>`
+function gradeDescription(grade: SecurityGrade): string {
+  const map: Record<SecurityGrade, string> = {
+    A: 'Excellent', B: 'Good', C: 'Fair', D: 'Poor', F: 'Critical',
+  }
+  return map[grade]
+}
 
 export function generateHeader(result: ScanResult): string {
   const grade = result.score
   const color = GRADE_COLORS[grade]
   const date = escapeHtml(new Date(result.startedAt).toLocaleString())
+  const desc = gradeDescription(grade)
+  const threats = result.summary.threatsFound
 
   return `
-    ${THEME_SCRIPT}
     <div class="header">
       <div class="header-top">
         <div class="header-info">
@@ -61,9 +67,14 @@ export function generateHeader(result: ScanResult): string {
             <button class="theme-toggle" id="theme-toggle">Dark Mode</button>
           </div>
         </div>
-        <div class="grade-badge" style="border-color:${color};background:${color}22;">
-          <span class="grade-letter" style="color:${color};">${grade}</span>
-          <span class="grade-label">Security Grade</span>
+        <div class="grade-badge" style="--grade-color:${color};">
+          <div class="grade-ring">
+            <span class="grade-letter">${grade}</span>
+          </div>
+          <div class="grade-detail">
+            <span class="grade-desc">${desc}</span>
+            <span class="grade-sub">${threats} threat${threats !== 1 ? 's' : ''} found</span>
+          </div>
         </div>
       </div>
     </div>
@@ -149,6 +160,34 @@ export function generateSummary(result: ScanResult): string {
     `
 }
 
+export function generateFilterBar(result: ScanResult): string {
+  const { bySeverity } = result.summary
+  const levels: Array<{ key: SeverityLevel; label: string }> = [
+    { key: 'critical', label: 'Critical' },
+    { key: 'high', label: 'High' },
+    { key: 'medium', label: 'Medium' },
+    { key: 'low', label: 'Low' },
+  ]
+  const buttons = levels
+    .map(l => {
+      const count = bySeverity[l.key]
+      return `<button class="filter-btn active" data-severity="${l.key}">
+        <span class="filter-dot ${l.key}"></span>${l.label} <span class="filter-count">${count}</span>
+      </button>`
+    })
+    .join('')
+
+  return `
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-label">Filter:</span>
+        ${buttons}
+      </div>
+      <button class="expand-all-btn" id="expand-all">Expand All</button>
+    </div>
+    `
+}
+
 export function generateNoThreats(): string {
   return `
     <div class="no-threats">
@@ -177,18 +216,15 @@ function buildCopyPrompt(threat: Threat): string {
   ].join('\\n')
 }
 
-function buildThreatHeader(componentName: string, threat: Threat, escapedPrompt: string): string {
-  const onclick = `(function(btn){navigator.clipboard.writeText('${escapedPrompt}').then(function(){var t=btn.textContent;btn.textContent='Copied!';setTimeout(function(){btn.textContent=t;},2000);});})(this)`
-  return `<div class="threat-header severity-${threat.severity}">
+function buildThreatToggle(componentName: string, threat: Threat): string {
+  return `<div class="threat-toggle severity-${threat.severity}">
         <div class="threat-title">${escapeHtml(threat.message)}</div>
         <div class="threat-meta">
-          <span>Component: <strong>${escapeHtml(componentName)}</strong></span>
-          <span>Severity: <span class="badge badge-${threat.severity}">${threat.severity}</span></span>
-          <span>Category: <strong>${formatCategory(threat.category)}</strong></span>
-          <span>Confidence: <strong>${Math.round(threat.confidence)}%</strong></span>
-        </div>
-        <div class="threat-actions">
-          <button class="copy-claude-btn" onclick="${onclick}">Copy for Claude</button>
+          <span class="badge badge-${threat.severity}">${threat.severity}</span>
+          <span>${escapeHtml(componentName)}</span>
+          <span>${formatCategory(threat.category)}</span>
+          <span>${Math.round(threat.confidence)}%</span>
+          <span class="threat-chevron"></span>
         </div>
       </div>`
 }
@@ -196,7 +232,8 @@ function buildThreatHeader(componentName: string, threat: Threat, escapedPrompt:
 export function generateThreat(componentName: string, threat: Threat): string {
   const anchor = `threat-${escapeHtml(threat.id)}`
   const escapedPrompt = escapeHtml(buildCopyPrompt(threat))
-  const header = buildThreatHeader(componentName, threat, escapedPrompt)
+  const onclick = `(function(btn){navigator.clipboard.writeText('${escapedPrompt}').then(function(){var t=btn.textContent;btn.textContent='Copied!';setTimeout(function(){btn.textContent=t;},2000);});})(this)`
+  const toggle = buildThreatToggle(componentName, threat)
   const evidenceItems = threat.evidence
     .map(e => `<li class="evidence-item">${escapeHtml(e.description)}</li>`)
     .join('')
@@ -205,8 +242,8 @@ export function generateThreat(componentName: string, threat: Threat): string {
     : ''
 
   return `
-    <div class="threat" id="${anchor}">
-      ${header}
+    <div class="threat" id="${anchor}" data-severity="${threat.severity}">
+      ${toggle}
       <div class="threat-body">
         <div class="threat-section">
           <h4>Evidence</h4>
@@ -217,6 +254,9 @@ export function generateThreat(componentName: string, threat: Threat): string {
           <div class="code-location">${escapeHtml(threat.location.file)}:${threat.location.line}:${threat.location.column}</div>
         </div>
         ${remediation}
+        <div class="threat-actions">
+          <button class="copy-claude-btn" onclick="${onclick}">Copy for Claude</button>
+        </div>
       </div>
     </div>
     `
@@ -246,13 +286,19 @@ export function generatePlatformResults(result: ScanResult): string {
 
       return `
         <div class="platform-section">
-          <div class="platform-header">
-            <h2>${formatPlatformName(platform.platform)}</h2>
-            <p class="platform-stats">
-              ${components.length} components scanned &middot; ${totalThreats} threats detected
-            </p>
+          <div class="platform-toggle">
+            <div>
+              <h2>${formatPlatformName(platform.platform)}</h2>
+              <p class="platform-stats">
+                ${components.length} components &middot;
+                <span class="platform-visible-count">${totalThreats} threats</span>
+              </p>
+            </div>
+            <span class="platform-chevron"></span>
           </div>
-          ${threatsHtml}
+          <div class="platform-threats">
+            ${threatsHtml}
+          </div>
         </div>
         `
     })

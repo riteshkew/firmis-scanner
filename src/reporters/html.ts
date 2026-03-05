@@ -6,10 +6,12 @@ import { getDarkThemeStyles } from './html-dark-theme.js'
 import {
   generateHeader,
   generateSummary,
+  generateFilterBar,
   generatePlatformResults,
   generateRuntimeRisks,
   generateFooter,
 } from './html-sections.js'
+import { getHtmlScripts } from './html-scripts.js'
 
 export class HtmlReporter implements FileReporter {
   private readonly outputPath: string
@@ -44,10 +46,12 @@ function generateHtml(result: ScanResult): string {
   <div class="container">
     ${generateHeader(result)}
     ${generateSummary(result)}
+    ${generateFilterBar(result)}
     ${generatePlatformResults(result)}
     ${generateRuntimeRisks(result)}
     ${generateFooter(result)}
   </div>
+  ${getHtmlScripts()}
 </body>
 </html>`
 }

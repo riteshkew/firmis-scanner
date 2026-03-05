@@ -18,7 +18,6 @@ export function getHtmlStyles(): string {
       background: white;
       border-radius: 12px;
       box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-      overflow: hidden;
       transition: background 0.3s, box-shadow 0.3s;
     }
 
@@ -46,31 +45,53 @@ export function getHtmlStyles(): string {
     .header-info p { opacity: 0.9; font-size: 0.9rem; }
 
     .grade-badge {
-      width: 90px;
-      height: 90px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 16px;
+      padding: 0.75rem 1.25rem 0.75rem 0.75rem;
+      flex-shrink: 0;
+      backdrop-filter: blur(12px);
+    }
+
+    .grade-ring {
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      border: 4px solid rgba(255,255,255,0.4);
-      background: rgba(0,0,0,0.2);
+      background: var(--grade-color);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.2), 0 4px 14px rgba(0,0,0,0.2);
       flex-shrink: 0;
-      backdrop-filter: blur(4px);
     }
 
     .grade-letter {
-      font-size: 2.5rem;
+      font-size: 1.75rem;
       font-weight: 800;
       line-height: 1;
+      color: white;
     }
 
-    .grade-label {
-      font-size: 0.6rem;
-      opacity: 0.85;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-top: 2px;
+    .grade-detail {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .grade-desc {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: white;
+      line-height: 1.2;
+    }
+
+    .grade-sub {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.7);
+      line-height: 1.2;
     }
 
     .header-controls {
@@ -193,6 +214,83 @@ export function getHtmlStyles(): string {
       color: #555;
     }
 
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 2rem;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .filter-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.7rem;
+      border: 1px solid #dee2e6;
+      border-radius: 20px;
+      background: white;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: #999;
+      opacity: 0.5;
+    }
+
+    .filter-btn.active { opacity: 1; border-color: #adb5bd; color: #333; }
+    .filter-btn:hover { border-color: #adb5bd; }
+
+    .filter-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .filter-dot.critical { background: #c0392b; }
+    .filter-dot.high { background: #e74c3c; }
+    .filter-dot.medium { background: #f39c12; }
+    .filter-dot.low { background: #3498db; }
+
+    .filter-count { font-size: 0.7rem; color: #999; }
+
+    .expand-all-btn {
+      padding: 0.3rem 0.7rem;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      background: white;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: #666;
+      white-space: nowrap;
+    }
+
+    .expand-all-btn:hover { border-color: #adb5bd; color: #333; }
+
+    /* Platform sections */
     .platform-section {
       padding: 2rem;
       border-bottom: 2px solid #f0f0f0;
@@ -201,9 +299,30 @@ export function getHtmlStyles(): string {
 
     .platform-section:last-of-type { border-bottom: none; }
 
-    .platform-header { margin-bottom: 1.5rem; }
-    .platform-header h2 { color: #333; margin-bottom: 0.4rem; }
+    .platform-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      margin-bottom: 1rem;
+      user-select: none;
+    }
+
+    .platform-toggle:hover { opacity: 0.8; }
+    .platform-toggle h2 { color: #333; margin-bottom: 0.25rem; }
     .platform-stats { color: #666; font-size: 0.9rem; }
+    .platform-visible-count { font-weight: 600; }
+
+    .platform-chevron::after {
+      content: '\\25BC';
+      font-size: 0.75rem;
+      color: #999;
+      transition: transform 0.2s;
+      display: inline-block;
+    }
+
+    .platform-section.collapsed .platform-chevron::after { transform: rotate(-90deg); }
+    .platform-section.collapsed .platform-threats { display: none; }
 
     .threat {
       background: #fff;
@@ -219,15 +338,32 @@ export function getHtmlStyles(): string {
       transform: translateY(-1px);
     }
 
-    .threat-header {
+    .threat-toggle {
       padding: 1rem 1.5rem;
       border-left: 4px solid #e74c3c;
+      cursor: pointer;
+      user-select: none;
     }
 
-    .threat-header.severity-critical { border-left-color: #c0392b; background: #fdecea; }
-    .threat-header.severity-high { border-left-color: #e74c3c; background: #fdecea; }
-    .threat-header.severity-medium { border-left-color: #f39c12; background: #fef5e7; }
-    .threat-header.severity-low { border-left-color: #3498db; background: #ebf5fb; }
+    .threat-toggle:hover { opacity: 0.9; }
+
+    .threat-chevron::after {
+      content: '\\25B6';
+      font-size: 0.6rem;
+      color: #999;
+      transition: transform 0.2s;
+      display: inline-block;
+    }
+
+    .threat.expanded .threat-chevron::after { transform: rotate(90deg); }
+
+    .threat-body { display: none; }
+    .threat.expanded .threat-body { display: block; }
+
+    .threat-toggle.severity-critical { border-left-color: #c0392b; background: #fdecea; }
+    .threat-toggle.severity-high { border-left-color: #e74c3c; background: #fdecea; }
+    .threat-toggle.severity-medium { border-left-color: #f39c12; background: #fef5e7; }
+    .threat-toggle.severity-low { border-left-color: #3498db; background: #ebf5fb; }
 
     .threat-title {
       font-size: 1.05rem;
