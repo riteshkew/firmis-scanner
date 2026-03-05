@@ -1,40 +1,100 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: Firmis — AI Agent Security Scanner
+description: "Detect malicious behavior in Claude Skills, MCP Servers, Codex Plugins, Cursor Rules, and more. 199 built-in rules. Zero install. Runs offline."
+template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
-  image:
-    file: ../../assets/houston.webp
+  title: Security scanner for AI agents
+  tagline: Detect threats in Claude Skills, MCP Servers, Codex Plugins, and 5 more platforms. 199 rules. Zero install. Fully offline.
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: Get started
+      link: /quickstart/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/riteshkew/firmis-scanner
       icon: external
       variant: minimal
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Next steps
+## What can you do with Firmis?
 
-<CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
-	</Card>
-	<Card title="Change page layout" icon="document">
-		Delete `template: splash` in `src/content/docs/index.mdx` to display a
-		sidebar on this page.
-	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
-	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
-	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
-	</Card>
+<CardGrid>
+  <Card title="Find threats in your AI agents" icon="warning">
+    Scan for prompt injection, data exfiltration, credential harvesting, and 13 more threat categories.
+
+    [Scan your project →](/cli/scan)
+  </Card>
+  <Card title="Audit your MCP servers" icon="magnifier">
+    Detect tool poisoning, hidden instructions, and unauthorized network access in MCP server configurations.
+
+    [MCP guide →](/platforms/mcp-servers)
+  </Card>
+  <Card title="Generate a security BOM" icon="document">
+    CycloneDX 1.7 Agent Bill of Materials — every component, dependency, and model in your AI stack.
+
+    [Generate BOM →](/cli/bom)
+  </Card>
+  <Card title="Secure your CI pipeline" icon="rocket">
+    One command: discover → BOM → scan → report. SARIF output for GitHub Security tab.
+
+    [CI integration →](/cli/ci)
+  </Card>
 </CardGrid>
+
+## Supported platforms
+
+| Platform | Components Detected | Maturity |
+|---|---|---|
+| [Claude Skills](/platforms/claude-skills) | CLAUDE.md, tool definitions, permissions | GA |
+| [MCP Servers](/platforms/mcp-servers) | Server configs, tool handlers, transport | GA |
+| [Cursor Rules](/platforms/cursor-rules) | .cursorrules, settings, extensions | GA |
+| [Codex Plugins](/platforms/codex-plugins) | Plugin manifests, tool definitions | Beta |
+| [CrewAI Agents](/platforms/crewai-agents) | Agent configs, tool definitions, tasks | Beta |
+| [AutoGPT Plugins](/platforms/autogpt-plugins) | Plugin manifests, commands | Experimental |
+| [OpenClaw Skills](/platforms/openclaw-skills) | Skill definitions, handlers | Experimental |
+| [Nanobot Plugins](/platforms/nanobot-plugins) | Plugin configs, tool handlers | Experimental |
+
+## How it works
+
+```text
+npx firmis scan .
+       │
+       ▼
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│  Discovery   │───▶│  Rule Engine  │───▶│   Reporter   │
+│              │    │              │    │              │
+│ Auto-detect  │    │ 199 YAML     │    │ Terminal     │
+│ 8 platforms  │    │ rules across │    │ JSON / SARIF │
+│ components   │    │ 16 threat    │    │ HTML report  │
+│ dependencies │    │ categories   │    │              │
+└─────────────┘    └──────────────┘    └─────────────┘
+```
+
+[Learn how the detection engine works →](/concepts/how-it-works)
+
+## Threat categories
+
+Firmis detects 16 categories of threats in AI agent code:
+
+| Category | Examples | Severity Range |
+|---|---|---|
+| Tool Poisoning | Hidden instructions in tool descriptions | Critical |
+| Data Exfiltration | Sending local data to external URLs | Critical–High |
+| Credential Harvesting | Accessing AWS/GCP/Azure credentials | Critical–High |
+| Prompt Injection | Instruction override in tool output | Critical–High |
+| Secret Detection | Hardcoded API keys, tokens, passwords | Critical–Medium |
+| Supply Chain | Known-vulnerable dependencies | High–Medium |
+| Malware Signatures | Known malicious code patterns | Critical |
+| Known Malicious | Packages flagged in threat databases | Critical |
+| Network Abuse | Unauthorized DNS/HTTP requests | High–Medium |
+| File System Abuse | Unauthorized file read/write | High–Medium |
+| Permission Overgrant | Excessive tool permissions | High–Medium |
+| Agent Memory Poisoning | Corrupting agent context/memory | High |
+| Malware Distribution | Spreading malicious payloads | Critical–High |
+| Privilege Escalation | Gaining unauthorized access | High |
+| Insecure Configuration | Weak security settings | Medium–Low |
+| Access Control | Missing authentication/authorization | High–Medium |
+
+[View all 199 detection rules →](/rules/built-in-rules)

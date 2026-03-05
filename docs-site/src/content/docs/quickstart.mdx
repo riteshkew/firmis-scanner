@@ -1,6 +1,104 @@
 ---
-title: Quick Start
-description: Get started with Firmis in under a minute.
+title: "Quick Start — Your First Scan in 60 Seconds"
+description: "Install Firmis and scan your AI agent components for security threats. Zero config, zero signup, runs entirely offline."
 ---
 
-Content coming soon.
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+
+> Scan your AI agent code for security threats in one command. No signup, no config, no data uploaded.
+
+<Aside type="tip">
+  Firmis runs entirely offline. Your code is never uploaded, transmitted, or collected. [Privacy policy →](/privacy)
+</Aside>
+
+## Run your first scan
+
+```bash title="Terminal"
+npx firmis scan .
+```
+
+That's it. Firmis auto-detects Claude Skills, MCP Servers, Codex Plugins, Cursor Rules, and 4 more platforms in your project.
+
+## What you'll see
+
+```text title="Example output"
+ Firmis Scanner v1.3.0
+
+ Scanning: /your/project
+ Platforms: mcp (3 servers), claude (2 skills)
+ Rules: 199 enabled
+
+ CRITICAL  tp-003  Hidden instruction in tool description
+           src/tools/search.ts:14
+
+ HIGH      de-002  Data sent to external URL in tool handler
+           src/tools/fetch.ts:42
+
+ HIGH      sd-015  Hardcoded API key detected
+           .env.example:3
+
+ Found 3 threats (1 critical, 2 high) in 1.2s
+```
+
+<details>
+<summary>No findings? Check these common causes</summary>
+
+- **No AI agent files detected** → specify platform: `npx firmis scan --platform mcp`
+- **Scanning node_modules** → add to `.firmisignore`
+- **Using a monorepo** → scan specific subdirectory: `npx firmis scan ./packages/agent`
+- **All findings suppressed** → check `.firmisignore` or lower severity: `--severity low`
+
+</details>
+
+## What happens under the hood
+
+```text
+npx firmis scan .
+       │
+       ▼
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│  Discovery   │───▶│  Rule Engine  │───▶│   Reporter   │
+│              │    │              │    │              │
+│ Auto-detect  │    │ 199 YAML     │    │ Terminal     │
+│ 8 platforms  │    │ rules across │    │ JSON / SARIF │
+│ components   │    │ 16 threat    │    │ HTML report  │
+│ dependencies │    │ categories   │    │              │
+└─────────────┘    └──────────────┘    └─────────────┘
+```
+
+## Next steps
+
+<CardGrid>
+  <Card title="Scan a specific platform" icon="magnifier">
+    Focus on one platform at a time.
+
+    ```bash
+    npx firmis scan --platform mcp
+    ```
+
+    [CLI Reference →](/cli/scan)
+  </Card>
+  <Card title="Add to your CI pipeline" icon="rocket">
+    One command for discover → BOM → scan → report.
+
+    ```bash
+    npx firmis ci --fail-on high
+    ```
+
+    [CI Integration →](/cli/ci)
+  </Card>
+  <Card title="Understand the findings" icon="information">
+    16 threat categories mapped to MITRE and OWASP.
+
+    [Threat Categories →](/reference/threat-categories)
+  </Card>
+  <Card title="Generate JSON output" icon="document">
+    Machine-readable output for automation.
+
+    ```bash
+    npx firmis scan --json
+    ```
+
+    [Output Formats →](/reference/sarif-output)
+  </Card>
+</CardGrid>

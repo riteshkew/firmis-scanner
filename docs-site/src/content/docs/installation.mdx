@@ -1,6 +1,81 @@
 ---
-title: Installation
-description: Install Firmis via npm, npx, or package manager.
+title: "Installation"
+description: "Install Firmis Scanner via npx (zero install), npm, or yarn. Requires Node.js 20+."
 ---
 
-Content coming soon.
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+> Firmis requires Node.js 20 or later. No other dependencies.
+
+## Zero install (recommended)
+
+```bash title="Terminal"
+npx firmis scan .
+```
+
+No global install needed. Always uses the latest version.
+
+## Global install
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install -g firmis-scanner
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn global add firmis-scanner
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add -g firmis-scanner
+    ```
+  </TabItem>
+</Tabs>
+
+Then run:
+
+```bash title="Terminal"
+firmis scan .
+```
+
+## Project dependency
+
+Add Firmis as a dev dependency for consistent versions across your team:
+
+```bash title="Terminal"
+npm install --save-dev firmis-scanner
+```
+
+```json title="package.json"
+{
+  "scripts": {
+    "security": "firmis scan .",
+    "security:ci": "firmis ci --fail-on high --format sarif"
+  }
+}
+```
+
+## Verify installation
+
+```bash title="Terminal"
+firmis --version
+```
+
+Expected output: `firmis-scanner v1.3.0` (or later).
+
+## Requirements
+
+| Requirement | Version |
+|---|---|
+| Node.js | >= 20.0.0 |
+| npm | >= 9.0.0 (ships with Node 20) |
+| OS | macOS, Linux, Windows |
+| Network | Not required (fully offline) |
+| Disk space | ~15 MB (including rules) |
+
+<Aside type="note">
+  Firmis has zero native dependencies. It runs on any platform that supports Node.js 20+. No Python, Docker, or WASM required.
+</Aside>

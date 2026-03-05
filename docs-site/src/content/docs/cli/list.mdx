@@ -1,6 +1,37 @@
 ---
-title: list
-description: List all available detection rules.
+title: "firmis list — List Detected Platforms"
+description: "List all AI agent platforms detected in the current project directory."
 ---
 
-Content coming soon.
+> List detected AI agent platforms in your project.
+
+## Usage
+
+```bash title="Terminal"
+firmis list [options]
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--json` | boolean | `false` | Output in JSON format |
+
+## Examples
+
+### List detected platforms
+
+```bash title="Terminal"
+npx firmis list
+```
+
+### JSON output for scripting
+
+```bash title="Terminal"
+npx firmis list --json
+```
+
+## Related
+
+- [Platforms](/concepts/platforms) — what platforms Firmis supports
+- [discover](/cli/discover) — detailed component-level discovery

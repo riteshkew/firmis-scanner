@@ -1,6 +1,48 @@
 ---
-title: policy
-description: Manage and enforce security policies for AI agents (Beta).
+title: "firmis policy — Policy Engine"
+description: "Define and enforce custom security policies for your AI agent projects. Beta feature."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Define custom security policies and enforce them against scan results.
+
+<Aside type="caution" title="Beta">
+  This feature is in beta. APIs and behavior may change between releases.
+  Available in the [Firmis Engine](https://github.com/riteshkew/firmis-engine) private beta.
+  [Request access →](mailto:beta@firmislabs.com)
+</Aside>
+
+## Usage
+
+```bash title="Terminal"
+firmis policy validate <policy-file>
+firmis policy check [path] --policy <policy-file>
+```
+
+## Subcommands
+
+### `policy validate`
+
+Validate a policy YAML file for syntax and schema correctness.
+
+| Flag | Type | Description |
+|---|---|---|
+| `--verbose` | boolean | Show detailed validation output |
+
+### `policy check`
+
+Run a scan and evaluate results against a policy.
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--policy <file>` | string | — | Policy file to enforce |
+| `--platform <name>` | string | auto-detect | Scan specific platform |
+| `--format <type>` | enum | `json` | Output format |
+| `--output <file>` | string | — | Save results to file |
+| `--fail-on-violation` | boolean | `true` | Exit non-zero on policy violations |
+
+## Related
+
+- [scan](/cli/scan) — underlying scan that policies evaluate
+- [Custom Rules](/rules/custom-rules) — rules that policies reference

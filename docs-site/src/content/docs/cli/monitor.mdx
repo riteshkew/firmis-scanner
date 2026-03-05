@@ -1,6 +1,49 @@
 ---
-title: monitor
-description: Monitor AI agent runtime behavior in real time (Beta).
+title: "firmis monitor — Runtime Monitoring"
+description: "Monitor AI agent behavior in real-time using Claude Code hooks and MCP proxy. Beta feature."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Monitor AI agent behavior in real-time. Detect threats as they happen, not after the fact.
+
+<Aside type="caution" title="Beta">
+  This feature is in beta. APIs and behavior may change between releases.
+  Available in the [Firmis Engine](https://github.com/riteshkew/firmis-engine) private beta.
+  [Request access →](mailto:beta@firmislabs.com)
+</Aside>
+
+## Usage
+
+```bash title="Terminal"
+firmis monitor [options]
+```
+
+## What it does
+
+The runtime monitor uses two channels to observe agent behavior:
+
+- **Claude Code Hooks** — intercepts PreToolUse/PostToolUse events
+- **MCP Proxy** — sits between client and server, inspecting all messages
+
+Features:
+- Blast radius scoring (0–100) with automatic response escalation
+- Behavioral baseline learning
+- Dangerous shell command detection
+- Cross-channel event correlation
+
+## Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--install-hooks` | boolean | `false` | Install Claude Code hooks |
+| `--start-daemon` | boolean | `false` | Start the monitoring daemon |
+| `--stop-daemon` | boolean | `false` | Stop the monitoring daemon |
+| `--status` | boolean | `false` | Show monitor status |
+| `--install` | boolean | `false` | Install all monitoring components |
+| `--uninstall` | boolean | `false` | Remove all monitoring components |
+
+## Related
+
+- [scan](/cli/scan) — static analysis (complementary to runtime monitoring)
+- [Claude Skills](/platforms/claude-skills) — Claude-specific threat detection

@@ -1,6 +1,54 @@
 ---
-title: bom
-description: Generate a CycloneDX 1.7 Agent Bill of Materials.
+title: "firmis bom — Generate Agent Bill of Materials"
+description: "Generate a CycloneDX 1.7 Agent Bill of Materials listing all AI agent components, dependencies, and models."
 ---
 
-Content coming soon.
+> Generate an Agent Bill of Materials (CycloneDX 1.7) for your AI agent project.
+
+## Usage
+
+```bash title="Terminal"
+firmis bom [path] [options]
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--platform <name>` | string | auto-detect | Include specific platform only |
+| `--output <file>` | string | stdout | Save BOM to file |
+| `--verbose` | boolean | `false` | Enable verbose logging |
+
+## Examples
+
+### Generate BOM for current directory
+
+```bash title="Terminal"
+npx firmis bom
+```
+
+### Save BOM to file
+
+```bash title="Terminal"
+npx firmis bom --output agent-bom.json
+```
+
+### Generate BOM for MCP servers only
+
+```bash title="Terminal"
+npx firmis bom --platform mcp --output mcp-bom.json
+```
+
+## What's in the BOM
+
+The Agent BOM follows the CycloneDX 1.7 specification and includes:
+- **Components** — each AI agent tool, skill, or plugin as a component
+- **Dependencies** — npm/pip packages with version information
+- **Models** — detected AI model references
+- **Metadata** — scan timestamp, Firmis version, project info
+
+## Related
+
+- [Agent BOM concept](/concepts/agent-bom) — what Agent BOMs are and why they matter
+- [CycloneDX BOM spec](/reference/cyclonedx-bom) — output format reference
+- [CI pipeline](/cli/ci) — auto-generate BOM as part of CI

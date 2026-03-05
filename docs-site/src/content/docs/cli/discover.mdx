@@ -1,6 +1,57 @@
 ---
-title: discover
-description: Discover AI agent components in a project directory.
+title: "firmis discover — Discover AI Platforms and Components"
+description: "Auto-detect AI agent platforms, components, dependencies, and models in your project. JSON output for automation."
 ---
 
-Content coming soon.
+> Discover AI platforms, components, dependencies, and models in your project directory.
+
+## Usage
+
+```bash title="Terminal"
+firmis discover [path] [options]
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--platform <name>` | string | auto-detect | Discover specific platform only |
+| `--json` | boolean | `false` | Output in JSON format |
+| `--output <file>` | string | stdout | Save discovery results to file |
+| `--verbose` | boolean | `false` | Show detailed component metadata |
+| `--show-deps` | boolean | `true` | Show AI-related dependencies |
+| `--show-models` | boolean | `true` | Show detected model files |
+
+## Examples
+
+### Discover all platforms in current directory
+
+```bash title="Terminal"
+npx firmis discover
+```
+
+### Discover MCP servers with JSON output
+
+```bash title="Terminal"
+npx firmis discover --platform mcp --json
+```
+
+### Save discovery to file
+
+```bash title="Terminal"
+npx firmis discover --output discovery.json --json
+```
+
+## What gets discovered
+
+For each detected platform, Firmis reports:
+- **Components** — individual tools, skills, plugins, or agents
+- **Dependencies** — npm/pip packages related to AI functionality
+- **Models** — detected model files or model references
+- **File paths** — exact locations of all detected files
+
+## Related
+
+- [Platforms](/concepts/platforms) — what platforms Firmis detects
+- [BOM](/cli/bom) — generate a Bill of Materials from discovery results
+- [scan](/cli/scan) — scan discovered components for threats

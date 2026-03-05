@@ -1,6 +1,46 @@
 ---
-title: validate
-description: Validate custom rule YAML files.
+title: "firmis validate — Validate Rule Files"
+description: "Validate custom or built-in YAML detection rules for syntax errors, invalid regex, and schema compliance."
 ---
 
-Content coming soon.
+> Validate rule files for syntax errors, invalid regex patterns, and schema compliance.
+
+## Usage
+
+```bash title="Terminal"
+firmis validate [rules...] [options]
+```
+
+Pass specific rule files or directories. If no arguments are given, validates all files in the default rules directory.
+
+## Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--strict` | boolean | `false` | Strict mode: regex warnings become errors |
+| `--built-in` | boolean | `false` | Also validate built-in rules |
+
+## Examples
+
+### Validate a custom rule file
+
+```bash title="Terminal"
+npx firmis validate rules/custom/my-rules.yaml
+```
+
+### Validate all rules (custom + built-in) in strict mode
+
+```bash title="Terminal"
+npx firmis validate --built-in --strict
+```
+
+### Validate a directory of rules
+
+```bash title="Terminal"
+npx firmis validate rules/custom/
+```
+
+## Related
+
+- [Custom Rules](/rules/custom-rules) — how to write YAML detection rules
+- [Rules Overview](/rules/overview) — how the rule engine works

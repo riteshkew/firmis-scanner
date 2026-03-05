@@ -1,6 +1,45 @@
 ---
-title: fix
-description: Automatically remediate detected security findings (Beta).
+title: "firmis fix — Auto-Fix Security Threats"
+description: "Automatically remediate detected security threats in AI agent configurations. Beta feature."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Automatically remediate detected security threats in AI agent configurations.
+
+<Aside type="caution" title="Beta">
+  This feature is in beta. APIs and behavior may change between releases.
+  Available in the [Firmis Engine](https://github.com/riteshkew/firmis-engine) private beta.
+  [Request access →](mailto:beta@firmislabs.com)
+</Aside>
+
+## Usage
+
+```bash title="Terminal"
+firmis fix [path] [options]
+```
+
+## What it does
+
+The fix engine analyzes scan findings and generates remediation patches:
+
+- Removes hardcoded secrets and replaces with environment variable references
+- Rewrites overly permissive tool permissions to least-privilege
+- Adds missing input validation to tool handlers
+- Quarantines known-malicious components
+
+## Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--platform <name>` | string | auto-detect | Fix specific platform only |
+| `--dry-run` | boolean | `false` | Show proposed fixes without applying |
+| `--severity <level>` | enum | `high` | Only fix findings at this severity or above |
+| `--output <file>` | string | — | Write fix report to file |
+| `--verbose` | boolean | `false` | Show detailed fix progress |
+| `--interactive` | boolean | `true` | Prompt before each fix |
+
+## Related
+
+- [scan](/cli/scan) — detect threats before fixing
+- [Threat Categories](/reference/threat-categories) — what gets fixed

@@ -1,6 +1,92 @@
 ---
-title: ci
-description: Run the full Firmis CI pipeline (discover, bom, scan, report).
+title: "firmis ci — CI Pipeline Command"
+description: "Run the full Firmis CI pipeline: discover → BOM → scan → report. One command for CI/CD integration."
 ---
 
-Content coming soon.
+> CI pipeline: discover → BOM → scan → report in one command. Designed for GitHub Actions, GitLab CI, and other CI systems.
+
+## Usage
+
+```bash title="Terminal"
+firmis ci [path] [options]
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--platform <name>` | string | auto-detect | Scan specific platform only |
+| `--fail-on <level>` | enum | — | Exit non-zero for findings at this severity or above: `low`, `medium`, `high`, `critical` |
+| `--format <type>` | enum | `sarif` | Report format: `json`, `sarif`, `html` |
+| `--output <file>` | string | — | Save report to file |
+| `--bom-output <file>` | string | — | Save Agent BOM to file |
+| `--quiet` | boolean | `false` | Suppress terminal output |
+| `--verbose` | boolean | `false` | Enable verbose logging |
+
+## Examples
+
+### Basic CI scan with SARIF output
+
+```bash title="Terminal"
+npx firmis ci --fail-on high --format sarif --output results.sarif
+```
+
+### CI with BOM generation
+
+```bash title="Terminal"
+npx firmis ci --fail-on critical --bom-output agent-bom.json --output scan.sarif
+```
+
+### Quick CI check (quiet mode)
+
+```bash title="Terminal"
+npx firmis ci --fail-on high --quiet
+```
+
+## Pipeline stages
+
+The `ci` command runs four stages sequentially:
+
+```text
+1. Discover  →  Auto-detect platforms and components
+2. BOM       →  Generate Agent Bill of Materials
+3. Scan      →  Run all rules against discovered components
+4. Report    →  Output findings in chosen format
+```
+
+## GitHub Actions example
+
+```yaml title=".github/workflows/firmis.yml"
+name: Firmis Security Scan
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run Firmis scan
+        run: npx firmis ci --fail-on high --format sarif --output results.sarif
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+```
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Pipeline completed, no findings above `--fail-on` threshold |
+| `1` | Findings found above `--fail-on` threshold |
+| `2` | Pipeline error |
+
+## Related
+
+- [GitHub Actions integration](/integrations/github-actions) — detailed CI setup guide
+- [SARIF output](/reference/sarif-output) — understanding the output format
+- [scan](/cli/scan) — standalone scan without the full pipeline

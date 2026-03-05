@@ -1,6 +1,78 @@
 ---
-title: scan
-description: Scan AI agent configurations for security threats.
+title: "firmis scan — Scan AI Agent Components"
+description: "Scan Claude Skills, MCP Servers, Codex Plugins, and more for security threats. Supports JSON, SARIF, HTML output. 199 built-in detection rules."
 ---
 
-Content coming soon.
+> Scan AI agent components for security threats. Auto-detects platforms or targets a specific one.
+
+## Usage
+
+```bash title="Terminal"
+firmis scan [path] [options]
+```
+
+If `[path]` is omitted, Firmis scans the current directory.
+
+## Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--platform <name>` | string | auto-detect | Scan a specific platform: `claude`, `mcp`, `codex`, `cursor`, `crewai`, `autogpt`, `openclaw`, `nanobot` |
+| `--all` | boolean | `true` | Scan all detected platforms |
+| `--severity <level>` | enum | `low` | Minimum severity to report: `low`, `medium`, `high`, `critical` |
+| `--fail-on <level>` | enum | — | Exit non-zero if findings at this severity or above |
+| `--json` | boolean | `false` | Output findings as JSON |
+| `--sarif` | boolean | `false` | Output findings as SARIF 2.1.0 |
+| `--html` | boolean | `false` | Output findings as HTML report |
+| `--output <file>` | string | stdout | Write output to file instead of stdout |
+| `--config <file>` | string | — | Path to custom config file |
+| `--ignore <rules>` | string | — | Skip specific rule IDs (comma-separated) |
+| `--concurrency <n>` | number | `4` | Number of parallel workers |
+| `--verbose` | boolean | `false` | Show detailed scan progress |
+| `--quiet` | boolean | `false` | Suppress terminal output; only exit code |
+
+## Examples
+
+### Scan current directory (auto-detect all platforms)
+
+```bash title="Terminal"
+npx firmis scan
+```
+
+### Scan only MCP servers with JSON output
+
+```bash title="Terminal"
+npx firmis scan --platform mcp --json
+```
+
+### Fail CI if high or critical findings
+
+```bash title="Terminal"
+npx firmis scan --fail-on high --sarif --output results.sarif
+```
+
+### Scan a specific path, ignore false positives
+
+```bash title="Terminal"
+npx firmis scan ./packages/agent --ignore sd-045,sd-046
+```
+
+### Generate HTML report
+
+```bash title="Terminal"
+npx firmis scan --html --output report.html
+```
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Scan completed, no findings above `--fail-on` threshold |
+| `1` | Findings found above `--fail-on` threshold |
+| `2` | Scan error (invalid path, config error, etc.) |
+
+## Related
+
+- [Threat Categories](/reference/threat-categories) — what Firmis detects
+- [Ignoring Findings](/rules/ignoring-findings) — suppress specific rules or files
+- [CI Pipeline](/cli/ci) — full discover → BOM → scan → report pipeline

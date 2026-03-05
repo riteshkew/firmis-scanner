@@ -1,6 +1,46 @@
 ---
-title: compliance
-description: Generate compliance reports mapped to SOC2, AI Act, GDPR, and NIST (Beta).
+title: "firmis compliance — Compliance Reporting"
+description: "Generate compliance evidence reports for SOC2, AI Act, GDPR, and NIST frameworks. Beta feature."
 ---
 
-Content coming soon.
+import { Aside } from '@astrojs/starlight/components';
+
+> Scan and generate compliance evidence reports mapped to regulatory frameworks.
+
+<Aside type="caution" title="Beta">
+  This feature is in beta. APIs and behavior may change between releases.
+  Available in the [Firmis Engine](https://github.com/riteshkew/firmis-engine) private beta.
+  [Request access →](mailto:beta@firmislabs.com)
+</Aside>
+
+## Usage
+
+```bash title="Terminal"
+firmis compliance [path] [options]
+```
+
+## What it does
+
+Maps scan findings to compliance frameworks:
+
+- **SOC 2** — security control evidence
+- **EU AI Act** — AI-specific compliance requirements
+- **GDPR** — data protection assessment
+- **NIST AI RMF** — risk management framework mapping
+- **OWASP LLM Top 10** — LLM-specific vulnerability mapping
+
+## Options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--framework <name>` | string | `all` | Specific framework: `soc2`, `ai-act`, `gdpr`, `nist`, `owasp` |
+| `--format <type>` | enum | `html` | Output format: `html`, `json` |
+| `--output <file>` | string | — | Save report to file |
+| `--verbose` | boolean | `false` | Show detailed mapping |
+| `--evidence` | boolean | `true` | Include evidence artifacts |
+
+## Related
+
+- [scan](/cli/scan) — generate the findings that compliance maps to
+- [Threat Categories](/reference/threat-categories) — categories mapped to frameworks
+- [Compliance Reporting guide](/guides/compliance-reporting) — step-by-step walkthrough
